@@ -31,7 +31,7 @@ if (process.env.AUTO_MONITOR === 'true') {
 }
 
 app.listen(port, () => {
-  console.log(`ThreatTrack backend running at http://localhost:${port}`)
+  console.log(`Tracking Threats backend running at http://localhost:${port}`)
   console.log(
     `Auto monitor ${process.env.AUTO_MONITOR === 'true' ? 'enabled' : 'disabled'}`,
   )

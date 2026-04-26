@@ -28,21 +28,63 @@ export function LiveMonitor() {
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+        <motion.div
+          animate={{
+            boxShadow: systemActive
+              ? [
+                  '0 0 0 rgba(16,185,129,0)',
+                  '0 0 24px rgba(16,185,129,0.18)',
+                  '0 0 0 rgba(16,185,129,0)',
+                ]
+              : '0 0 0 rgba(16,185,129,0)',
+          }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4"
+        >
           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="relative flex h-3 w-3 items-center justify-center">
+              {systemActive && (
+                <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.95)]" />
+            </span>
             {systemActive ? 'System Active' : 'System Idle'}
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
             Browser, manual URL, message, and email scans are collected by the local backend.
           </p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        </motion.div>
+        <motion.div
+          animate={{
+            boxShadow: [
+              '0 0 0 rgba(20,184,166,0)',
+              '0 0 22px rgba(20,184,166,0.12)',
+              '0 0 0 rgba(20,184,166,0)',
+            ],
+          }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+        >
           <p className="text-sm text-slate-500 dark:text-slate-400">Live scan count</p>
           <p className="mt-1 text-3xl font-semibold text-slate-950 dark:text-white">
             {liveScanCount}
           </p>
-        </div>
+          <div className="mt-3 flex h-8 items-end gap-1.5">
+            {[38, 64, 48, 82, 56, 92, 70, 86].map((height, index) => (
+              <motion.span
+                key={`${height}-${index}`}
+                animate={{ height: [`${height - 22}%`, `${height}%`, `${height - 10}%`] }}
+                transition={{
+                  duration: 1.2 + index * 0.07,
+                  repeat: Infinity,
+                  repeatType: 'mirror',
+                  ease: 'easeInOut',
+                }}
+                className="w-2 rounded-full bg-teal-400/80 shadow-[0_0_12px_rgba(45,212,191,0.75)]"
+              />
+            ))}
+          </div>
+        </motion.div>
       </section>
 
       <Panel>

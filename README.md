@@ -1,4 +1,4 @@
-# ThreatTrack Phishing Detection
+# Tracking Threats Phishing Detection
 
 A local-only React + Vite phishing detection system prototype.
 

@@ -9,6 +9,23 @@ const emptyStats = {
   unreadAlerts: 0,
 }
 
+const defaultNotificationSettings = {
+  reportEmails: [],
+  emailScanReports: true,
+  emailHistoryDigest: true,
+}
+
+const readNotificationSettings = () => {
+  try {
+    const stored = localStorage.getItem('threattrack:notification-settings')
+    return stored
+      ? { ...defaultNotificationSettings, ...JSON.parse(stored) }
+      : defaultNotificationSettings
+  } catch {
+    return defaultNotificationSettings
+  }
+}
+
 export function ThreatProvider({ children }) {
   const [scanHistory, setScanHistory] = useState([])
   const [alerts, setAlerts] = useState([])
@@ -20,6 +37,7 @@ export function ThreatProvider({ children }) {
   const [systemLogs, setSystemLogs] = useState([])
   const [systemActive, setSystemActive] = useState(false)
   const [stats, setStats] = useState(emptyStats)
+  const [notificationSettings, setNotificationSettings] = useState(readNotificationSettings)
   const [darkMode, setDarkMode] = useState(() => {
     try {
       const stored = localStorage.getItem('threattrack:dark-mode')
@@ -69,6 +87,13 @@ export function ThreatProvider({ children }) {
     localStorage.setItem('threattrack:dark-mode', JSON.stringify(darkMode))
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
+
+  useEffect(() => {
+    localStorage.setItem(
+      'threattrack:notification-settings',
+      JSON.stringify(notificationSettings),
+    )
+  }, [notificationSettings])
 
   useEffect(() => {
     const refreshTimeoutId = window.setTimeout(() => {
@@ -157,8 +182,10 @@ export function ThreatProvider({ children }) {
       liveEvents: liveFeed,
       liveFeed,
       liveScanCount,
+      notificationSettings,
       scanHistory,
       setDarkMode,
+      setNotificationSettings,
       stats,
       systemLogs,
       systemActive,
@@ -175,6 +202,7 @@ export function ThreatProvider({ children }) {
       flaggedThreats,
       liveFeed,
       liveScanCount,
+      notificationSettings,
       scanHistory,
       stats,
       systemLogs,

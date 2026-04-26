@@ -7,6 +7,7 @@ import { EmailAnalyzer } from './pages/EmailAnalyzer'
 import { ManualScan } from './pages/ManualScan'
 import { ScanHistory } from './pages/ScanHistory'
 import { Alerts } from './pages/Alerts'
+import { Settings } from './pages/Settings'
 import { useState } from 'react'
 
 const pages = {
@@ -16,6 +17,7 @@ const pages = {
   manual: ManualScan,
   history: ScanHistory,
   alerts: Alerts,
+  settings: Settings,
 }
 
 function AppShell() {

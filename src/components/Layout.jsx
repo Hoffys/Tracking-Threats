@@ -8,6 +8,7 @@ import {
   Moon,
   Radar,
   ScanLine,
+  Settings,
   ShieldCheck,
   ShieldX,
   Sun,
@@ -22,6 +23,7 @@ const navItems = [
   { id: 'manual', label: 'Scan', icon: ScanLine },
   { id: 'history', label: 'History', icon: History },
   { id: 'alerts', label: 'Alerts', icon: Bell },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 export function Layout({ activePage, children, onNavigate }) {
@@ -48,16 +50,27 @@ export function Layout({ activePage, children, onNavigate }) {
               <ShieldCheck size={22} />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-base font-semibold">ThreatTrack</span>
+              <span className="block truncate text-base font-semibold">Tracking Threats</span>
               <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                Phishing detection console
+                Real-time monitoring and protection against phishing attacks
               </span>
             </span>
           </button>
 
           <div className="flex items-center gap-2">
             <div className="hidden items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 md:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="relative flex h-3 w-3 items-center justify-center">
+                {systemActive && (
+                  <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400 opacity-75" />
+                )}
+                <span
+                  className={`relative h-2.5 w-2.5 rounded-full ${
+                    systemActive
+                      ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.95)]'
+                      : 'bg-slate-400'
+                  }`}
+                />
+              </span>
               {systemActive ? 'System Active' : 'System Idle'}
             </div>
             <div className="hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300 lg:flex">
@@ -125,7 +138,7 @@ export function Layout({ activePage, children, onNavigate }) {
       </AnimatePresence>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-        <div className="mx-auto grid max-w-6xl grid-cols-6 px-2 py-2">
+        <div className="mx-auto grid max-w-6xl grid-cols-7 px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = activePage === item.id

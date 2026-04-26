@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -147,8 +148,21 @@ export function ManualScan() {
               </div>
               <RiskBadge risk={result.status ?? result.risk} />
             </div>
-            <div className="mt-5 h-3 rounded-full bg-slate-100 dark:bg-slate-800">
-              <div
+            <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{
+                  width: `${result.score}%`,
+                  boxShadow: [
+                    '0 0 0 rgba(20,184,166,0)',
+                    '0 0 16px rgba(20,184,166,0.45)',
+                    '0 0 0 rgba(20,184,166,0)',
+                  ],
+                }}
+                transition={{
+                  width: { duration: 0.7, ease: 'easeOut' },
+                  boxShadow: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+                }}
                 className={`h-3 rounded-full ${
                   result.status === 'Dangerous'
                     ? 'bg-rose-500'
@@ -156,7 +170,6 @@ export function ManualScan() {
                       ? 'bg-amber-500'
                       : 'bg-emerald-500'
                 }`}
-                style={{ width: `${result.score}%` }}
               />
             </div>
             <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">

@@ -153,12 +153,15 @@ export function Alerts() {
           <h1 className="text-2xl font-semibold">Threat review queue</h1>
         </div>
         <button
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200"
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:text-slate-200"
           type="button"
           onClick={clearReviewedThreats}
+          disabled={reviewedInActiveView === 0}
         >
           <Trash2 size={16} />
-          Clear Reviewed Logs
+          {reviewedInActiveView > 0
+            ? `Clear Reviewed Logs (${reviewedInActiveView})`
+            : 'No Reviewed Logs'}
         </button>
       </div>
 
