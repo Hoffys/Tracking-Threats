@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "ThreatTrack Browser Monitor",
+  "version": "1.0.0",
+  "description": "Sends visited web links to the local ThreatTrack scanner.",
+  "permissions": ["storage", "tabs", "webNavigation"],
+  "host_permissions": ["<all_urls>", "http://localhost:4000/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "ThreatTrack",
+    "default_popup": "popup.html"
+  }
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ThreatTrack</title>
+    <style>
+      body {
+        width: 280px;
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+      }
+
+      main {
+        padding: 14px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 15px;
+      }
+
+      p {
+        margin: 6px 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #475569;
+      }
+
+      .status {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+      }
+
+      .pill {
+        display: inline-block;
+        margin-top: 4px;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        background: #ccfbf1;
+        color: #115e59;
+      }
+
+      .error {
+        background: #ffe4e6;
+        color: #be123c;
+      }
+
+      a {
+        display: inline-block;
+        margin-top: 12px;
+        color: #0f766e;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>ThreatTrack Monitor</h1>
+      <div class="status">
+        <p id="message">Waiting for browsing activity...</p>
+        <span id="pill" class="pill">Ready</span>
+      </div>
+      <a id="openApp" href="http://localhost:5173/" target="_blank">Open ThreatTrack</a>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "name": "tracking-threats",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client\"",
+    "dev:demo": "concurrently \"npm run server:dev:demo\" \"npm run client\"",
+    "client": "vite",
+    "server": "node backend/server.js",
+    "server:dev": "nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
+    "server:dev:demo": "cross-env AUTO_MONITOR=true nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.4",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.6",
+    "cross-env": "^10.1.0",
+    "express": "^5.2.1",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.11.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "nodemon": "^3.1.14",
+    "vite": "^8.0.10"
+  }
+}
