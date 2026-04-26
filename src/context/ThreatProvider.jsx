@@ -13,6 +13,7 @@ export function ThreatProvider({ children }) {
   const [scanHistory, setScanHistory] = useState([])
   const [alerts, setAlerts] = useState([])
   const [flaggedThreats, setFlaggedThreats] = useState([])
+  const [threatAuditLogs, setThreatAuditLogs] = useState([])
   const [activeNotification, setActiveNotification] = useState(null)
   const [liveFeed, setLiveFeed] = useState([])
   const [liveScanCount, setLiveScanCount] = useState(0)
@@ -30,10 +31,11 @@ export function ThreatProvider({ children }) {
   const latestDangerousAlertId = useRef(null)
 
   const refreshData = useCallback(async () => {
-    const [scans, nextAlerts, blockedThreats, feed, logs, nextStats] = await Promise.all([
+    const [scans, nextAlerts, blockedThreats, auditLogs, feed, logs, nextStats] = await Promise.all([
       apiService.getHistory(),
       apiService.getAlerts(),
       apiService.getBlockedThreats(),
+      apiService.getThreatAuditLogs(),
       apiService.getLiveFeed(),
       apiService.getSystemLogs(),
       apiService.getStats(),
@@ -42,6 +44,7 @@ export function ThreatProvider({ children }) {
     setScanHistory(scans)
     setAlerts(nextAlerts)
     setFlaggedThreats(blockedThreats)
+    setThreatAuditLogs(auditLogs)
     setLiveFeed(feed)
     setSystemLogs(logs)
     setLiveScanCount(nextStats.liveScanCount ?? nextStats.total ?? 0)
@@ -94,7 +97,7 @@ export function ThreatProvider({ children }) {
               })
             : await apiService.scanMessage({ target, content })
 
-      await refreshData()
+      refreshData().catch(console.error)
       if (scan.status === 'Dangerous') {
         setActiveNotification({
           id: scan.id,
@@ -111,6 +114,7 @@ export function ThreatProvider({ children }) {
 
   const clearHistory = useCallback(async () => {
     await apiService.clearHistory()
+    await apiService.clearThreatAuditLogs()
     await refreshData()
   }, [refreshData])
 
@@ -122,6 +126,19 @@ export function ThreatProvider({ children }) {
     [refreshData],
   )
 
+  const reviewThreat = useCallback(
+    async (id, status) => {
+      await apiService.reviewBlockedThreat(id, status)
+      await refreshData()
+    },
+    [refreshData],
+  )
+
+  const clearReviewedThreats = useCallback(async () => {
+    await apiService.clearReviewedThreats()
+    await refreshData()
+  }, [refreshData])
+
   const dismissNotification = () => setActiveNotification(null)
   const autoBlock = () => null
 
@@ -132,6 +149,7 @@ export function ThreatProvider({ children }) {
       acknowledgeAlert,
       autoBlock,
       clearHistory,
+      clearReviewedThreats,
       createScan,
       darkMode,
       dismissNotification,
@@ -144,11 +162,14 @@ export function ThreatProvider({ children }) {
       stats,
       systemLogs,
       systemActive,
+      reviewThreat,
+      threatAuditLogs,
     }),
     [
       activeNotification,
       acknowledgeAlert,
       clearHistory,
+      clearReviewedThreats,
       createScan,
       darkMode,
       flaggedThreats,
@@ -159,6 +180,8 @@ export function ThreatProvider({ children }) {
       systemLogs,
       systemActive,
       alerts,
+      reviewThreat,
+      threatAuditLogs,
     ],
   )
 

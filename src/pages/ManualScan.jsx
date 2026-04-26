@@ -17,6 +17,7 @@ export function ManualScan() {
   const [scanType, setScanType] = useState('URL')
   const [message, setMessage] = useState('')
   const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
 
   const submit = async (event) => {
@@ -24,8 +25,12 @@ export function ManualScan() {
     const scanTarget =
       scanType === 'URL' ? target : target || message.slice(0, 56) || 'Manual message scan'
     setIsScanning(true)
+    setError('')
     try {
       setResult(await createScan({ type: scanType, target: scanTarget, content: message }))
+    } catch {
+      setResult(null)
+      setError('Scan failed. Make sure the backend is running, then try again.')
     } finally {
       setIsScanning(false)
     }
@@ -106,7 +111,11 @@ export function ManualScan() {
 
       <Panel>
         <h2 className="text-lg font-semibold">Scan output</h2>
-        {result ? (
+        {error ? (
+          <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-medium text-rose-700 dark:text-rose-300">
+            {error}
+          </div>
+        ) : result ? (
           <div className="mt-4 space-y-4">
             {result.blocked && (
               <div className="rounded-lg border border-rose-500/40 bg-rose-600 p-4 text-white shadow-sm">

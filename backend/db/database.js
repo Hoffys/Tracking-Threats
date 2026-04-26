@@ -27,6 +27,7 @@ export async function initDatabase() {
       warning_signs TEXT,
       recommendations TEXT,
       details TEXT,
+      history_visible INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
 
@@ -55,6 +56,10 @@ export async function initDatabase() {
       action TEXT NOT NULL,
       reason TEXT,
       recommended_action TEXT,
+      review_status TEXT NOT NULL DEFAULT 'active',
+      active_visible INTEGER NOT NULL DEFAULT 1,
+      audit_visible INTEGER NOT NULL DEFAULT 1,
+      reviewed_at TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -67,6 +72,19 @@ export async function initDatabase() {
       created_at TEXT NOT NULL
     );
   `)
+
+  await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
+  await ensureColumn(db, 'blocked_threats', 'active_visible', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'blocked_threats', 'audit_visible', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'blocked_threats', 'reviewed_at', 'TEXT')
+  await ensureColumn(db, 'scans', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
+}
+
+async function ensureColumn(db, table, column, definition) {
+  const columns = await db.all(`PRAGMA table_info(${table})`)
+  if (!columns.some((item) => item.name === column)) {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  }
 }
 
 export const toJson = (value) => JSON.stringify(value ?? [])

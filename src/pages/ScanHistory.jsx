@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { FileClock, Trash2 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { useThreats } from '../hooks/useThreats'
@@ -12,7 +12,7 @@ const formatTime = (date) =>
   }).format(new Date(date))
 
 export function ScanHistory() {
-  const { clearHistory, scanHistory } = useThreats()
+  const { clearHistory, scanHistory, threatAuditLogs } = useThreats()
 
   return (
     <div className="space-y-5">
@@ -27,7 +27,7 @@ export function ScanHistory() {
           onClick={clearHistory}
         >
           <Trash2 size={16} />
-          Clear
+          Clear History View
         </button>
       </div>
 
@@ -84,6 +84,42 @@ export function ScanHistory() {
                     </ul>
                   </div>
                 )}
+              </article>
+            ))}
+          </div>
+        )}
+      </Panel>
+
+      <Panel>
+        <div className="mb-4 flex items-center gap-2">
+          <FileClock size={18} className="text-teal-500" />
+          <h2 className="text-lg font-semibold">Reviewed / Archived Threats</h2>
+        </div>
+        {threatAuditLogs.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Archived and reviewed flagged threats will appear here without deleting audit data.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {threatAuditLogs.map((threat) => (
+              <article
+                key={threat.id}
+                className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{threat.target}</p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      {threat.type} • {threat.reviewStatus} •{' '}
+                      {formatTime(threat.reviewedAt ?? threat.blockedAt)} • Safety score{' '}
+                      {threat.score}/100
+                    </p>
+                  </div>
+                  <RiskBadge risk={threat.reviewStatus === 'marked_safe' ? 'Safe' : 'Dangerous'} />
+                </div>
+                <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                  {threat.reason}
+                </p>
               </article>
             ))}
           </div>

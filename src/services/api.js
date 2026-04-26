@@ -14,12 +14,20 @@ const request = async (path, options) => {
 export const apiService = {
   getAlerts: () => request('/alerts'),
   getBlockedThreats: () => request('/blocked-threats'),
+  getThreatAuditLogs: () => request('/threat-audit-logs'),
   getHistory: () => request('/history'),
   getLiveFeed: () => request('/live-feed'),
   getStats: () => request('/stats'),
   getSystemLogs: () => request('/system-logs'),
   clearHistory: () => request('/history', { method: 'DELETE' }),
+  clearThreatAuditLogs: () => request('/threat-audit-logs/clear', { method: 'PATCH' }),
   dismissAlert: (id) => request(`/alerts/${id}/dismiss`, { method: 'PATCH' }),
+  clearReviewedThreats: () => request('/blocked-threats/clear-reviewed', { method: 'PATCH' }),
+  reviewBlockedThreat: (id, status) =>
+    request(`/blocked-threats/${id}/review`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
   scanUrl: (url) =>
     request('/scan/url', {
       method: 'POST',

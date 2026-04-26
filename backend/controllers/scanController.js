@@ -54,6 +54,11 @@ export const mapBlockedThreat = (row) => ({
   action: row.action,
   reason: row.reason,
   recommendedAction: row.recommended_action,
+  warningSigns: fromJson(row.warning_signs),
+  reviewStatus: row.review_status ?? 'active',
+  activeVisible: row.active_visible !== 0,
+  auditVisible: row.audit_visible !== 0,
+  reviewedAt: row.reviewed_at,
   blockedAt: row.created_at,
 })
 
@@ -84,8 +89,8 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
 
   await db.run(
     `INSERT INTO scans
-      (id, type, target, content, score, status, risk, action, summary, warning_signs, recommendations, details, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, type, target, content, score, status, risk, action, summary, warning_signs, recommendations, details, history_visible, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     scan.id,
     scan.type,
     scan.target,
@@ -98,6 +103,7 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
     toJson(scan.warningSigns),
     toJson(scan.recommendations),
     toJson({ ...(scan.details ?? {}), source }),
+    1,
     scan.createdAt,
   )
 
@@ -105,8 +111,8 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
     const recommendedAction = scan.recommendations?.[0] ?? 'Block the threat immediately.'
     await db.run(
       `INSERT INTO blocked_threats
-        (id, scan_id, type, target, content, score, status, action, reason, recommended_action, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, scan_id, type, target, content, score, status, action, reason, recommended_action, review_status, active_visible, audit_visible, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       uuid(),
       scan.id,
       scan.type,
@@ -117,6 +123,9 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
       'Blocked',
       scan.summary,
       recommendedAction,
+      'active',
+      1,
+      1,
       createdAt,
     )
     await db.run(
