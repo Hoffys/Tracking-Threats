@@ -1,5 +1,6 @@
 import { dbPromise, fromJson, toJson } from '../db/database.js'
 import { analyzeEmail } from '../services/emailAnalyzer.js'
+import { scanFile } from '../services/fileScanner.js'
 import { scanMessage } from '../services/messageScanner.js'
 import { scanUrl } from '../services/urlScanner.js'
 
@@ -23,6 +24,7 @@ export const mapScan = (row) => {
     recommendation: fromJson(row.recommendations).join(' '),
     source: details.source ?? 'api',
     emailBreakdown: details.emailBreakdown,
+    fileDetails: details.file,
     responseStatus: row.action === 'Blocked' ? 'Blocked' : null,
     blocked: row.action === 'Blocked',
     date: row.created_at,
@@ -203,6 +205,16 @@ export async function createEmailScan({ sender, subject = '', body = '' }, sourc
   })
 }
 
+export async function createFileScan({ fileName, mimeType = '', size = 0, content = '' }, source = 'api') {
+  return persistScan({
+    type: 'File',
+    target: fileName || 'Uploaded file',
+    content,
+    analysis: scanFile({ fileName, mimeType, size, content }),
+    source,
+  })
+}
+
 export async function scanUrlHandler(req, res, next) {
   try {
     const target = req.body.url ?? req.body.target
@@ -220,6 +232,19 @@ export async function scanMessageHandler(req, res, next) {
     const target = req.body.target ?? content?.slice(0, 56) ?? 'Manual message scan'
     if (!content) return res.status(400).json({ error: 'message is required' })
     res.status(201).json(await createMessageScan({ target, content }))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function scanFileHandler(req, res, next) {
+  try {
+    const fileName = req.body.fileName ?? req.body.name ?? req.body.target
+    const mimeType = req.body.mimeType ?? req.body.type ?? ''
+    const size = Number(req.body.size ?? 0)
+    const content = req.body.content ?? ''
+    if (!fileName) return res.status(400).json({ error: 'fileName is required' })
+    res.status(201).json(await createFileScan({ fileName, mimeType, size, content }))
   } catch (error) {
     next(error)
   }

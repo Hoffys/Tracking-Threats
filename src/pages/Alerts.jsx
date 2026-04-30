@@ -128,6 +128,8 @@ export function Alerts() {
   const {
     acknowledgeAlert,
     alerts,
+    clearAlerts,
+    clearFlaggedThreats,
     clearReviewedThreats,
     flaggedThreats,
     reviewThreat,
@@ -145,6 +147,18 @@ export function Alerts() {
     setSelectedThreat(null)
   }
 
+  const handleClearAlerts = async () => {
+    if (!window.confirm('Clear all alert records from the alerts table?')) return
+    await clearAlerts()
+  }
+
+  const handleClearFlaggedThreats = async () => {
+    if (!window.confirm('Clear flagged threats from the active view? Records will stay in the database.')) {
+      return
+    }
+    await clearFlaggedThreats()
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -152,17 +166,39 @@ export function Alerts() {
           <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Alerts</p>
           <h1 className="text-2xl font-semibold">Threat review queue</h1>
         </div>
-        <button
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:text-slate-200"
-          type="button"
-          onClick={clearReviewedThreats}
-          disabled={reviewedInActiveView === 0}
-        >
-          <Trash2 size={16} />
-          {reviewedInActiveView > 0
-            ? `Clear Reviewed Logs (${reviewedInActiveView})`
-            : 'No Reviewed Logs'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="inline-flex items-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 text-sm font-medium text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-300"
+            type="button"
+            onClick={handleClearAlerts}
+            disabled={alerts.length === 0}
+          >
+            <Trash2 size={16} />
+            {alerts.length > 0 ? `Clear Alerts (${alerts.length})` : 'No Alerts'}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 text-sm font-medium text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-300"
+            type="button"
+            onClick={handleClearFlaggedThreats}
+            disabled={flaggedThreats.length === 0}
+          >
+            <Trash2 size={16} />
+            {flaggedThreats.length > 0
+              ? `Clear Flagged (${flaggedThreats.length})`
+              : 'No Flagged Threats'}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:text-slate-200"
+            type="button"
+            onClick={clearReviewedThreats}
+            disabled={reviewedInActiveView === 0}
+          >
+            <Trash2 size={16} />
+            {reviewedInActiveView > 0
+              ? `Clear Reviewed Logs (${reviewedInActiveView})`
+              : 'No Reviewed Logs'}
+          </button>
+        </div>
       </div>
 
       {flaggedThreats.length > 0 && (

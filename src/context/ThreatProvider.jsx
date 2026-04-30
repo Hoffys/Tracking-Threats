@@ -110,7 +110,7 @@ export function ThreatProvider({ children }) {
   }, [refreshData])
 
   const createScan = useCallback(
-    async ({ type, target, content = '' }) => {
+    async ({ type, target, content = '', fileName, mimeType, size }) => {
       const scan =
         type === 'URL' || type === 'Domain'
           ? await apiService.scanUrl(target)
@@ -120,7 +120,14 @@ export function ThreatProvider({ children }) {
                 subject: content.split('\n')[0] ?? '',
                 body: content.split('\n').slice(1).join('\n') || content,
               })
-            : await apiService.scanMessage({ target, content })
+            : type === 'File'
+              ? await apiService.scanFile({
+                  fileName: fileName ?? target,
+                  mimeType,
+                  size,
+                  content,
+                })
+              : await apiService.scanMessage({ target, content })
 
       refreshData().catch(console.error)
       if (scan.status === 'Dangerous') {
@@ -151,6 +158,13 @@ export function ThreatProvider({ children }) {
     [refreshData],
   )
 
+  const clearAlerts = useCallback(async () => {
+    await apiService.clearAlerts()
+    setActiveNotification(null)
+    latestDangerousAlertId.current = null
+    await refreshData()
+  }, [refreshData])
+
   const reviewThreat = useCallback(
     async (id, status) => {
       await apiService.reviewBlockedThreat(id, status)
@@ -164,6 +178,11 @@ export function ThreatProvider({ children }) {
     await refreshData()
   }, [refreshData])
 
+  const clearFlaggedThreats = useCallback(async () => {
+    await apiService.clearFlaggedThreats()
+    await refreshData()
+  }, [refreshData])
+
   const dismissNotification = () => setActiveNotification(null)
   const autoBlock = () => null
 
@@ -173,6 +192,8 @@ export function ThreatProvider({ children }) {
       alerts,
       acknowledgeAlert,
       autoBlock,
+      clearAlerts,
+      clearFlaggedThreats,
       clearHistory,
       clearReviewedThreats,
       createScan,
@@ -195,6 +216,8 @@ export function ThreatProvider({ children }) {
     [
       activeNotification,
       acknowledgeAlert,
+      clearAlerts,
+      clearFlaggedThreats,
       clearHistory,
       clearReviewedThreats,
       createScan,

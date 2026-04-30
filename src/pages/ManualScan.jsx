@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import {
   AlertTriangle,
   CheckCircle2,
+  FileText,
   Link2,
   MailWarning,
   SearchCheck,
@@ -17,18 +18,46 @@ export function ManualScan() {
   const [target, setTarget] = useState('')
   const [scanType, setScanType] = useState('URL')
   const [message, setMessage] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
 
+  const readFilePreview = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result ?? ''))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(file.slice(0, 200 * 1024))
+    })
+
   const submit = async (event) => {
     event.preventDefault()
     const scanTarget =
-      scanType === 'URL' ? target : target || message.slice(0, 56) || 'Manual message scan'
+      scanType === 'URL'
+        ? target
+        : scanType === 'File'
+          ? selectedFile?.name
+          : target || message.slice(0, 56) || 'Manual message scan'
     setIsScanning(true)
     setError('')
     try {
-      setResult(await createScan({ type: scanType, target: scanTarget, content: message }))
+      if (scanType === 'File') {
+        if (!selectedFile) throw new Error('No file selected')
+        const content = await readFilePreview(selectedFile)
+        setResult(
+          await createScan({
+            type: 'File',
+            target: selectedFile.name,
+            fileName: selectedFile.name,
+            mimeType: selectedFile.type,
+            size: selectedFile.size,
+            content,
+          }),
+        )
+      } else {
+        setResult(await createScan({ type: scanType, target: scanTarget, content: message }))
+      }
     } catch {
       setResult(null)
       setError('Scan failed. Make sure the backend is running, then try again.')
@@ -41,12 +70,13 @@ export function ManualScan() {
     <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
       <Panel>
         <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Manual Scan</p>
-        <h1 className="mt-1 text-2xl font-semibold">Scan a URL or message</h1>
+        <h1 className="mt-1 text-2xl font-semibold">Scan a URL, message, or file</h1>
         <form className="mt-5 space-y-4" onSubmit={submit}>
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
             {[
               { type: 'URL', icon: Link2 },
               { type: 'Message', icon: MailWarning },
+              { type: 'File', icon: FileText },
             ].map(({ type, icon: Icon }) => (
               <button
                 key={type}
@@ -66,27 +96,48 @@ export function ManualScan() {
               </button>
             ))}
           </div>
-          <label className="block">
-            <span className="text-sm font-medium">
-              {scanType === 'URL' ? 'URL to scan' : 'Sender or subject'}
-            </span>
-            {scanType === 'URL' ? (
+          {scanType !== 'File' && (
+            <label className="block">
+              <span className="text-sm font-medium">
+                {scanType === 'URL' ? 'URL to scan' : 'Sender or subject'}
+              </span>
+              {scanType === 'URL' ? (
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                  value={target}
+                  onChange={(event) => setTarget(event.target.value)}
+                  placeholder="https://example.com/login"
+                  required
+                />
+              ) : (
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                  value={target}
+                  onChange={(event) => setTarget(event.target.value)}
+                  placeholder="billing@example.com or Invoice notice"
+                />
+              )}
+            </label>
+          )}
+          {scanType === 'File' && (
+            <label className="block">
+              <span className="text-sm font-medium">File to scan</span>
               <input
-                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-                placeholder="https://example.com/login"
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none file:mr-3 file:rounded-md file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                type="file"
+                onChange={(event) => {
+                  setSelectedFile(event.target.files?.[0] ?? null)
+                  setResult(null)
+                }}
                 required
               />
-            ) : (
-              <input
-                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-                placeholder="billing@example.com or Invoice notice"
-              />
-            )}
-          </label>
+              {selectedFile && (
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  {selectedFile.name} • {(selectedFile.size / 1024).toFixed(1)} KB
+                </p>
+              )}
+            </label>
+          )}
           {scanType === 'Message' && (
             <label className="block">
               <span className="text-sm font-medium">Email or message content</span>
@@ -209,7 +260,7 @@ export function ManualScan() {
           </div>
         ) : (
           <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-            Submit a URL or message to generate a backend-powered 0-100 safety score.
+            Submit a URL, message, or file to generate a backend-powered 0-100 safety score.
           </p>
         )}
       </Panel>

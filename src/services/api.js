@@ -19,9 +19,11 @@ export const apiService = {
   getLiveFeed: () => request('/live-feed'),
   getStats: () => request('/stats'),
   getSystemLogs: () => request('/system-logs'),
+  clearAlerts: () => request('/alerts', { method: 'DELETE' }),
   clearHistory: () => request('/history', { method: 'DELETE' }),
   clearThreatAuditLogs: () => request('/threat-audit-logs/clear', { method: 'PATCH' }),
   dismissAlert: (id) => request(`/alerts/${id}/dismiss`, { method: 'PATCH' }),
+  clearFlaggedThreats: () => request('/blocked-threats/clear-active', { method: 'PATCH' }),
   clearReviewedThreats: () => request('/blocked-threats/clear-reviewed', { method: 'PATCH' }),
   reviewBlockedThreat: (id, status) =>
     request(`/blocked-threats/${id}/review`, {
@@ -42,5 +44,10 @@ export const apiService = {
     request('/scan/message', {
       method: 'POST',
       body: JSON.stringify({ target, message: content }),
+    }),
+  scanFile: ({ fileName, mimeType, size, content }) =>
+    request('/scan/file', {
+      method: 'POST',
+      body: JSON.stringify({ fileName, mimeType, size, content }),
     }),
 }

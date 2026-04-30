@@ -47,6 +47,16 @@ export async function dismissAlert(req, res, next) {
   }
 }
 
+export async function clearAlerts(_req, res, next) {
+  try {
+    const db = await dbPromise
+    await db.run('DELETE FROM alerts')
+    res.json({ ok: true })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function getBlockedThreats(_req, res, next) {
   try {
     const db = await dbPromise
@@ -123,6 +133,16 @@ export async function clearReviewedThreats(_req, res, next) {
     await db.run(
       "UPDATE blocked_threats SET active_visible = 0 WHERE review_status != 'active'",
     )
+    res.json({ ok: true })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function clearFlaggedThreats(_req, res, next) {
+  try {
+    const db = await dbPromise
+    await db.run('UPDATE blocked_threats SET active_visible = 0')
     res.json({ ok: true })
   } catch (error) {
     next(error)

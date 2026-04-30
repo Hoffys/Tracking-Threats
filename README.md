@@ -1,6 +1,6 @@
 # Tracking Threats Phishing Detection
 
-A local-only React + Vite phishing detection system prototype.
+A local-only React + Vite phishing detection system.
 
 ## Stack
 
