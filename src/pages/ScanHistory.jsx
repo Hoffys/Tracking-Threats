@@ -19,7 +19,7 @@ export function ScanHistory() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Scan History</p>
-          <h1 className="text-2xl font-semibold">Database scan records</h1>
+          <h1 className="text-2xl font-semibold">Scan Records</h1>
         </div>
         <button
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200"
@@ -34,7 +34,7 @@ export function ScanHistory() {
       <Panel>
         {scanHistory.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            No scans yet. New email and manual scans will be saved in SQLite.
+            No scan yet. New email and manual scans will be saved.
           </p>
         ) : (
           <div className="space-y-3">

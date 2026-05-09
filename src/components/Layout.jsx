@@ -77,28 +77,32 @@ export function Layout({ activePage, children, onNavigate }) {
               </span>
               {systemActive ? 'System Active' : 'System Idle'}
             </div>
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300 lg:flex">
-              <Activity size={16} className="text-teal-500" />
+            <div className="status-glow hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300 lg:flex">
+              <Activity size={16} className="activity-glow text-teal-500" />
               {liveScanCount} live scans
             </div>
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300 sm:flex">
-              <Activity size={16} className="text-teal-500" />
+            <div className="status-glow hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300 sm:flex">
+              <Activity size={16} className="activity-glow text-teal-500" />
               {stats.unreadAlerts} active alerts
             </div>
             <button
               type="button"
               aria-label="Toggle dark mode"
               title="Toggle dark mode"
-              className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+              className="theme-toggle grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700 transition dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
               onClick={() => setDarkMode((current) => !current)}
             >
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+              {darkMode ? (
+                <Sun key="sun" size={18} className="theme-toggle-icon text-amber-300" />
+              ) : (
+                <Moon key="moon" size={18} className="theme-toggle-icon text-slate-600" />
+              )}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 md:pb-8">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-32 pt-5">
         {children}
       </main>
 

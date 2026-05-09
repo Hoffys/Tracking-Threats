@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { Activity, Mail, Radio, Router, ShieldCheck } from 'lucide-react'
+import { Activity, ChevronDown, Mail, Radio, Router, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { useThreats } from '../hooks/useThreats'
@@ -19,6 +20,7 @@ const activityIcons = {
 
 export function LiveMonitor() {
   const { liveFeed, liveScanCount, systemActive, systemLogs } = useThreats()
+  const [showSystemLogs, setShowSystemLogs] = useState(false)
 
   return (
     <div className="space-y-5">
@@ -158,30 +160,49 @@ export function LiveMonitor() {
 
       <Panel>
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">System logs</h2>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Latest backend events
-          </span>
-        </div>
-        {systemLogs.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Waiting for backend scan logs...
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {systemLogs.slice(0, 6).map((log) => (
-              <div
-                key={log.id}
-                className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium">{log.event}</p>
-                  <span className="text-xs text-slate-400">{formatTime(log.timestamp)}</span>
-                </div>
-                <p className="mt-1 text-slate-500 dark:text-slate-400">{log.message}</p>
-              </div>
-            ))}
+          <div>
+            <h2 className="text-lg font-semibold">System logs</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Latest backend events
+            </p>
           </div>
+          <button
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-700 dark:border-slate-800 dark:text-slate-200 dark:hover:border-teal-500 dark:hover:text-teal-300"
+            type="button"
+            onClick={() => setShowSystemLogs((current) => !current)}
+          >
+            {showSystemLogs ? 'Hide logs' : `Show logs (${systemLogs.length})`}
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${showSystemLogs ? 'rotate-180' : ''}`}
+            />
+          </button>
+        </div>
+        {showSystemLogs && (
+          systemLogs.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Waiting for backend scan logs...
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {systemLogs.slice(0, 6).map((log) => (
+                <div
+                  key={log.id}
+                  className="min-w-0 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-800"
+                >
+                  <div className="flex min-w-0 items-center justify-between gap-3">
+                    <p className="min-w-0 truncate font-medium">{log.event}</p>
+                    <span className="shrink-0 text-xs text-slate-400">
+                      {formatTime(log.timestamp)}
+                    </span>
+                  </div>
+                  <p className="mt-1 max-w-full break-words text-slate-500 dark:text-slate-400">
+                    {log.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </Panel>
     </div>

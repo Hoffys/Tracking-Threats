@@ -115,7 +115,7 @@ export function Settings() {
                     addEmail()
                   }
                 }}
-                placeholder="security@example.com"
+                placeholder="TrackingThreats@example.com"
               />
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white"
