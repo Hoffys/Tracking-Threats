@@ -1,12 +1,41 @@
 const params = new URLSearchParams(window.location.search)
-const blockedUrl = params.get('url') || ''
 const blockedHost = params.get('host') || ''
 
-document.getElementById('blocked-url').textContent =
-  blockedUrl || (blockedHost ? `Blocked host: ${blockedHost}` : 'Unknown URL')
-document.getElementById('score').textContent = `Status: ${
-  params.get('status') || 'Blocked'
-} - Safety score ${params.get('score') || '0'}/100`
+let blockedUrl = params.get('url') || ''
+
+function renderBlockedPage({ url = '', host = '', status = 'Blocked', score = '0' }) {
+  blockedUrl = url
+
+  document.getElementById('blocked-url').textContent =
+    blockedUrl || (host ? `Blocked host: ${host}` : 'Unknown URL')
+  document.getElementById('score').textContent = `Status: ${status} - Safety score ${score}/100`
+}
+
+async function loadBlockedContext() {
+  if (!blockedHost) {
+    renderBlockedPage({
+      url: blockedUrl,
+      status: params.get('status') || 'Blocked',
+      score: params.get('score') || '0',
+    })
+    return
+  }
+
+  const key = `blockedContext:${blockedHost}`
+  const stored = await chrome.storage.local.get(key)
+  const context = stored[key]
+
+  if (context?.expiresAt && Date.now() <= context.expiresAt) {
+    renderBlockedPage(context)
+    return
+  }
+
+  renderBlockedPage({
+    host: blockedHost,
+    status: params.get('status') || 'Blocked',
+    score: params.get('score') || '0',
+  })
+}
 
 document.getElementById('continue-button').addEventListener('click', () => {
   if (!blockedUrl && !blockedHost) return
@@ -22,3 +51,5 @@ document.getElementById('continue-button').addEventListener('click', () => {
     },
   )
 })
+
+loadBlockedContext()

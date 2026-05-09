@@ -18,7 +18,7 @@ export function ManualScan() {
   const [target, setTarget] = useState('')
   const [scanType, setScanType] = useState('URL')
   const [message, setMessage] = useState('')
-  const [selectedFile, setSelectedFile] = useState(null)
+  const [selectedFiles, setSelectedFiles] = useState([])
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
@@ -43,7 +43,7 @@ export function ManualScan() {
       scanType === 'URL'
         ? target
         : scanType === 'File'
-          ? selectedFile?.name
+          ? selectedFiles.map((file) => file.name).join(', ')
           : target || message.slice(0, 56) || 'Manual message scan'
 
     setIsScanning(true)
@@ -51,18 +51,21 @@ export function ManualScan() {
 
     try {
       if (scanType === 'File') {
-        if (!selectedFile) throw new Error('No file selected')
-        const content = await readFilePreview(selectedFile)
-        setResult(
-          await createScan({
-            type: 'File',
-            target: selectedFile.name,
-            fileName: selectedFile.name,
-            mimeType: selectedFile.type,
-            size: selectedFile.size,
-            content,
+        if (selectedFiles.length === 0) throw new Error('No file selected')
+        const scans = await Promise.all(
+          selectedFiles.map(async (selectedFile) => {
+            const content = await readFilePreview(selectedFile)
+            return createScan({
+              type: 'File',
+              target: selectedFile.name,
+              fileName: selectedFile.name,
+              mimeType: selectedFile.type,
+              size: selectedFile.size,
+              content,
+            })
           }),
         )
+        setResult(scans)
       } else {
         setResult(await createScan({ type: scanType, target: scanTarget, content: message }))
       }
@@ -73,6 +76,116 @@ export function ManualScan() {
       setIsScanning(false)
     }
   }
+
+  const scanResults = (Array.isArray(result) ? result : [result]).filter(Boolean)
+  const scanButtonText =
+    isScanning && scanType === 'File'
+      ? `Scanning ${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}...`
+      : isScanning
+        ? 'Scanning...'
+        : scanType === 'File' && selectedFiles.length > 1
+          ? `Run ${selectedFiles.length} File Scans`
+          : 'Run Scan'
+
+  const renderScanResult = (scanResult) => (
+    <div key={scanResult.id} className="space-y-4">
+      {scanResult.blocked && (
+        <div className="rounded-lg border border-rose-500/40 bg-rose-600 p-4 text-white shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/15">
+              <ShieldX size={21} />
+            </span>
+            <div>
+              <p className="font-semibold">Threat Blocked Automatically</p>
+              <p className="mt-1 text-sm text-rose-50">
+                This Dangerous scan was marked as Blocked and saved to flagged threats.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate font-medium">{scanResult.target}</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {scanResult.type} - Safety score {scanResult.score}/100
+            </p>
+            {scanResult.responseStatus && (
+              <p className="mt-1 text-sm font-semibold text-rose-600 dark:text-rose-300">
+                Response: {scanResult.responseStatus}
+              </p>
+            )}
+          </div>
+          <RiskBadge risk={scanResult.status ?? scanResult.risk} />
+        </div>
+
+        <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{
+              width: `${scanResult.score}%`,
+              boxShadow: [
+                '0 0 0 rgba(20,184,166,0)',
+                '0 0 16px rgba(20,184,166,0.45)',
+                '0 0 0 rgba(20,184,166,0)',
+              ],
+            }}
+            transition={{
+              width: { duration: 0.7, ease: 'easeOut' },
+              boxShadow: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className={`h-3 rounded-full ${
+              scanResult.status === 'Dangerous'
+                ? 'bg-rose-500'
+                : scanResult.status === 'Suspicious'
+                  ? 'bg-amber-500'
+                  : 'bg-emerald-500'
+            }`}
+          />
+        </div>
+
+        <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
+          {scanResult.summary}
+        </p>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+              <AlertTriangle size={17} className="text-amber-500" />
+              Warning signs
+            </div>
+            {scanResult.warningSigns?.length > 0 ? (
+              <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                {scanResult.warningSigns.map((sign) => (
+                  <li key={sign}>- {sign}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No warning signs detected.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+              <CheckCircle2 size={17} className="text-teal-500" />
+              Recommendations
+            </div>
+            <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+              {(scanResult.recommendations ?? [scanResult.recommendation]).map(
+                (recommendation) => (
+                  <li key={recommendation}>- {recommendation}</li>
+                ),
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
@@ -130,16 +243,26 @@ export function ManualScan() {
               <input
                 className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none file:mr-3 file:rounded-md file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
                 type="file"
+                multiple
                 onChange={(event) => {
-                  setSelectedFile(event.target.files?.[0] ?? null)
+                  setSelectedFiles(Array.from(event.target.files ?? []))
                   setResult(null)
                 }}
                 required
               />
-              {selectedFile && (
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  {selectedFile.name} - {(selectedFile.size / 1024).toFixed(1)} KB
-                </p>
+              {selectedFiles.length > 0 && (
+                <div className="mt-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {selectedFiles.length} file{selectedFiles.length === 1 ? '' : 's'} selected
+                  </p>
+                  <ul className="mt-2 max-h-32 space-y-1 overflow-auto text-xs text-slate-500 dark:text-slate-400">
+                    {selectedFiles.map((file) => (
+                      <li key={`${file.name}-${file.lastModified}`}>
+                        {file.name} - {(file.size / 1024).toFixed(1)} KB
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </label>
           )}
@@ -166,7 +289,7 @@ export function ManualScan() {
             disabled={isScanning}
           >
             <SearchCheck size={18} />
-            {isScanning ? 'Scanning...' : 'Run Scan'}
+            {scanButtonText}
           </button>
         </form>
       </Panel>
@@ -177,101 +300,14 @@ export function ManualScan() {
           <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-medium text-rose-700 dark:text-rose-300">
             {error}
           </div>
-        ) : result ? (
+        ) : scanResults.length > 0 ? (
           <div className="mt-4 space-y-4">
-            {result.blocked && (
-              <div className="rounded-lg border border-rose-500/40 bg-rose-600 p-4 text-white shadow-sm">
-                <div className="flex items-start gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white/15">
-                    <ShieldX size={21} />
-                  </span>
-                  <div>
-                    <p className="font-semibold">Threat Blocked Automatically</p>
-                    <p className="mt-1 text-sm text-rose-50">
-                      This Dangerous scan was marked as Blocked and saved to flagged threats.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{result.target}</p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {result.type} - Safety score {result.score}/100
-                  </p>
-                  {result.responseStatus && (
-                    <p className="mt-1 text-sm font-semibold text-rose-600 dark:text-rose-300">
-                      Response: {result.responseStatus}
-                    </p>
-                  )}
-                </div>
-                <RiskBadge risk={result.status ?? result.risk} />
-              </div>
-
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${result.score}%`,
-                    boxShadow: [
-                      '0 0 0 rgba(20,184,166,0)',
-                      '0 0 16px rgba(20,184,166,0.45)',
-                      '0 0 0 rgba(20,184,166,0)',
-                    ],
-                  }}
-                  transition={{
-                    width: { duration: 0.7, ease: 'easeOut' },
-                    boxShadow: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-                  }}
-                  className={`h-3 rounded-full ${
-                    result.status === 'Dangerous'
-                      ? 'bg-rose-500'
-                      : result.status === 'Suspicious'
-                        ? 'bg-amber-500'
-                        : 'bg-emerald-500'
-                  }`}
-                />
-              </div>
-
-              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
-                {result.summary}
+            {scanResults.length > 1 && (
+              <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm font-medium text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                Completed {scanResults.length} file scans.
               </p>
-
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <div>
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                    <AlertTriangle size={17} className="text-amber-500" />
-                    Warning signs
-                  </div>
-                  {result.warningSigns?.length > 0 ? (
-                    <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                      {result.warningSigns.map((sign) => (
-                        <li key={sign}>- {sign}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      No warning signs detected.
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                    <CheckCircle2 size={17} className="text-teal-500" />
-                    Recommendations
-                  </div>
-                  <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    {(result.recommendations ?? [result.recommendation]).map((recommendation) => (
-                      <li key={recommendation}>- {recommendation}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            )}
+            {scanResults.map(renderScanResult)}
           </div>
         ) : (
           <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">

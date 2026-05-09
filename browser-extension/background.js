@@ -5,6 +5,7 @@ const MAX_TRACKED = 200
 const BLOCK_RULE_ID_BASE = 10000
 const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
+const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
 
 const recentScans = new Map()
 let blockedHosts = new Map()
@@ -38,20 +39,42 @@ function getNextRuleId() {
   return null
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function getBlockContextKey(host) {
+  return `blockedContext:${host}`
+}
+
+async function saveBlockedContext(host, rawUrl, scan) {
+  await chrome.storage.local.set({
+    [getBlockContextKey(host)]: {
+      host,
+      url: rawUrl,
+      status: scan?.status ?? 'Blocked',
+      score: scan?.score ?? 0,
+      expiresAt: Date.now() + BLOCK_CONTEXT_TTL_MS,
+    },
+  })
+}
+
 function getBlockRule(host, ruleId) {
+  const escapedHost = escapeRegex(host)
+
   return {
     id: ruleId,
     priority: 1,
     action: {
       type: 'redirect',
       redirect: {
-        regexSubstitution: `${chrome.runtime.getURL(
-          'blocked.html',
-        )}?host=${encodeURIComponent(host)}&url=\\0&status=Blocked&score=0`,
+        regexSubstitution: `${chrome.runtime.getURL('blocked.html')}?host=${encodeURIComponent(
+          host,
+        )}`,
       },
     },
     condition: {
-      regexFilter: `^https?://([^/]+\\.)?${host.replace(/\./g, '\\.')}/.*`,
+      regexFilter: `^https?://([^/?#]+\\.)?${escapedHost}([/?#].*)?$`,
       resourceTypes: ['main_frame'],
     },
   }
@@ -112,19 +135,27 @@ function hasBypass(host) {
   return true
 }
 
-async function rememberBlockedSite(rawUrl) {
+async function rememberBlockedSite(rawUrl, scan = null) {
   const host = getHost(rawUrl)
-  if (!host || blockedHosts.has(host)) return
+  if (!host) return
 
-  const ruleId = getNextRuleId()
-  if (!ruleId) return
+  await saveBlockedContext(host, rawUrl, scan)
 
-  blockedHosts.set(host, ruleId)
-  await saveBlockedHosts()
+  let ruleId = blockedHosts.get(host)
+  if (!ruleId) {
+    ruleId = getNextRuleId()
+    if (!ruleId) return
+    blockedHosts.set(host, ruleId)
+    await saveBlockedHosts()
+  }
+
+  const existingRules = await chrome.declarativeNetRequest.getDynamicRules()
+  const hasRule = existingRules.some((rule) => rule.id === ruleId)
+  if (hasRule) return
 
   await chrome.declarativeNetRequest.updateDynamicRules({
     addRules: [getBlockRule(host, ruleId)],
-    removeRuleIds: [ruleId],
+    removeRuleIds: [],
   })
 }
 
@@ -183,7 +214,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   const recentScan = getRecentScan(rawUrl)
   if (recentScan) {
     if (isBlockedScan(recentScan) && !bypassActive) {
-      await rememberBlockedSite(rawUrl)
+      await rememberBlockedSite(rawUrl, recentScan)
       openBlockedPage(tabId, rawUrl, recentScan)
     }
     return
@@ -212,7 +243,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
     })
 
     if (isBlockedScan(scan) && !bypassActive) {
-      await rememberBlockedSite(rawUrl)
+      await rememberBlockedSite(rawUrl, scan)
       openBlockedPage(tabId, rawUrl, scan)
     }
   } catch (error) {
