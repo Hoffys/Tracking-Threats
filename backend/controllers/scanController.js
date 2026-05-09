@@ -2,6 +2,7 @@ import { dbPromise, fromJson, toJson } from '../db/database.js'
 import { analyzeEmail } from '../services/emailAnalyzer.js'
 import { scanFile } from '../services/fileScanner.js'
 import { scanMessage } from '../services/messageScanner.js'
+import { enrichUrlAnalysis } from '../services/threatIntel.js'
 import { scanUrl } from '../services/urlScanner.js'
 
 const now = () => new Date().toISOString()
@@ -220,7 +221,9 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
 }
 
 export async function createUrlScan(target, source = 'api') {
-  return persistScan({ type: 'URL', target, content: '', analysis: scanUrl(target), source })
+  const baseAnalysis = scanUrl(target)
+  const analysis = await enrichUrlAnalysis(target, baseAnalysis)
+  return persistScan({ type: 'URL', target, content: '', analysis, source })
 }
 
 export async function createMessageScan({ target, content }, source = 'api') {

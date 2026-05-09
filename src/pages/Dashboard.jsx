@@ -6,7 +6,15 @@ import { StatCard } from '../components/StatCard'
 
 export function Dashboard({ onNavigate }) {
   const { alerts, scanHistory, stats } = useThreats()
-  const recent = scanHistory.slice(0, 4)
+  const riskOrder = { Dangerous: 0, Suspicious: 1, Safe: 2 }
+  const recent = [...scanHistory]
+    .sort((left, right) => {
+      const leftRank = riskOrder[left.status] ?? 3
+      const rightRank = riskOrder[right.status] ?? 3
+      if (leftRank !== rightRank) return leftRank - rightRank
+      return new Date(right.date).getTime() - new Date(left.date).getTime()
+    })
+    .slice(0, 4)
 
   return (
     <div className="space-y-5">
@@ -65,7 +73,7 @@ export function Dashboard({ onNavigate }) {
 
       <Panel>
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Recent scans</h2>
+          <h2 className="text-lg font-semibold">Recent risk activity</h2>
           <button
             className="text-sm font-medium text-teal-700 dark:text-teal-300"
             type="button"
@@ -84,6 +92,9 @@ export function Dashboard({ onNavigate }) {
                 <p className="truncate text-sm font-medium">{scan.target}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {scan.type} scan • Safety score {scan.score}/100
+                </p>
+                <p className="mt-1 text-xs font-medium text-slate-400">
+                  Source: {scan.source}
                 </p>
               </div>
               <RiskBadge risk={scan.status ?? scan.risk} />

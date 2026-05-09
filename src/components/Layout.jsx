@@ -9,7 +9,6 @@ import {
   Radar,
   ScanLine,
   Settings,
-  ShieldCheck,
   ShieldX,
   Sun,
 } from 'lucide-react'
@@ -46,8 +45,13 @@ export function Layout({ activePage, children, onNavigate }) {
             type="button"
             onClick={() => onNavigate('dashboard')}
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-600 text-white">
-              <ShieldCheck size={22} />
+            <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-950 ring-1 ring-teal-400/30">
+              <img
+                src="/tracking-threats-logo.png"
+                alt=""
+                aria-hidden="true"
+                className="h-full w-full object-cover"
+              />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-base font-semibold">Tracking Threats</span>
