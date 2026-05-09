@@ -63,6 +63,52 @@ export async function initDatabase() {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS email_scans (
+      id TEXT PRIMARY KEY,
+      scan_id TEXT NOT NULL,
+      sender TEXT NOT NULL,
+      subject TEXT,
+      body TEXT,
+      score INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      risk TEXT NOT NULL,
+      summary TEXT,
+      warning_signs TEXT,
+      recommendations TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS message_scans (
+      id TEXT PRIMARY KEY,
+      scan_id TEXT NOT NULL,
+      target TEXT NOT NULL,
+      message TEXT,
+      score INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      risk TEXT NOT NULL,
+      summary TEXT,
+      warning_signs TEXT,
+      recommendations TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS live_monitor_activity (
+      id TEXT PRIMARY KEY,
+      scan_id TEXT NOT NULL UNIQUE,
+      activity_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      target TEXT NOT NULL,
+      domain TEXT,
+      title TEXT NOT NULL,
+      detail TEXT,
+      score INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      risk_status TEXT NOT NULL,
+      warning_signs TEXT,
+      history_visible INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS system_logs (
       id TEXT PRIMARY KEY,
       level TEXT NOT NULL,
@@ -78,6 +124,7 @@ export async function initDatabase() {
   await ensureColumn(db, 'blocked_threats', 'audit_visible', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'blocked_threats', 'reviewed_at', 'TEXT')
   await ensureColumn(db, 'scans', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'live_monitor_activity', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
 }
 
 async function ensureColumn(db, table, column, definition) {

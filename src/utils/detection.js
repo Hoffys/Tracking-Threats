@@ -1,6 +1,6 @@
 const statusFromScore = (score) => {
   if (score >= 80) return { status: 'Safe', risk: 'low' }
-  if (score >= 50) return { status: 'Suspicious', risk: 'medium' }
+  if (score > 50) return { status: 'Suspicious', risk: 'medium' }
   return { status: 'Dangerous', risk: 'critical' }
 }
 
@@ -38,9 +38,112 @@ const parseUrl = (input) => {
   }
 }
 
-const suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'xyz', 'top']
+const suspiciousTlds = [
+  'bar',
+  'bet',
+  'biz',
+  'cam',
+  'casino',
+  'cc',
+  'cf',
+  'cfd',
+  'click',
+  'club',
+  'cn',
+  'cyou',
+  'do',
+  'fit',
+  'ga',
+  'gq',
+  'icu',
+  'info',
+  'lat',
+  'link',
+  'live',
+  'loan',
+  'ml',
+  'monster',
+  'mov',
+  'online',
+  'quest',
+  'rest',
+  'ru',
+  'sbs',
+  'shop',
+  'site',
+  'space',
+  'store',
+  'tk',
+  'top',
+  'website',
+  'win',
+  'work',
+  'xyz',
+  'zip',
+]
 const shorteners = ['bit.ly', 'tinyurl.com', 't.co', 'goo.gl', 'ow.ly', 'is.gd']
-const protectedBrands = ['google', 'facebook', 'paypal', 'amazon', 'microsoft', 'apple']
+const piracyDomains = [
+  'dodi',
+  'dodi-repacks',
+  'dodi-repacks.site',
+  'elamigos',
+  'elamigos-games',
+  'fitgirl',
+  'fitgirl-repacks.site',
+  'fitgirlrepacks',
+  'game3rb',
+  'gamedrive',
+  'gog-games',
+  'igggames',
+  'igg-games',
+  'kisskh',
+  'kisskh.do',
+  'oceanofgames',
+  'online-fix',
+  'ovagames',
+  'repack-games',
+  'steamrip',
+  'steamunlocked',
+  'thepiratebay',
+  'thepiratebay.org',
+]
+const gamblingDomains = [
+  '1xbet',
+  '22bet',
+  '888casino',
+  'bet365',
+  'bet88',
+  'binggo',
+  'binggoplus',
+  'bingo',
+  'bingoplus',
+  'bovada',
+  'casino',
+  'dafabet',
+  'ggbet',
+  'jackpot',
+  'luckyplus',
+  'megapari',
+  'parimatch',
+  'stake',
+]
+const protectedBrands = [
+  'amazon',
+  'apple',
+  'bdo',
+  'bingoplus',
+  'bpi',
+  'facebook',
+  'gcash',
+  'google',
+  'maya',
+  'metrobank',
+  'microsoft',
+  'netflix',
+  'paypal',
+  'shopee',
+  'unionbank',
+]
 const substitutions = { 0: 'o', 1: 'l', 3: 'e', 4: 'a', 5: 's', 7: 't', '@': 'a', '$': 's' }
 
 const levenshtein = (left, right) => {
@@ -91,23 +194,70 @@ const hasTyposquatting = (host) => {
   })
 }
 
-export const extractLinks = (text) => text.match(/https?:\/\/[^\s<>"']+|www\.[^\s<>"']+/gi) ?? []
+export const extractLinks = (text) =>
+  text.match(
+    /https?:\/\/[^\s<>"']+|www\.[^\s<>"']+|(?:[a-z0-9-]+\.)+[a-z]{2,24}(?:\/[^\s<>"']*)?/gi,
+  ) ?? []
 
 export function scanUrl(input) {
   const value = input.trim()
   const url = parseUrl(value)
   const host = url?.hostname.toLowerCase() ?? value.toLowerCase()
   const path = url?.pathname.toLowerCase() ?? ''
+  const search = url?.search.toLowerCase() ?? ''
+  const fullUrlText = `${host}${path}${search}`
   const tld = host.split('.').at(-1)
+  const registrableName = getRegistrableName(host)
   const warnings = []
 
   addWarning(warnings, !url, 'URL format is malformed or incomplete', 18)
   addWarning(warnings, url?.protocol !== 'https:', 'URL does not use HTTPS', 16)
+  addWarning(warnings, host.startsWith('xn--'), 'Uses punycode domain that may hide lookalike characters', 24)
+  addWarning(warnings, (host.match(/-/g) ?? []).length >= 2, 'Domain uses multiple hyphens often seen in fake sites', 12)
+  addWarning(warnings, /\d/.test(registrableName) && /[a-z]/i.test(registrableName), 'Domain mixes letters and numbers', 10)
+  addWarning(
+    warnings,
+    /secure|security|verify|verification|account|accounts|login|signin|support|billing|wallet|claim|reward|promo|bonus|update/.test(
+      fullUrlText,
+    ),
+    'URL contains account, verification, or reward wording often used in phishing',
+    18,
+  )
+  addWarning(
+    warnings,
+    piracyDomains.includes(host.replace(/^www\./, '')) || piracyDomains.includes(registrableName),
+    'Known piracy or torrent site domain',
+    55,
+  )
+  addWarning(
+    warnings,
+    /torrent|pirate|crack|cracked|keygen|warez|magnet|free-download|fitgirl|dodi|elamigos|gog-games|igg-games|igggames|oceanofgames|ovagames|steamrip|steamunlocked|online-fix|repack|repacks|kisskh|watch-?online|drama|anime|movie|stream/.test(
+      fullUrlText,
+    ),
+    'URL contains piracy, torrent, streaming, or cracked software keywords',
+    24,
+  )
+  addWarning(
+    warnings,
+    gamblingDomains.some((domain) => host.includes(domain) || registrableName.includes(domain)),
+    'Known gambling or betting site domain',
+    45,
+  )
+  addWarning(
+    warnings,
+    /casino|gambl(e|ing)|betting?|sportsbook|slots?|jackpot|poker|roulette|baccarat|sabong|scatter|bonus|withdraw|deposit|freebet|play-?to-?earn/.test(
+      fullUrlText,
+    ),
+    'URL contains gambling, betting, or cash-out keywords',
+    24,
+  )
   addWarning(warnings, suspiciousTlds.includes(tld), `Uses suspicious .${tld} top-level domain`, 18)
   addWarning(warnings, /^\d{1,3}(\.\d{1,3}){3}$/.test(host), 'Uses an IP address instead of a domain name', 25)
   addWarning(warnings, shorteners.includes(host.replace(/^www\./, '')), 'Uses a URL shortener', 20)
   addWarning(warnings, hasTyposquatting(host), 'Possible typosquatting of a trusted brand', 25)
   addWarning(warnings, /login|verify|signin|account|password/.test(path), 'URL contains credential or account keywords', 14)
+  addWarning(warnings, /^[a-z0-9]{5,8}$/i.test(registrableName), 'Uses a short random-looking domain name', 14)
+  addWarning(warnings, path.length > 1 && path.length <= 8, 'Uses a short opaque URL path', 8)
   addWarning(warnings, host.split('.').length >= 4, 'Contains excessive subdomains', 8)
   addWarning(warnings, /%[0-9a-f]{2}/i.test(value), 'Contains encoded characters that may hide the destination', 8)
   addWarning(warnings, value.length > 90, 'URL is unusually long', 6)
@@ -135,16 +285,31 @@ export function scanUrl(input) {
 export function scanMessage(input) {
   const text = input.trim()
   const links = extractLinks(text)
+  const linkAnalyses = links.map((link) => scanUrl(link))
   const warnings = []
 
   addWarning(warnings, /urgent|immediate|act now|expires|suspended/i.test(text), 'Uses urgency or pressure words', 16)
   addWarning(warnings, /bank|payment|credit card|ssn|social security/i.test(text), 'Requests financial or identity information', 20)
   addWarning(warnings, /password|passcode|credentials|login|signin/i.test(text), 'Requests password or login information', 22)
   addWarning(warnings, /prize|lottery|winner|jackpot|claim reward|free gift/i.test(text), 'Uses prize or lottery scam wording', 16)
+  addWarning(warnings, /\b\d{10,11}\b/.test(text), 'Contains a phone-number style account or sender reference', 10)
+  addWarning(
+    warnings,
+    /\b(withdraw|laruin|lucky|binggo|bingo|galing kay|maari mo na|maaari mo na|ngayon|jackpot|casino|bet|betting|slots|sabong|scatter|bonus|deposit|freebet)\b/i.test(text),
+    'Uses cash-out, gambling, or reward wording common in SMS scams',
+    18,
+  )
+  addWarning(warnings, /sender\s*:/i.test(text), 'Message includes copied sender metadata', 4)
   addWarning(warnings, links.length > 0, 'Contains links that should be verified before opening', 10)
   addWarning(
     warnings,
-    links.some((link) => scanUrl(link).status !== 'Safe'),
+    linkAnalyses.some((analysis) => analysis.status === 'Dangerous'),
+    'Contains a dangerous link',
+    45,
+  )
+  addWarning(
+    warnings,
+    linkAnalyses.some((analysis) => analysis.status === 'Suspicious'),
     'Contains a suspicious link',
     18,
   )

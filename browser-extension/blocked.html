@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Threat Blocked</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0f172a;
+        color: #f8fafc;
+      }
+
+      body {
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      main {
+        border: 1px solid rgba(244, 63, 94, 0.45);
+        border-radius: 8px;
+        background: rgba(127, 29, 29, 0.28);
+        max-width: 720px;
+        padding: 28px;
+        width: 100%;
+      }
+
+      h1 {
+        font-size: 28px;
+        line-height: 1.1;
+        margin: 0;
+      }
+
+      p {
+        color: #fecdd3;
+        line-height: 1.6;
+        margin: 12px 0 0;
+      }
+
+      .url {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(248, 113, 113, 0.35);
+        border-radius: 8px;
+        color: #fff;
+        margin-top: 20px;
+        overflow-wrap: anywhere;
+        padding: 14px;
+      }
+
+      .meta {
+        color: #fda4af;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      button {
+        border-radius: 8px;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border: 0;
+        color: #7f1d1d;
+      }
+
+      .warning {
+        color: #fecdd3;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="meta">Tracking Threats</div>
+      <h1>Website Blocked</h1>
+      <p>This page was automatically blocked because the local scanner marked it as dangerous.</p>
+      <div class="url" id="blocked-url"></div>
+      <p id="score"></p>
+      <p class="warning">
+        Continuing may expose your device or account to phishing, malware, piracy, gambling, or scam risks.
+      </p>
+      <div class="actions">
+        <button id="continue-button" type="button">Unblock and Continue</button>
+      </div>
+    </main>
+    <script src="blocked.js"></script>
+  </body>
+</html>

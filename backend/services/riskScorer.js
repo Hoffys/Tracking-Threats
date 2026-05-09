@@ -1,6 +1,6 @@
 export function getRiskFromScore(score) {
   if (score >= 80) return { status: 'Safe', risk: 'low', action: 'Allowed' }
-  if (score >= 50) return { status: 'Suspicious', risk: 'medium', action: 'Review' }
+  if (score > 50) return { status: 'Suspicious', risk: 'medium', action: 'Review' }
   return { status: 'Dangerous', risk: 'critical', action: 'Blocked' }
 }
 

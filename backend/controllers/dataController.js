@@ -1,6 +1,55 @@
 import { dbPromise, fromJson } from '../db/database.js'
 import { mapAlert, mapBlockedThreat, mapScan } from './scanController.js'
-import { getDomain } from '../services/urlScanner.js'
+
+const getDisplayDomain = (target) => {
+  try {
+    return new URL(target.includes('://') ? target : `https://${target}`).hostname
+  } catch {
+    return target
+  }
+}
+
+async function syncLiveMonitorActivity(db) {
+  const rows = await db.all(`
+    SELECT scans.*
+    FROM scans
+    LEFT JOIN live_monitor_activity ON live_monitor_activity.scan_id = scans.id
+    WHERE scans.history_visible = 1
+      AND (
+        live_monitor_activity.scan_id IS NULL
+        OR live_monitor_activity.history_visible != scans.history_visible
+      )
+    ORDER BY scans.created_at DESC
+    LIMIT 250
+  `)
+
+  for (const row of rows) {
+    const scan = mapScan(row)
+    await db.run(
+      `INSERT OR REPLACE INTO live_monitor_activity
+        (id, scan_id, activity_type, source, target, domain, title, detail, score, status, risk_status, warning_signs, history_visible, created_at)
+        VALUES (
+          COALESCE((SELECT id FROM live_monitor_activity WHERE scan_id = ?), ?),
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )`,
+      scan.id,
+      crypto.randomUUID(),
+      scan.id,
+      scan.type,
+      scan.source,
+      scan.target,
+      scan.type === 'URL' ? getDisplayDomain(scan.target) : scan.target,
+      scan.source === 'browser-extension' ? 'Browser URL scan' : `${scan.type} scan`,
+      scan.content || scan.target,
+      scan.score,
+      scan.status === 'Dangerous' ? 'Blocked' : scan.status,
+      scan.status,
+      JSON.stringify(scan.warningSigns ?? []),
+      1,
+      scan.date,
+    )
+  }
+}
 
 export async function getHistory(_req, res, next) {
   try {
@@ -21,6 +70,7 @@ export async function clearHistory(_req, res, next) {
   try {
     const db = await dbPromise
     await db.run('UPDATE scans SET history_visible = 0')
+    await db.run('UPDATE live_monitor_activity SET history_visible = 0')
     res.json({ ok: true })
   } catch (error) {
     next(error)
@@ -171,35 +221,33 @@ export async function getSystemLogs(_req, res, next) {
 export async function getLiveFeed(_req, res, next) {
   try {
     const db = await dbPromise
+    await syncLiveMonitorActivity(db)
     const rows = await db.all(`
-      SELECT * FROM scans
+      SELECT * FROM live_monitor_activity
       WHERE history_visible = 1
       ORDER BY created_at DESC
       LIMIT 50
     `)
     res.json(
-      rows.map((row) => {
-        const scan = mapScan(row)
-        return {
-          id: scan.id,
-          activityType: scan.type === 'Email' ? 'Email' : scan.type,
-          source:
-            scan.source === 'browser-extension'
-              ? 'browser-extension'
-              : scan.type === 'Email'
-                ? 'email-background-analyzer'
-                : scan.source,
-          target: scan.target,
-          domain: scan.type === 'URL' ? getDomain(scan.target) : scan.target,
-          title: scan.source === 'browser-extension' ? 'Browser URL scan' : `${scan.type} scan`,
-          detail: scan.content || scan.target,
-          score: scan.score,
-          status: scan.status === 'Dangerous' ? 'Blocked' : scan.status,
-          riskStatus: scan.status,
-          timestamp: scan.date,
-          warningSigns: scan.warningSigns,
-        }
-      }),
+      rows.map((row) => ({
+        id: row.scan_id,
+        activityType: row.activity_type,
+        source:
+          row.source === 'browser-extension'
+            ? 'browser-extension'
+            : row.activity_type === 'Email'
+              ? 'email-background-analyzer'
+              : row.source,
+        target: row.target,
+        domain: row.domain,
+        title: row.title,
+        detail: row.detail,
+        score: row.score,
+        status: row.status,
+        riskStatus: row.risk_status,
+        timestamp: row.created_at,
+        warningSigns: fromJson(row.warning_signs),
+      })),
     )
   } catch (error) {
     next(error)

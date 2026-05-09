@@ -3,13 +3,26 @@
   "name": "Tracking Threats Browser Monitor",
   "version": "1.0.0",
   "description": "Sends visited web links to the local Tracking Threats scanner.",
-  "permissions": ["storage", "tabs", "webNavigation"],
+  "permissions": ["storage", "tabs", "webNavigation", "declarativeNetRequest"],
   "host_permissions": ["<all_urls>", "http://localhost:4000/*"],
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.com/search*"],
+      "js": ["google-results.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_title": "Tracking Threats",
     "default_popup": "popup.html"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "blocked.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

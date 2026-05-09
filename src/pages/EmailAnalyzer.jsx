@@ -32,11 +32,13 @@ export function EmailAnalyzer() {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
 
   const submit = async (event) => {
     event.preventDefault()
     setIsScanning(true)
+    setError('')
     try {
       const scan = await createScan({
         type: 'Email',
@@ -44,6 +46,9 @@ export function EmailAnalyzer() {
         content: `${subject}\n${body}`,
       })
       setResult(scan)
+    } catch {
+      setResult(null)
+      setError('Email analysis failed. Make sure the backend is running, then try again.')
     } finally {
       setIsScanning(false)
     }
@@ -97,12 +102,20 @@ export function EmailAnalyzer() {
 
       <Panel>
         <h2 className="text-lg font-semibold">Result</h2>
-        {result ? (
+        {error ? (
+          <div className="mt-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-medium text-rose-700 dark:text-rose-300">
+            {error}
+          </div>
+        ) : result ? (
           <div className="mt-4 space-y-4">
             <RiskBadge risk={result.status ?? result.risk} />
             <div>
               <p className="text-4xl font-semibold">{result.score}/100</p>
               <p className="text-sm text-slate-500 dark:text-slate-400">Final risk score</p>
+            </div>
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+              Saved to SQLite scans table as {result.type} record.
+              <span className="mt-1 block break-all text-xs opacity-80">ID: {result.id}</span>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">{result.summary}</p>
 

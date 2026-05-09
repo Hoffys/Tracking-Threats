@@ -7,6 +7,14 @@ import { scanUrl } from '../services/urlScanner.js'
 const now = () => new Date().toISOString()
 const uuid = () => crypto.randomUUID()
 
+const getDisplayDomain = (target) => {
+  try {
+    return new URL(target.includes('://') ? target : `https://${target}`).hostname
+  } catch {
+    return target
+  }
+}
+
 export const mapScan = (row) => {
   const details = fromJson(row.details, {})
   return {
@@ -109,7 +117,31 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
     scan.createdAt,
   )
 
-  if (scan.status === 'Dangerous' || scan.score <= 49) {
+  await db.run(
+    `INSERT OR REPLACE INTO live_monitor_activity
+      (id, scan_id, activity_type, source, target, domain, title, detail, score, status, risk_status, warning_signs, history_visible, created_at)
+      VALUES (
+        COALESCE((SELECT id FROM live_monitor_activity WHERE scan_id = ?), ?),
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )`,
+    scan.id,
+    uuid(),
+    scan.id,
+    scan.type,
+    source,
+    scan.target,
+    scan.type === 'URL' ? getDisplayDomain(scan.target) : scan.target,
+    source === 'browser-extension' ? 'Browser URL scan' : `${scan.type} scan`,
+    scan.content || scan.target,
+    scan.score,
+    scan.status === 'Dangerous' ? 'Blocked' : scan.status,
+    scan.status,
+    toJson(scan.warningSigns),
+    1,
+    scan.createdAt,
+  )
+
+  if (scan.status === 'Dangerous' || scan.score <= 50) {
     const recommendedAction = scan.recommendations?.[0] ?? 'Block the threat immediately.'
     await db.run(
       `INSERT INTO blocked_threats
@@ -192,17 +224,60 @@ export async function createUrlScan(target, source = 'api') {
 }
 
 export async function createMessageScan({ target, content }, source = 'api') {
-  return persistScan({ type: 'Message', target, content, analysis: scanMessage(content), source })
+  const analysis = scanMessage(content)
+  const scan = await persistScan({ type: 'Message', target, content, analysis, source })
+
+  const db = await dbPromise
+  await db.run(
+    `INSERT INTO message_scans
+      (id, scan_id, target, message, score, status, risk, summary, warning_signs, recommendations, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    uuid(),
+    scan.id,
+    target,
+    content,
+    scan.score,
+    scan.status,
+    scan.risk,
+    scan.summary,
+    toJson(scan.warningSigns),
+    toJson(scan.recommendations),
+    scan.date,
+  )
+
+  return scan
 }
 
 export async function createEmailScan({ sender, subject = '', body = '' }, source = 'api') {
-  return persistScan({
+  const analysis = analyzeEmail({ sender, subject, body })
+  const scan = await persistScan({
     type: 'Email',
     target: sender || subject || 'Untitled email',
     content: `${subject}\n${body}`.trim(),
-    analysis: analyzeEmail({ sender, subject, body }),
+    analysis,
     source,
   })
+
+  const db = await dbPromise
+  await db.run(
+    `INSERT INTO email_scans
+      (id, scan_id, sender, subject, body, score, status, risk, summary, warning_signs, recommendations, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    uuid(),
+    scan.id,
+    sender || 'Unknown sender',
+    subject,
+    body,
+    scan.score,
+    scan.status,
+    scan.risk,
+    scan.summary,
+    toJson(scan.warningSigns),
+    toJson(scan.recommendations),
+    scan.date,
+  )
+
+  return scan
 }
 
 export async function createFileScan({ fileName, mimeType = '', size = 0, content = '' }, source = 'api') {

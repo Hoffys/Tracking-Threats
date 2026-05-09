@@ -31,6 +31,12 @@ export function ManualScan() {
       reader.readAsText(file.slice(0, 200 * 1024))
     })
 
+  const selectScanType = (type) => {
+    setScanType(type)
+    setResult(null)
+    setError('')
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     const scanTarget =
@@ -39,8 +45,10 @@ export function ManualScan() {
         : scanType === 'File'
           ? selectedFile?.name
           : target || message.slice(0, 56) || 'Manual message scan'
+
     setIsScanning(true)
     setError('')
+
     try {
       if (scanType === 'File') {
         if (!selectedFile) throw new Error('No file selected')
@@ -81,10 +89,7 @@ export function ManualScan() {
               <button
                 key={type}
                 type="button"
-                onClick={() => {
-                  setScanType(type)
-                  setResult(null)
-                }}
+                onClick={() => selectScanType(type)}
                 className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
                   scanType === type
                     ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
@@ -96,29 +101,29 @@ export function ManualScan() {
               </button>
             ))}
           </div>
+
           {scanType !== 'File' && (
             <label className="block">
               <span className="text-sm font-medium">
                 {scanType === 'URL' ? 'URL to scan' : 'Sender or subject'}
               </span>
-              {scanType === 'URL' ? (
-                <input
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
-                  value={target}
-                  onChange={(event) => setTarget(event.target.value)}
-                  placeholder="https://example.com/login"
-                  required
-                />
-              ) : (
-                <input
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
-                  value={target}
-                  onChange={(event) => setTarget(event.target.value)}
-                  placeholder="billing@example.com or Invoice notice"
-                />
-              )}
+              <input
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                value={target}
+                onChange={(event) => {
+                  setTarget(event.target.value)
+                  setResult(null)
+                }}
+                placeholder={
+                  scanType === 'URL'
+                    ? 'https://example.com/login'
+                    : 'Paste billing@example.com, invoice notice, or suspicious message'
+                }
+                required={scanType === 'URL'}
+              />
             </label>
           )}
+
           {scanType === 'File' && (
             <label className="block">
               <span className="text-sm font-medium">File to scan</span>
@@ -133,25 +138,30 @@ export function ManualScan() {
               />
               {selectedFile && (
                 <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  {selectedFile.name} • {(selectedFile.size / 1024).toFixed(1)} KB
+                  {selectedFile.name} - {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               )}
             </label>
           )}
+
           {scanType === 'Message' && (
             <label className="block">
               <span className="text-sm font-medium">Email or message content</span>
               <textarea
                 className="mt-2 min-h-40 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
                 value={message}
-                onChange={(event) => setMessage(event.target.value)}
+                onChange={(event) => {
+                  setMessage(event.target.value)
+                  setResult(null)
+                }}
                 placeholder="Paste the suspicious email, SMS, or chat message here..."
                 required
               />
             </label>
           )}
+
           <button
-            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
             type="submit"
             disabled={isScanning}
           >
@@ -184,79 +194,84 @@ export function ManualScan() {
                 </div>
               </div>
             )}
-          <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate font-medium">{result.target}</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {result.type} • Safety score {result.score}/100
-                </p>
-                {result.responseStatus && (
-                  <p className="mt-1 text-sm font-semibold text-rose-600 dark:text-rose-300">
-                    Response: {result.responseStatus}
+
+            <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{result.target}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {result.type} - Safety score {result.score}/100
                   </p>
-                )}
-              </div>
-              <RiskBadge risk={result.status ?? result.risk} />
-            </div>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${result.score}%`,
-                  boxShadow: [
-                    '0 0 0 rgba(20,184,166,0)',
-                    '0 0 16px rgba(20,184,166,0.45)',
-                    '0 0 0 rgba(20,184,166,0)',
-                  ],
-                }}
-                transition={{
-                  width: { duration: 0.7, ease: 'easeOut' },
-                  boxShadow: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
-                }}
-                className={`h-3 rounded-full ${
-                  result.status === 'Dangerous'
-                    ? 'bg-rose-500'
-                    : result.status === 'Suspicious'
-                      ? 'bg-amber-500'
-                      : 'bg-emerald-500'
-                }`}
-              />
-            </div>
-            <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
-              {result.summary}
-            </p>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                  <AlertTriangle size={17} className="text-amber-500" />
-                  Warning signs
+                  {result.responseStatus && (
+                    <p className="mt-1 text-sm font-semibold text-rose-600 dark:text-rose-300">
+                      Response: {result.responseStatus}
+                    </p>
+                  )}
                 </div>
-                {result.warningSigns?.length > 0 ? (
+                <RiskBadge risk={result.status ?? result.risk} />
+              </div>
+
+              <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${result.score}%`,
+                    boxShadow: [
+                      '0 0 0 rgba(20,184,166,0)',
+                      '0 0 16px rgba(20,184,166,0.45)',
+                      '0 0 0 rgba(20,184,166,0)',
+                    ],
+                  }}
+                  transition={{
+                    width: { duration: 0.7, ease: 'easeOut' },
+                    boxShadow: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+                  }}
+                  className={`h-3 rounded-full ${
+                    result.status === 'Dangerous'
+                      ? 'bg-rose-500'
+                      : result.status === 'Suspicious'
+                        ? 'bg-amber-500'
+                        : 'bg-emerald-500'
+                  }`}
+                />
+              </div>
+
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
+                {result.summary}
+              </p>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                    <AlertTriangle size={17} className="text-amber-500" />
+                    Warning signs
+                  </div>
+                  {result.warningSigns?.length > 0 ? (
+                    <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                      {result.warningSigns.map((sign) => (
+                        <li key={sign}>- {sign}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No warning signs detected.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                    <CheckCircle2 size={17} className="text-teal-500" />
+                    Recommendations
+                  </div>
                   <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                    {result.warningSigns.map((sign) => (
-                      <li key={sign}>- {sign}</li>
+                    {(result.recommendations ?? [result.recommendation]).map((recommendation) => (
+                      <li key={recommendation}>- {recommendation}</li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    No warning signs detected.
-                  </p>
-                )}
-              </div>
-              <div>
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                  <CheckCircle2 size={17} className="text-teal-500" />
-                  Recommendations
                 </div>
-                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                  {(result.recommendations ?? [result.recommendation]).map((recommendation) => (
-                    <li key={recommendation}>- {recommendation}</li>
-                  ))}
-                </ul>
               </div>
             </div>
-          </div>
           </div>
         ) : (
           <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">

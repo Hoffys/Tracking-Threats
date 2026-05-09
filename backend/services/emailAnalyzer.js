@@ -2,7 +2,49 @@ import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from 
 import { extractLinks, scanMessage } from './messageScanner.js'
 import { scanUrl } from './urlScanner.js'
 
-const suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'xyz', 'top']
+const suspiciousTlds = [
+  'bar',
+  'bet',
+  'biz',
+  'cam',
+  'casino',
+  'cc',
+  'cf',
+  'cfd',
+  'click',
+  'club',
+  'cn',
+  'cyou',
+  'do',
+  'fit',
+  'ga',
+  'gq',
+  'icu',
+  'info',
+  'lat',
+  'link',
+  'live',
+  'loan',
+  'ml',
+  'monster',
+  'mov',
+  'online',
+  'quest',
+  'rest',
+  'ru',
+  'sbs',
+  'shop',
+  'site',
+  'space',
+  'store',
+  'tk',
+  'top',
+  'website',
+  'win',
+  'work',
+  'xyz',
+  'zip',
+]
 const trustedFreeDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'icloud.com', 'yahoo.com']
 
 const getSenderDomain = (sender) => {

@@ -2,8 +2,72 @@ const API_URL = 'http://localhost:4000/api/scan/url'
 const APP_URL = 'http://localhost:5173/'
 const COOLDOWN_MS = 15000
 const MAX_TRACKED = 200
+const BLOCK_RULE_ID_BASE = 10000
+const MAX_BLOCK_RULES = 250
+const UNBLOCK_BYPASS_MS = 30000
 
 const recentScans = new Map()
+let blockedHosts = new Map()
+const bypassHosts = new Map()
+
+async function loadBlockedHosts() {
+  const stored = await chrome.storage.local.get('blockedHosts')
+  blockedHosts = new Map(stored.blockedHosts ?? [])
+}
+
+async function saveBlockedHosts() {
+  await chrome.storage.local.set({
+    blockedHosts: Array.from(blockedHosts.entries()),
+  })
+}
+
+function getHost(rawUrl) {
+  try {
+    return new URL(rawUrl).hostname.replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
+function getNextRuleId() {
+  const usedIds = new Set(blockedHosts.values())
+  for (let offset = 0; offset < MAX_BLOCK_RULES; offset += 1) {
+    const candidate = BLOCK_RULE_ID_BASE + offset
+    if (!usedIds.has(candidate)) return candidate
+  }
+  return null
+}
+
+function getBlockRule(host, ruleId) {
+  return {
+    id: ruleId,
+    priority: 1,
+    action: {
+      type: 'redirect',
+      redirect: {
+        regexSubstitution: `${chrome.runtime.getURL(
+          'blocked.html',
+        )}?host=${encodeURIComponent(host)}&url=\\0&status=Blocked&score=0`,
+      },
+    },
+    condition: {
+      regexFilter: `^https?://([^/]+\\.)?${host.replace(/\./g, '\\.')}/.*`,
+      resourceTypes: ['main_frame'],
+    },
+  }
+}
+
+async function syncBlockRules() {
+  const entries = Array.from(blockedHosts.entries())
+  const ruleIds = entries.map(([, ruleId]) => ruleId)
+
+  if (ruleIds.length === 0) return
+
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: ruleIds,
+    addRules: entries.map(([host, ruleId]) => getBlockRule(host, ruleId)),
+  })
+}
 
 function isTrackableUrl(rawUrl) {
   try {
@@ -16,17 +80,69 @@ function isTrackableUrl(rawUrl) {
   }
 }
 
-function remember(url) {
-  recentScans.set(url, Date.now())
+function remember(url, scan = null) {
+  recentScans.set(url, { scan, timestamp: Date.now() })
   if (recentScans.size > MAX_TRACKED) {
     const oldest = recentScans.keys().next().value
     recentScans.delete(oldest)
   }
 }
 
-function isRecentlyScanned(url) {
+function getRecentScan(url) {
   const previous = recentScans.get(url)
-  return previous && Date.now() - previous < COOLDOWN_MS
+  if (!previous) return null
+  if (Date.now() - previous.timestamp >= COOLDOWN_MS) {
+    recentScans.delete(url)
+    return null
+  }
+  return previous.scan
+}
+
+function isBlockedScan(scan) {
+  return scan?.status === 'Dangerous' || scan?.blocked || scan?.responseStatus === 'Blocked'
+}
+
+function hasBypass(host) {
+  const expiresAt = bypassHosts.get(host)
+  if (!expiresAt) return false
+  if (Date.now() > expiresAt) {
+    bypassHosts.delete(host)
+    return false
+  }
+  return true
+}
+
+async function rememberBlockedSite(rawUrl) {
+  const host = getHost(rawUrl)
+  if (!host || blockedHosts.has(host)) return
+
+  const ruleId = getNextRuleId()
+  if (!ruleId) return
+
+  blockedHosts.set(host, ruleId)
+  await saveBlockedHosts()
+
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    addRules: [getBlockRule(host, ruleId)],
+    removeRuleIds: [ruleId],
+  })
+}
+
+async function unblockSite({ rawUrl, host: fallbackHost }) {
+  const host = getHost(rawUrl) || fallbackHost?.replace(/^www\./, '')
+  const ruleId = blockedHosts.get(host)
+  if (!host) return false
+
+  bypassHosts.set(host, Date.now() + UNBLOCK_BYPASS_MS)
+
+  if (!ruleId) return true
+
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: [ruleId],
+  })
+  blockedHosts.delete(host)
+  await saveBlockedHosts()
+  return true
 }
 
 async function saveStatus(status) {
@@ -39,8 +155,39 @@ async function saveStatus(status) {
   })
 }
 
-async function scanUrl(rawUrl, reason = 'navigation') {
-  if (!isTrackableUrl(rawUrl) || isRecentlyScanned(rawUrl)) return
+function openBlockedPage(tabId, rawUrl, scan) {
+  if (!tabId || tabId < 0) return
+
+  const blockedUrl = chrome.runtime.getURL(
+    `blocked.html?url=${encodeURIComponent(rawUrl)}&score=${encodeURIComponent(
+      scan.score,
+    )}&status=${encodeURIComponent(scan.status)}`,
+  )
+
+  try {
+    const updateResult = chrome.tabs.update(tabId, { url: blockedUrl })
+    if (updateResult?.catch) {
+      updateResult.catch(() => {
+        // Tab may close or become unavailable before the redirect finishes.
+      })
+    }
+  } catch {
+    // Tab may close or become unavailable before the redirect finishes.
+  }
+}
+
+async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
+  if (!isTrackableUrl(rawUrl)) return
+  const bypassActive = hasBypass(getHost(rawUrl))
+
+  const recentScan = getRecentScan(rawUrl)
+  if (recentScan) {
+    if (isBlockedScan(recentScan) && !bypassActive) {
+      await rememberBlockedSite(rawUrl)
+      openBlockedPage(tabId, rawUrl, recentScan)
+    }
+    return
+  }
 
   remember(rawUrl)
   try {
@@ -56,12 +203,18 @@ async function scanUrl(rawUrl, reason = 'navigation') {
 
     if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
     const scan = await response.json()
+    remember(rawUrl, scan)
     await saveStatus({
       ok: true,
       lastUrl: rawUrl,
       lastStatus: scan.status,
       lastScore: scan.score,
     })
+
+    if (isBlockedScan(scan) && !bypassActive) {
+      await rememberBlockedSite(rawUrl)
+      openBlockedPage(tabId, rawUrl, scan)
+    }
   } catch (error) {
     await saveStatus({
       ok: false,
@@ -73,14 +226,14 @@ async function scanUrl(rawUrl, reason = 'navigation') {
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    scanUrl(tab.url, 'tab-complete')
+    scanUrl(tab.url, 'tab-complete', tab.id)
   }
 })
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     const tab = await chrome.tabs.get(tabId)
-    if (tab.url) scanUrl(tab.url, 'tab-activated')
+    if (tab.url) scanUrl(tab.url, 'tab-activated', tab.id)
   } catch {
     // Tab may disappear before Chrome returns it.
   }
@@ -88,6 +241,31 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 
 chrome.webNavigation.onCommitted.addListener((details) => {
   if (details.frameId === 0) {
-    scanUrl(details.url, details.transitionType ?? 'navigation')
+    scanUrl(details.url, details.transitionType ?? 'navigation', details.tabId)
   }
 })
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === 'scan-candidate-url' && message.url) {
+    scanUrl(message.url, message.reason ?? 'content-script')
+    sendResponse({ ok: true })
+    return true
+  }
+
+  if (message?.type === 'unblock-site' && (message.url || message.host)) {
+    unblockSite({ rawUrl: message.url, host: message.host })
+      .then((ok) => sendResponse({ ok }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  return false
+})
+
+chrome.storage.local.remove('allowedHosts')
+
+loadBlockedHosts()
+  .then(syncBlockRules)
+  .catch(() => {
+    // Storage may be temporarily unavailable during extension startup.
+  })
