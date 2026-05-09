@@ -32,6 +32,7 @@ export const mapScan = (row) => {
     recommendations: fromJson(row.recommendations),
     recommendation: fromJson(row.recommendations).join(' '),
     source: details.source ?? 'api',
+    threatIntel: details.threatIntel ?? [],
     emailBreakdown: details.emailBreakdown,
     fileDetails: details.file,
     responseStatus: row.action === 'Blocked' ? 'Blocked' : null,

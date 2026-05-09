@@ -1,6 +1,7 @@
 import { FileClock, Trash2 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
+import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
 
 const formatTime = (date) =>
@@ -60,6 +61,7 @@ export function ScanHistory() {
                 <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                   {scan.summary}
                 </p>
+                <ThreatIntelSummary providers={scan.threatIntel} />
                 {scan.warningSigns?.length > 0 && (
                   <div className="mt-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">

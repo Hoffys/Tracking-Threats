@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
+import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
 
 export function ManualScan() {
@@ -149,6 +150,7 @@ export function ManualScan() {
         <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
           {scanResult.summary}
         </p>
+        <ThreatIntelSummary providers={scanResult.threatIntel} />
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div>

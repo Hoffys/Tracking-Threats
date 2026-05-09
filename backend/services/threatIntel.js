@@ -1,6 +1,9 @@
+import dns from 'node:dns/promises'
+import net from 'node:net'
 import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
 
 const requestTimeoutMs = 4500
+const dnsTimeoutMs = 2500
 
 const withTimeout = async (url, options) => {
   const controller = new AbortController()
@@ -15,6 +18,69 @@ const withTimeout = async (url, options) => {
 
 const getUrlIdentifier = (target) =>
   Buffer.from(target).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+const parseTarget = (target) => {
+  try {
+    return new URL(target.includes('://') ? target : `https://${target}`)
+  } catch {
+    return null
+  }
+}
+
+const getHost = (target) => parseTarget(target)?.hostname.toLowerCase().replace(/^www\./, '') ?? ''
+
+const isPrivateOrReservedIp = (value) => {
+  if (net.isIP(value) === 4) {
+    const parts = value.split('.').map(Number)
+    const [first, second] = parts
+    return (
+      first === 10 ||
+      first === 127 ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      (first === 169 && second === 254) ||
+      first === 0 ||
+      first >= 224
+    )
+  }
+
+  if (net.isIP(value) === 6) {
+    const normalized = value.toLowerCase()
+    return (
+      normalized === '::1' ||
+      normalized.startsWith('fc') ||
+      normalized.startsWith('fd') ||
+      normalized.startsWith('fe80:')
+    )
+  }
+
+  return false
+}
+
+const withDnsTimeout = async (operation) => {
+  let timeout
+  try {
+    return await Promise.race([
+      operation,
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('DNS lookup timed out')), dnsTimeoutMs)
+      }),
+    ])
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+const postForm = (url, values, extraHeaders = {}) =>
+  withTimeout(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'TrackingThreats/1.0',
+      ...extraHeaders,
+    },
+    body: new URLSearchParams(values),
+  })
 
 async function checkVirusTotal(target) {
   const apiKey = process.env.VIRUSTOTAL_API_KEY
@@ -110,16 +176,187 @@ async function checkGoogleSafeBrowsing(target) {
   }
 }
 
-export async function enrichUrlAnalysis(target, baseAnalysis) {
+async function checkUrlhausUrl(target) {
+  const response = await postForm('https://urlhaus-api.abuse.ch/v1/url/', { url: target })
+
+  if (!response.ok) throw new Error(`URLhaus URL lookup returned ${response.status}`)
+
+  const payload = await response.json()
+  const listed = payload.query_status === 'ok'
+  const tags = Array.isArray(payload.tags) ? payload.tags.filter(Boolean) : []
+  const threat = payload.threat || tags.join(', ') || 'malware distribution'
+
+  return {
+    provider: 'URLhaus URL',
+    checked: true,
+    found: listed,
+    status: payload.url_status,
+    threat,
+    tags,
+    warning: listed ? `URLhaus lists this URL for ${threat}` : null,
+    deduction: listed ? 65 : 0,
+  }
+}
+
+async function checkUrlhausHost(target) {
+  const host = getHost(target)
+  if (!host || net.isIP(host)) return null
+
+  const response = await postForm('https://urlhaus-api.abuse.ch/v1/host/', { host })
+
+  if (!response.ok) throw new Error(`URLhaus host lookup returned ${response.status}`)
+
+  const payload = await response.json()
+  const listed = payload.query_status === 'ok'
+  const activeUrls = Number(payload.urls?.length ?? 0)
+
+  return {
+    provider: 'URLhaus Host',
+    checked: true,
+    found: listed,
+    host,
+    urlCount: activeUrls,
+    warning: listed
+      ? `URLhaus reports malware URLs hosted on ${host}${activeUrls ? ` (${activeUrls} recent URL${activeUrls === 1 ? '' : 's'})` : ''}`
+      : null,
+    deduction: listed ? 55 : 0,
+  }
+}
+
+async function checkPhishTank(target) {
+  const response = await postForm('https://checkurl.phishtank.com/checkurl/', {
+    format: 'json',
+    url: target,
+  })
+
+  if (!response.ok) throw new Error(`PhishTank returned ${response.status}`)
+
+  const payload = await response.json()
+  const results = payload.results ?? {}
+  const listed = Boolean(results.in_database)
+  const verified = Boolean(results.verified)
+
+  return {
+    provider: 'PhishTank',
+    checked: true,
+    found: listed,
+    verified,
+    phishId: results.phish_id,
+    warning: listed
+      ? `PhishTank ${verified ? 'verified' : 'reported'} this URL as phishing`
+      : null,
+    deduction: verified ? 60 : listed ? 42 : 0,
+  }
+}
+
+async function resolveHostAddresses(host) {
+  if (!host) return { addresses: [], errors: [] }
+  if (net.isIP(host)) return { addresses: [host], errors: [] }
+
   const results = await Promise.allSettled([
-    checkVirusTotal(target),
-    checkGoogleSafeBrowsing(target),
+    withDnsTimeout(dns.resolve4(host)),
+    withDnsTimeout(dns.resolve6(host)),
   ])
+
+  const addresses = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+  const errors = results
+    .filter((result) => result.status === 'rejected')
+    .map((result) => result.reason)
+  const unavailableErrors = errors.filter(
+    (error) => !['ENODATA', 'ENOTFOUND', 'ENODOMAIN'].includes(error?.code),
+  )
+
+  if (addresses.length === 0 && unavailableErrors.length > 0) {
+    throw unavailableErrors[0]
+  }
+
+  return { addresses, errors }
+}
+
+async function checkDnsReputation(target) {
+  const host = getHost(target)
+  if (!host) return null
+
+  const { addresses } = await resolveHostAddresses(host)
+  const privateAddresses = addresses.filter(isPrivateOrReservedIp)
+  const hasNoPublicAddress = addresses.length === 0
+
+  return {
+    provider: 'DNS Reputation',
+    checked: true,
+    found: privateAddresses.length > 0 || hasNoPublicAddress,
+    host,
+    addresses: addresses.slice(0, 8),
+    warning:
+      privateAddresses.length > 0
+        ? `Domain resolves to private or reserved network address ${privateAddresses[0]}`
+        : hasNoPublicAddress
+          ? 'Domain has no public A or AAAA DNS records'
+          : null,
+    deduction: privateAddresses.length > 0 ? 35 : hasNoPublicAddress ? 12 : 0,
+  }
+}
+
+async function checkAbuseIpDb(target) {
+  const apiKey = process.env.ABUSEIPDB_API_KEY
+  if (!apiKey) return null
+
+  const host = getHost(target)
+  const { addresses } = await resolveHostAddresses(host)
+  const publicAddress = addresses.find((address) => !isPrivateOrReservedIp(address))
+  if (!publicAddress) return null
+
+  const response = await withTimeout(
+    `https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(
+      publicAddress,
+    )}&maxAgeInDays=90&verbose=true`,
+    {
+      headers: {
+        accept: 'application/json',
+        key: apiKey,
+      },
+    },
+  )
+
+  if (!response.ok) throw new Error(`AbuseIPDB returned ${response.status}`)
+
+  const payload = await response.json()
+  const data = payload.data ?? {}
+  const confidence = Number(data.abuseConfidenceScore ?? 0)
+
+  return {
+    provider: 'AbuseIPDB',
+    checked: true,
+    found: confidence > 0,
+    ipAddress: publicAddress,
+    abuseConfidenceScore: confidence,
+    totalReports: data.totalReports,
+    countryCode: data.countryCode,
+    warning:
+      confidence > 0
+        ? `AbuseIPDB reports ${confidence}% abuse confidence for host IP ${publicAddress}`
+        : null,
+    deduction: confidence >= 80 ? 50 : confidence >= 25 ? 25 : confidence > 0 ? 10 : 0,
+  }
+}
+
+export async function enrichUrlAnalysis(target, baseAnalysis) {
+  const checks = [
+    { provider: 'VirusTotal', run: () => checkVirusTotal(target) },
+    { provider: 'Google Safe Browsing', run: () => checkGoogleSafeBrowsing(target) },
+    { provider: 'URLhaus URL', run: () => checkUrlhausUrl(target) },
+    { provider: 'URLhaus Host', run: () => checkUrlhausHost(target) },
+    { provider: 'PhishTank', run: () => checkPhishTank(target) },
+    { provider: 'DNS Reputation', run: () => checkDnsReputation(target) },
+    { provider: 'AbuseIPDB', run: () => checkAbuseIpDb(target) },
+  ]
+
+  const results = await Promise.allSettled(checks.map((check) => check.run()))
 
   const providerResults = results.map((result, index) => {
     if (result.status === 'fulfilled') return result.value
     return {
-      provider: index === 0 ? 'VirusTotal' : 'Google Safe Browsing',
+      provider: checks[index].provider,
       checked: true,
       error: result.reason?.message ?? 'Threat intelligence lookup failed',
     }

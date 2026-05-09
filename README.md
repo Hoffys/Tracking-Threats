@@ -30,17 +30,18 @@ npm run dev:demo
 
 ## Optional threat intelligence
 
-The URL scanner works locally by default. To enrich URL scans with external
-reputation checks, set either or both environment variables before starting the
-backend:
+The URL scanner works locally by default. URLhaus, PhishTank, and DNS
+reputation checks run without keys. To add more external reputation checks, set
+any of these environment variables before starting the backend:
 
 ```bash
 VIRUSTOTAL_API_KEY=your_virustotal_key
 GOOGLE_SAFE_BROWSING_API_KEY=your_google_safe_browsing_key
+ABUSEIPDB_API_KEY=your_abuseipdb_key
 ```
 
 When these keys are not set, the app continues to use the built-in local
-heuristic scanner only.
+heuristic scanner plus no-key reputation sources where available.
 
 ## Pages
 
