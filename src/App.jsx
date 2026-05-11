@@ -20,12 +20,25 @@ const pages = {
   settings: Settings,
 }
 
+const getInitialPage = () => {
+  const page = new URLSearchParams(window.location.search).get('page')
+  return pages[page] ? page : 'dashboard'
+}
+
 function AppShell() {
-  const [activePage, setActivePage] = useState('dashboard')
+  const [activePage, setActivePage] = useState(getInitialPage)
   const ActivePage = pages[activePage]
 
+  const handleNavigate = (page) => {
+    setActivePage(page)
+    const url = new URL(window.location.href)
+    url.searchParams.set('page', page)
+    url.searchParams.delete('blocked')
+    window.history.replaceState({}, '', url)
+  }
+
   return (
-    <Layout activePage={activePage} onNavigate={setActivePage}>
+    <Layout activePage={activePage} onNavigate={handleNavigate}>
       <AnimatePresence mode="wait">
         <motion.div
           key={activePage}
@@ -34,7 +47,7 @@ function AppShell() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
         >
-          <ActivePage onNavigate={setActivePage} />
+          <ActivePage onNavigate={handleNavigate} />
         </motion.div>
       </AnimatePresence>
     </Layout>

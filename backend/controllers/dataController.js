@@ -58,7 +58,7 @@ export async function getHistory(_req, res, next) {
       SELECT * FROM scans
       WHERE history_visible = 1
       ORDER BY created_at DESC
-      LIMIT 250
+      LIMIT 50
     `)
     res.json(rows.map(mapScan))
   } catch (error) {

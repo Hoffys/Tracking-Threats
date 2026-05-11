@@ -1,7 +1,16 @@
 const params = new URLSearchParams(window.location.search)
 const blockedHost = params.get('host') || ''
+const APP_URL = 'http://localhost:5173/'
 
 let blockedUrl = params.get('url') || ''
+
+function getDetailsUrl({ page = 'history', url = '', host = '' } = {}) {
+  const detailsUrl = new URL(APP_URL)
+  detailsUrl.searchParams.set('page', page)
+  const target = url || host
+  if (target) detailsUrl.searchParams.set('blocked', target)
+  return detailsUrl.toString()
+}
 
 function renderBlockedPage({ url = '', host = '', status = 'Blocked', score = '0' }) {
   blockedUrl = url
@@ -9,6 +18,11 @@ function renderBlockedPage({ url = '', host = '', status = 'Blocked', score = '0
   document.getElementById('blocked-url').textContent =
     blockedUrl || (host ? `Blocked host: ${host}` : 'Unknown URL')
   document.getElementById('score').textContent = `Status: ${status} - Safety score ${score}/100`
+  document.getElementById('details-link').href = getDetailsUrl({
+    page: 'history',
+    url: blockedUrl,
+    host,
+  })
 }
 
 async function loadBlockedContext() {

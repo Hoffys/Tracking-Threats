@@ -78,6 +78,13 @@ function ThreatReviewModal({ onAction, onClose, threat }) {
           </div>
 
           <div>
+            <p className="text-sm font-semibold">Recommendation</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {threat.recommendedAction ?? 'Review this item before opening or trusting it.'}
+            </p>
+          </div>
+
+          <div>
             <p className="text-sm font-semibold">Warning signs</p>
             {threat.warningSigns?.length > 0 ? (
               <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">

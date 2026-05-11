@@ -7,6 +7,7 @@ import { scanUrl } from '../services/urlScanner.js'
 
 const now = () => new Date().toISOString()
 const uuid = () => crypto.randomUUID()
+const visibleScanLimit = 50
 
 const getDisplayDomain = (target) => {
   try {
@@ -84,6 +85,33 @@ export async function createSystemLog({ level = 'info', event, message, metadata
     message,
     toJson(metadata),
     now(),
+  )
+}
+
+async function enforceVisibleScanLimit(db) {
+  const rowsToHide = await db.all(
+    `
+      SELECT id
+      FROM scans
+      WHERE history_visible = 1
+      ORDER BY created_at DESC
+      LIMIT -1 OFFSET ?
+    `,
+    visibleScanLimit,
+  )
+
+  if (rowsToHide.length === 0) return
+
+  const scanIds = rowsToHide.map((row) => row.id)
+  const placeholders = scanIds.map(() => '?').join(', ')
+
+  await db.run(
+    `UPDATE scans SET history_visible = 0 WHERE id IN (${placeholders})`,
+    ...scanIds,
+  )
+  await db.run(
+    `UPDATE live_monitor_activity SET history_visible = 0 WHERE scan_id IN (${placeholders})`,
+    ...scanIds,
   )
 }
 
@@ -212,6 +240,8 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
     metadata: { scanId: scan.id, source },
   })
 
+  await enforceVisibleScanLimit(db)
+
   return mapScan({
     ...scan,
     warning_signs: toJson(scan.warningSigns),
@@ -334,8 +364,9 @@ export async function scanEmailHandler(req, res, next) {
     const sender = req.body.sender ?? req.body.target ?? ''
     const subject = req.body.subject ?? ''
     const body = req.body.body ?? req.body.content ?? ''
+    const source = req.body.source ?? 'api'
     if (!body && !subject) return res.status(400).json({ error: 'email content is required' })
-    res.status(201).json(await createEmailScan({ sender, subject, body }))
+    res.status(201).json(await createEmailScan({ sender, subject, body }, source))
   } catch (error) {
     next(error)
   }

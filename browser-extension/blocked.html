@@ -79,6 +79,18 @@
         color: #7f1d1d;
       }
 
+      .secondary-link {
+        align-items: center;
+        border: 1px solid rgba(254, 205, 211, 0.36);
+        border-radius: 8px;
+        color: #fff;
+        display: inline-flex;
+        font: inherit;
+        font-weight: 700;
+        padding: 11px 16px;
+        text-decoration: none;
+      }
+
       .warning {
         color: #fecdd3;
         font-size: 14px;
@@ -96,6 +108,15 @@
         Continuing may expose your device or account to phishing, malware, piracy, gambling, or scam risks.
       </p>
       <div class="actions">
+        <a
+          class="secondary-link"
+          id="details-link"
+          href="http://localhost:5173/?page=history"
+          target="_blank"
+          rel="noreferrer"
+        >
+          See why this site was blocked
+        </a>
         <button id="continue-button" type="button">Unblock and Continue</button>
       </div>
     </main>

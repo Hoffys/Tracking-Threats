@@ -18,7 +18,7 @@ import { useThreats } from '../hooks/useThreats'
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'monitor', label: 'Monitor', icon: Radar },
-  { id: 'email', label: 'Email', icon: MailSearch },
+  { id: 'email', label: 'Manual', icon: MailSearch },
   { id: 'manual', label: 'Scan', icon: ScanLine },
   { id: 'history', label: 'History', icon: History },
   { id: 'alerts', label: 'Alerts', icon: Bell },

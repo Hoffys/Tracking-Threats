@@ -3,6 +3,12 @@
   "name": "Tracking Threats Browser Monitor",
   "version": "1.0.0",
   "description": "Sends visited web links to the local Tracking Threats scanner.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": ["storage", "tabs", "webNavigation", "declarativeNetRequest"],
   "host_permissions": ["<all_urls>", "http://localhost:4000/*"],
   "background": {
@@ -10,14 +16,37 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.google.com/search*"],
+      "matches": [
+        "https://www.google.com/search*",
+        "https://google.com/search*",
+        "https://www.bing.com/search*",
+        "https://bing.com/search*",
+        "https://duckduckgo.com/*",
+        "https://search.yahoo.com/search*"
+      ],
       "js": ["google-results.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.google.com/*",
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://mail.yahoo.com/*"
+      ],
+      "js": ["email-monitor.js"],
       "run_at": "document_idle"
     }
   ],
   "action": {
     "default_title": "Tracking Threats",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
   "web_accessible_resources": [
     {

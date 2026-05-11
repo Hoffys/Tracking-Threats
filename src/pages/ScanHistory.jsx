@@ -1,4 +1,5 @@
 import { FileClock, Trash2 } from 'lucide-react'
+import { useEffect, useMemo } from 'react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
@@ -12,8 +13,41 @@ const formatTime = (date) =>
     minute: '2-digit',
   }).format(new Date(date))
 
+const getHost = (value) => {
+  try {
+    return new URL(value.includes('://') ? value : `https://${value}`).hostname.replace(/^www\./, '')
+  } catch {
+    return value.replace(/^www\./, '')
+  }
+}
+
+const matchesBlockedTarget = (scan, blockedTarget) => {
+  if (!blockedTarget) return false
+  const scanTarget = scan.target.toLowerCase()
+  const blocked = blockedTarget.toLowerCase()
+  const scanHost = getHost(scanTarget)
+  const blockedHost = getHost(blocked)
+  return scanTarget === blocked || scanHost === blockedHost || scanTarget.includes(blockedHost)
+}
+
 export function ScanHistory() {
   const { clearHistory, scanHistory, threatAuditLogs } = useThreats()
+  const blockedTarget = useMemo(
+    () => new URLSearchParams(window.location.search).get('blocked') ?? '',
+    [],
+  )
+  const focusedScan = useMemo(
+    () => scanHistory.find((scan) => matchesBlockedTarget(scan, blockedTarget)),
+    [blockedTarget, scanHistory],
+  )
+
+  useEffect(() => {
+    if (!focusedScan) return
+    document.getElementById(`scan-${focusedScan.id}`)?.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth',
+    })
+  }, [focusedScan])
 
   return (
     <div className="space-y-5">
@@ -32,6 +66,24 @@ export function ScanHistory() {
         </button>
       </div>
 
+      {blockedTarget && (
+        <Panel>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
+                Blocked site review
+              </p>
+              <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-300">
+                {focusedScan
+                  ? 'The matching blocked scan is highlighted below with warning signs and recommendations.'
+                  : 'Waiting for the matching blocked scan record to appear here.'}
+              </p>
+            </div>
+            {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} />}
+          </div>
+        </Panel>
+      )}
+
       <Panel>
         {scanHistory.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -42,7 +94,12 @@ export function ScanHistory() {
             {scanHistory.map((scan) => (
               <article
                 key={scan.id}
-                className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                id={`scan-${scan.id}`}
+                className={`rounded-lg border p-4 ${
+                  matchesBlockedTarget(scan, blockedTarget)
+                    ? 'border-rose-500 bg-rose-500/10 shadow-sm shadow-rose-500/10'
+                    : 'border-slate-200 dark:border-slate-800'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

@@ -23,6 +23,11 @@ export function ManualScan() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
+  const scanTypeLabels = {
+    URL: 'URL',
+    Message: 'SMS',
+    File: 'File',
+  }
 
   const readFilePreview = (file) =>
     new Promise((resolve, reject) => {
@@ -45,7 +50,7 @@ export function ManualScan() {
         ? target
         : scanType === 'File'
           ? selectedFiles.map((file) => file.name).join(', ')
-          : target || message.slice(0, 56) || 'Manual message scan'
+          : target || message.slice(0, 56) || 'Manual SMS scan'
 
     setIsScanning(true)
     setError('')
@@ -193,7 +198,7 @@ export function ManualScan() {
     <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
       <Panel>
         <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Manual Scan</p>
-        <h1 className="mt-1 text-2xl font-semibold">Scan a URL, message, or file</h1>
+        <h1 className="mt-1 text-2xl font-semibold">Scan a URL, SMS, or file</h1>
         <form className="mt-5 space-y-4" onSubmit={submit}>
           <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
             {[
@@ -212,7 +217,7 @@ export function ManualScan() {
                 }`}
               >
                 <Icon size={16} />
-                {type}
+                {scanTypeLabels[type]}
               </button>
             ))}
           </div>
@@ -232,7 +237,7 @@ export function ManualScan() {
                 placeholder={
                   scanType === 'URL'
                     ? 'https://example.com/login'
-                    : 'Paste billing@example.com, invoice notice, or suspicious message'
+                    : 'Paste a phone number, sender name, or suspicious SMS'
                 }
                 required={scanType === 'URL'}
               />
@@ -271,7 +276,7 @@ export function ManualScan() {
 
           {scanType === 'Message' && (
             <label className="block">
-              <span className="text-sm font-medium">Email or message content</span>
+              <span className="text-sm font-medium">SMS content</span>
               <textarea
                 className="mt-2 min-h-40 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
                 value={message}
@@ -279,7 +284,7 @@ export function ManualScan() {
                   setMessage(event.target.value)
                   setResult(null)
                 }}
-                placeholder="Paste the suspicious email, SMS, or chat message here..."
+                placeholder="Paste the suspicious SMS here..."
                 required
               />
             </label>
@@ -313,7 +318,7 @@ export function ManualScan() {
           </div>
         ) : (
           <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-            Submit a URL, message, or file to generate a backend-powered 0-100 safety score.
+            Submit a URL, SMS, or file to generate a backend-powered 0-100 safety score.
           </p>
         )}
       </Panel>

@@ -24,10 +24,10 @@ export function Dashboard({ onNavigate }) {
       page: 'dashboard',
     },
     {
-      title: 'Analyze suspicious emails',
-      description: 'Enter the sender, subject, and message body to check for phishing risk.',
+      title: 'Manual email check',
+      description: 'Paste a sender, subject, and email body when automatic webmail scanning is not available.',
       icon: MailCheck,
-      action: 'Analyze Email',
+      action: 'Manual Check',
       page: 'email',
     },
     {
@@ -69,7 +69,7 @@ export function Dashboard({ onNavigate }) {
               type="button"
               onClick={() => onNavigate('email')}
             >
-              Analyze Email
+              Manual Check
             </button>
             <button
               className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white"

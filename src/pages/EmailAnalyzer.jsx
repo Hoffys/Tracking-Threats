@@ -57,8 +57,10 @@ export function EmailAnalyzer() {
   return (
     <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
       <Panel>
-        <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Email Analyzer</p>
-        <h1 className="mt-1 text-2xl font-semibold">Inspect a suspicious message</h1>
+        <p className="text-sm font-medium text-teal-700 dark:text-teal-300">
+          Manual Email Check
+        </p>
+        <h1 className="mt-1 text-2xl font-semibold">Paste an email for manual review</h1>
 
         <form className="mt-5 space-y-4" onSubmit={submit}>
           <label className="block">
@@ -208,7 +210,7 @@ export function EmailAnalyzer() {
           </div>
         ) : (
           <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-            Run an email analysis to see the safety score, indicators, and next action.
+            Paste email content to see the safety score, indicators, and next action.
           </p>
         )}
       </Panel>

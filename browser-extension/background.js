@@ -1,4 +1,5 @@
 const API_URL = 'http://localhost:4000/api/scan/url'
+const EMAIL_API_URL = 'http://localhost:4000/api/scan/email'
 const APP_URL = 'http://localhost:5173/'
 const COOLDOWN_MS = 15000
 const MAX_TRACKED = 200
@@ -208,7 +209,7 @@ function openBlockedPage(tabId, rawUrl, scan) {
 }
 
 async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
-  if (!isTrackableUrl(rawUrl)) return
+  if (!isTrackableUrl(rawUrl)) return null
   const bypassActive = hasBypass(getHost(rawUrl))
 
   const recentScan = getRecentScan(rawUrl)
@@ -217,7 +218,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       await rememberBlockedSite(rawUrl, recentScan)
       openBlockedPage(tabId, rawUrl, recentScan)
     }
-    return
+    return recentScan
   }
 
   remember(rawUrl)
@@ -246,12 +247,47 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       await rememberBlockedSite(rawUrl, scan)
       openBlockedPage(tabId, rawUrl, scan)
     }
+
+    return scan
   } catch (error) {
     await saveStatus({
       ok: false,
       lastUrl: rawUrl,
       error: error.message,
     })
+    return { ok: false, error: error.message }
+  }
+}
+
+async function scanEmailContent({ sender = '', subject = '', body = '' }) {
+  try {
+    const response = await fetch(EMAIL_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender,
+        subject,
+        body,
+        source: 'browser-email-monitor',
+      }),
+    })
+
+    if (!response.ok) throw new Error(`Email scanner returned ${response.status}`)
+    const scan = await response.json()
+    await saveStatus({
+      ok: true,
+      lastUrl: sender || subject || 'Opened email',
+      lastStatus: scan.status,
+      lastScore: scan.score,
+    })
+    return scan
+  } catch (error) {
+    await saveStatus({
+      ok: false,
+      lastUrl: sender || subject || 'Opened email',
+      error: error.message,
+    })
+    return { ok: false, error: error.message }
   }
 }
 
@@ -279,7 +315,15 @@ chrome.webNavigation.onCommitted.addListener((details) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'scan-candidate-url' && message.url) {
     scanUrl(message.url, message.reason ?? 'content-script')
-    sendResponse({ ok: true })
+      .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'scan-email-content') {
+    scanEmailContent(message.email ?? {})
+      .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }
 
