@@ -95,6 +95,28 @@
         color: #fecdd3;
         font-size: 14px;
       }
+
+      .threat-kind {
+        background: rgba(15, 23, 42, 0.48);
+        border: 1px solid rgba(251, 113, 133, 0.38);
+        border-radius: 8px;
+        margin-top: 16px;
+        padding: 14px;
+      }
+
+      .threat-kind strong {
+        color: #fff;
+        display: block;
+        font-size: 15px;
+      }
+
+      .threat-kind span {
+        color: #fecdd3;
+        display: block;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-top: 6px;
+      }
     </style>
   </head>
   <body>
@@ -104,8 +126,12 @@
       <p>This page was automatically blocked because the local scanner marked it as dangerous.</p>
       <div class="url" id="blocked-url"></div>
       <p id="score"></p>
+      <div class="threat-kind">
+        <strong id="threat-type">Detected threat: Dangerous website risk</strong>
+        <span id="threat-reason">The scanner found dangerous URL indicators.</span>
+      </div>
       <p class="warning">
-        Continuing may expose your device or account to phishing, malware, piracy, gambling, or scam risks.
+        Continuing may expose your device, account, or data to this threat.
       </p>
       <div class="actions">
         <a

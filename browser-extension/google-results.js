@@ -74,21 +74,40 @@ function addBadge(anchor, scan) {
   anchor.dataset.threattrackStatus = scan.status
 
   const badge = document.createElement('span')
+  badge.className = 'threattrack-result-badge'
   badge.textContent = scan.status === 'Dangerous' ? 'Blocked risk' : 'Caution'
   badge.style.cssText = [
-    'display:inline-block',
+    'all:initial',
+    'box-sizing:border-box',
+    'display:inline-flex',
+    'align-items:center',
+    'justify-content:center',
+    'flex:0 0 auto',
+    'align-self:flex-start',
+    'width:auto',
+    'min-width:0',
+    'height:20px',
+    'min-height:20px',
+    'max-height:20px',
     'margin-left:8px',
     'border:1px solid rgba(225,29,72,.35)',
     'border-radius:999px',
     'background:#ffe4e6',
     'color:#9f1239',
-    'font:700 11px/1.2 Arial,sans-serif',
-    'padding:3px 7px',
+    'font:700 11px/20px Arial,sans-serif',
+    'padding:0 8px',
+    'white-space:nowrap',
+    'text-decoration:none',
     'vertical-align:middle',
   ].join(';')
 
   const title = anchor.querySelector('h3')
-  ;(title ?? anchor).appendChild(badge)
+  if (title) {
+    title.appendChild(badge)
+  } else {
+    anchor.insertAdjacentElement('afterend', badge)
+  }
+
   return true
 }
 
@@ -97,13 +116,21 @@ function markGoogleLinks(url, scan) {
     (anchor) => normalizeCandidate(anchor.getAttribute('href')) === url,
   )
   const titleAnchors = anchors.filter((anchor) => anchor.querySelector('h3'))
+  const textAnchors = anchors.filter(
+    (anchor) =>
+      !anchor.querySelector('img') &&
+      anchor.textContent.trim().length > 12 &&
+      anchor.getBoundingClientRect().width > 80,
+  )
 
   if (titleAnchors.length > 0) {
     titleAnchors.forEach((anchor) => addBadge(anchor, scan))
     return
   }
 
-  if (anchors[0]) addBadge(anchors[0], scan)
+  if (textAnchors.length > 0) {
+    textAnchors.forEach((anchor) => addBadge(anchor, scan))
+  }
 }
 
 function showRiskPopup() {

@@ -48,6 +48,36 @@ function getBlockContextKey(host) {
   return `blockedContext:${host}`
 }
 
+function getDetectedThreat(scan = {}) {
+  const warningText = (scan.warningSigns ?? []).join(' ').toLowerCase()
+
+  if (/piracy|torrent|cracked|keygen|warez|streaming|repack/.test(warningText)) {
+    return 'Piracy or illegal download risk'
+  }
+
+  if (/gambling|betting|casino|cash-out|sportsbook/.test(warningText)) {
+    return 'Gambling or betting risk'
+  }
+
+  if (/phishing|credential|password|login|account|verification|typosquatting|trusted brand/.test(warningText)) {
+    return 'Phishing or credential theft risk'
+  }
+
+  if (/malware|abuse|malicious|harmful|urlhaus|virustotal/.test(warningText)) {
+    return 'Malware or abuse reputation risk'
+  }
+
+  if (/private or reserved|no public|dns/.test(warningText)) {
+    return 'Suspicious DNS or network risk'
+  }
+
+  return scan.status === 'Dangerous' ? 'Dangerous website risk' : 'Suspicious website risk'
+}
+
+function getPrimaryWarning(scan = {}) {
+  return scan.warningSigns?.[0] ?? scan.summary ?? 'The scanner found dangerous URL indicators.'
+}
+
 async function saveBlockedContext(host, rawUrl, scan) {
   await chrome.storage.local.set({
     [getBlockContextKey(host)]: {
@@ -55,6 +85,8 @@ async function saveBlockedContext(host, rawUrl, scan) {
       url: rawUrl,
       status: scan?.status ?? 'Blocked',
       score: scan?.score ?? 0,
+      threatType: getDetectedThreat(scan),
+      primaryWarning: getPrimaryWarning(scan),
       expiresAt: Date.now() + BLOCK_CONTEXT_TTL_MS,
     },
   })
@@ -193,7 +225,9 @@ function openBlockedPage(tabId, rawUrl, scan) {
   const blockedUrl = chrome.runtime.getURL(
     `blocked.html?url=${encodeURIComponent(rawUrl)}&score=${encodeURIComponent(
       scan.score,
-    )}&status=${encodeURIComponent(scan.status)}`,
+    )}&status=${encodeURIComponent(scan.status)}&threat=${encodeURIComponent(
+      getDetectedThreat(scan),
+    )}&warning=${encodeURIComponent(getPrimaryWarning(scan))}`,
   )
 
   try {
