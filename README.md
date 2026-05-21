@@ -79,11 +79,16 @@ SMTP_SECURE=true
 SMTP_USER=your_sender_gmail@gmail.com
 SMTP_PASS=your_gmail_app_password
 SMTP_FROM=your_sender_gmail@gmail.com
+SMTP_TLS_REJECT_UNAUTHORIZED=true
 ```
 
 Do not use a normal Gmail account password. When SMTP is configured and the
 Settings toggle is enabled, each saved scan can email a summary to saved report
 emails. The Settings page can also send the current history digest on demand.
+Keep SMTP TLS certificate verification enabled. If a local antivirus, proxy, or
+development network intercepts Gmail SMTP certificates and Node reports a local
+certificate-chain verification error, `SMTP_TLS_REJECT_UNAUTHORIZED=false` can
+be used only as a local troubleshooting override.
 
 ## Pages
 

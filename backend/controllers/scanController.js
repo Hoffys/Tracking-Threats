@@ -74,6 +74,14 @@ export const mapBlockedThreat = (row) => ({
   auditVisible: row.audit_visible !== 0,
   reviewedAt: row.reviewed_at,
   blockedAt: row.created_at,
+  emailDetails:
+    row.type === 'Email'
+      ? {
+          sender: row.email_sender || 'Sender not provided',
+          subject: row.email_subject || 'Subject not provided',
+          body: row.email_body ?? '',
+        }
+      : null,
 })
 
 export async function createSystemLog({ level = 'info', event, message, metadata = {} }) {
@@ -329,7 +337,7 @@ export async function createEmailScan({ sender, subject = '', body = '' }, sourc
   const analysis = analyzeEmail({ sender, subject, body })
   const scan = await persistScan({
     type: 'Email',
-    target: sender || subject || 'Untitled email',
+    target: subject || sender || 'Email content without sender or subject',
     content: `${subject}\n${body}`.trim(),
     analysis,
     source,

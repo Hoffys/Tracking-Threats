@@ -42,7 +42,7 @@ export function EmailAnalyzer() {
     try {
       const scan = await createScan({
         type: 'Email',
-        target: sender || subject || 'Untitled email',
+        target: subject || sender || 'Email content without sender or subject',
         content: `${subject}\n${body}`,
       })
       setResult(scan)

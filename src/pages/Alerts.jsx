@@ -41,8 +41,26 @@ function DetailItem({ label, value }) {
   )
 }
 
+const getThreatTitle = (threat) => {
+  if (threat.type !== 'Email') return threat.target
+
+  const subject = threat.emailDetails?.subject
+  const sender = threat.emailDetails?.sender
+  if (subject && subject !== 'Subject not provided') return subject
+  if (sender && sender !== 'Sender not provided') return `Email from ${sender}`
+  if (threat.target && threat.target !== 'Untitled email') return threat.target
+  return 'Email content without sender or subject'
+}
+
+const getEmailPreview = (body = '') => {
+  const normalized = body.replace(/\s+/g, ' ').trim()
+  if (!normalized) return 'No email body was saved for this scan.'
+  return normalized.length > 240 ? `${normalized.slice(0, 237)}...` : normalized
+}
+
 function ThreatReviewModal({ onAction, onClose, threat }) {
   if (!threat) return null
+  const emailDetails = threat.type === 'Email' ? threat.emailDetails : null
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/65 p-4">
@@ -66,12 +84,30 @@ function ThreatReviewModal({ onAction, onClose, threat }) {
 
         <div className="mt-5 grid gap-4 rounded-lg bg-slate-100 p-4 dark:bg-slate-950 sm:grid-cols-2">
           <DetailItem label="Threat type" value={threat.type} />
-          <DetailItem label="URL/email" value={threat.target} />
+          <DetailItem
+            label={threat.type === 'Email' ? 'Email label' : 'URL/email'}
+            value={getThreatTitle(threat)}
+          />
           <DetailItem label="Safety score" value={`${threat.score}/100`} />
           <DetailItem label="Timestamp" value={formatTime(threat.blockedAt)} />
+          {emailDetails && (
+            <>
+              <DetailItem label="Sender" value={emailDetails.sender} />
+              <DetailItem label="Subject" value={emailDetails.subject} />
+            </>
+          )}
         </div>
 
         <div className="mt-5 space-y-4">
+          {emailDetails && (
+            <div>
+              <p className="text-sm font-semibold">Email preview</p>
+              <p className="mt-2 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                {getEmailPreview(emailDetails.body)}
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="text-sm font-semibold">Detection reason</p>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{threat.reason}</p>
@@ -248,11 +284,16 @@ export function Alerts() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{threat.target}</p>
+                    <p className="truncate font-medium">{getThreatTitle(threat)}</p>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       {threat.type} • Blocked {formatTime(threat.blockedAt)} • Safety score{' '}
                       {threat.score}/100
                     </p>
+                    {threat.type === 'Email' && threat.emailDetails && (
+                      <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
+                        From {threat.emailDetails.sender}
+                      </p>
+                    )}
                     {threat.reviewStatus !== 'active' && (
                       <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
                         {reviewLabels[threat.reviewStatus] ?? threat.reviewStatus}
@@ -314,12 +355,17 @@ export function Alerts() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{threat.target}</p>
+                    <p className="truncate font-medium">{getThreatTitle(threat)}</p>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       {reviewLabels[threat.reviewStatus] ?? threat.reviewStatus} •{' '}
                       {formatTime(threat.reviewedAt ?? threat.blockedAt)} • Safety score{' '}
                       {threat.score}/100
                     </p>
+                    {threat.type === 'Email' && threat.emailDetails && (
+                      <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
+                        From {threat.emailDetails.sender}
+                      </p>
+                    )}
                   </div>
                   <RiskBadge risk={threat.reviewStatus === 'marked_safe' ? 'Safe' : 'Dangerous'} />
                 </div>

@@ -1,8 +1,11 @@
+import dns from 'node:dns/promises'
+import net from 'node:net'
 import nodemailer from 'nodemailer'
 import { dbPromise, fromJson } from '../db/database.js'
 import { readNotificationSettings } from './notificationSettings.js'
 
 let transporter
+let transporterKey
 
 const getSmtpConfig = () => {
   const host = process.env.SMTP_HOST
@@ -15,14 +18,35 @@ const getSmtpConfig = () => {
     host,
     port,
     secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
-    auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    auth: { user, pass: pass.replace(/\s/g, '') },
   }
 }
 
-const getTransporter = () => {
+const resolveSmtpConfig = async (config) => {
+  if (net.isIP(config.host)) return config
+
+  const { address } = await dns.lookup(config.host, { family: 4 })
+  return {
+    ...config,
+    host: address,
+    tls: {
+      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
+      servername: config.host,
+    },
+  }
+}
+
+const getTransporter = async () => {
   const config = getSmtpConfig()
   if (!config) return null
-  if (!transporter) transporter = nodemailer.createTransport(config)
+  const key = `${config.host}:${config.port}:${config.auth.user}:${config.secure}`
+  if (!transporter || transporterKey !== key) {
+    transporter = nodemailer.createTransport(await resolveSmtpConfig(config))
+    transporterKey = key
+  }
   return transporter
 }
 
@@ -37,7 +61,7 @@ const formatRecommendations = (recommendations = []) =>
     : '- Review the scan inside Tracking Threats.'
 
 const sendTextMail = async ({ recipients, subject, text }) => {
-  const smtp = getTransporter()
+  const smtp = await getTransporter()
   if (!smtp || recipients.length === 0) return { sent: false, skipped: true }
 
   const result = await smtp.sendMail({

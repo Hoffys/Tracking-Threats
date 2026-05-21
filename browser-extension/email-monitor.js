@@ -44,9 +44,7 @@ function getGmailEmail() {
       getVisibleText('.gD') ||
       getVisibleText('.go'),
     subject: getVisibleText('h2.hP') || getVisibleText('[data-thread-perm-id] h2'),
-    body:
-      bodies.at(-1) ??
-      getLargestVisibleText(['[role="main"] .a3s', '[role="main"] [dir="ltr"]', '[role="main"]']),
+    body: bodies.at(-1) ?? getLargestVisibleText(['[role="main"] .a3s']),
   }
 }
 
@@ -99,6 +97,10 @@ function getScanKey(email) {
     subject: email.subject,
     body: email.body.slice(0, 2000),
   })
+}
+
+function isTrackingThreatsReport(email) {
+  return email.subject.trim().toLowerCase().startsWith('[tracking threats]')
 }
 
 function isRiskyScan(scan) {
@@ -229,7 +231,13 @@ function showEmailWarning(scan, email) {
 function scanOpenedEmail() {
   const email = getOpenedEmail()
   const content = `${email.subject}\n${email.body}`.trim()
-  if (content.length < MIN_EMAIL_TEXT_LENGTH) return
+  if (
+    (!email.sender && !email.subject) ||
+    isTrackingThreatsReport(email) ||
+    content.length < MIN_EMAIL_TEXT_LENGTH
+  ) {
+    return
+  }
 
   const scanKey = getScanKey(email)
   if (scanKey === lastScanKey) return

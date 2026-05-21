@@ -116,9 +116,15 @@ export async function getBlockedThreats(_req, res, next) {
   try {
     const db = await dbPromise
     const rows = await db.all(`
-      SELECT blocked_threats.*, scans.warning_signs
+      SELECT
+        blocked_threats.*,
+        scans.warning_signs,
+        email_scans.sender AS email_sender,
+        email_scans.subject AS email_subject,
+        email_scans.body AS email_body
       FROM blocked_threats
       LEFT JOIN scans ON scans.id = blocked_threats.scan_id
+      LEFT JOIN email_scans ON email_scans.scan_id = blocked_threats.scan_id
       WHERE blocked_threats.active_visible = 1
       ORDER BY blocked_threats.created_at DESC
       LIMIT 250
@@ -133,9 +139,15 @@ export async function getThreatAuditLogs(_req, res, next) {
   try {
     const db = await dbPromise
     const rows = await db.all(`
-      SELECT blocked_threats.*, scans.warning_signs
+      SELECT
+        blocked_threats.*,
+        scans.warning_signs,
+        email_scans.sender AS email_sender,
+        email_scans.subject AS email_subject,
+        email_scans.body AS email_body
       FROM blocked_threats
       LEFT JOIN scans ON scans.id = blocked_threats.scan_id
+      LEFT JOIN email_scans ON email_scans.scan_id = blocked_threats.scan_id
       WHERE blocked_threats.review_status != 'active'
         AND blocked_threats.audit_visible = 1
       ORDER BY COALESCE(blocked_threats.reviewed_at, blocked_threats.created_at) DESC
