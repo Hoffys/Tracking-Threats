@@ -144,13 +144,29 @@ const distance = (left, right) => {
   return rows[left.length][right.length]
 }
 
-const hasTyposquatting = (host) => {
+  const hasTyposquatting = (host) => {
   const domain = getRegistrableName(host)
   const normalized = normalizeLookalikes(domain)
+  const domainTokens = domain.split(/[-_]/).filter((token) => token.length >= 5)
+  const normalizedTokens = domainTokens.map(normalizeLookalikes)
   return protectedBrands.some((brand) => {
     if (domain === brand) return false
-    return normalized === brand || normalized.includes(brand) || distance(normalized, brand) <= 2
+    return (
+      normalized === brand ||
+      normalized.includes(brand) ||
+      distance(normalized, brand) <= 2 ||
+      normalizedTokens.some(
+        (token) => token !== brand && Math.abs(token.length - brand.length) <= 1 && distance(token, brand) <= 1,
+      )
+    )
   })
+}
+
+const hasShortRandomLookingName = (name) => {
+  if (!/^[a-z0-9]{5,8}$/i.test(name)) return false
+
+  const vowels = name.match(/[aeiou]/gi) ?? []
+  return /\d/.test(name) || vowels.length <= 1
 }
 
 export function getDomain(target) {
@@ -214,7 +230,7 @@ export function scanUrl(urlInput) {
   addWarning(warnings, shorteners.includes(host.replace(/^www\./, '')), 'Uses a URL shortener', 20)
   addWarning(warnings, hasTyposquatting(host), 'Possible typosquatting of a trusted brand', 25)
   addWarning(warnings, /login|verify|signin|account|password/.test(path), 'URL contains credential or account keywords', 14)
-  addWarning(warnings, /^[a-z0-9]{5,8}$/i.test(registrableName), 'Uses a short random-looking domain name', 14)
+  addWarning(warnings, hasShortRandomLookingName(registrableName), 'Uses a short random-looking domain name', 14)
   addWarning(warnings, path.length > 1 && path.length <= 8, 'Uses a short opaque URL path', 8)
 
   const score = scoreWarnings(warnings)

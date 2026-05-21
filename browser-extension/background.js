@@ -7,6 +7,12 @@ const BLOCK_RULE_ID_BASE = 10000
 const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
 const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
+const PASS_THROUGH_HOSTS = new Set([
+  'bing.com',
+  'duckduckgo.com',
+  'google.com',
+  'search.yahoo.com',
+])
 
 const recentScans = new Map()
 let blockedHosts = new Map()
@@ -23,12 +29,20 @@ async function saveBlockedHosts() {
   })
 }
 
+function normalizeHost(host) {
+  return host.replace(/^www\./, '')
+}
+
 function getHost(rawUrl) {
   try {
-    return new URL(rawUrl).hostname.replace(/^www\./, '')
+    return normalizeHost(new URL(rawUrl).hostname)
   } catch {
     return ''
   }
+}
+
+function isPassThroughHost(host) {
+  return PASS_THROUGH_HOSTS.has(normalizeHost(host))
 }
 
 function getNextRuleId() {
@@ -125,11 +139,25 @@ async function syncBlockRules() {
   })
 }
 
+async function clearPassThroughBlockRules() {
+  const entries = Array.from(blockedHosts.entries()).filter(([host]) =>
+    isPassThroughHost(host),
+  )
+  if (entries.length === 0) return
+
+  const removeRuleIds = entries.map(([, ruleId]) => ruleId)
+  for (const [host] of entries) blockedHosts.delete(host)
+
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds })
+  await saveBlockedHosts()
+}
+
 function isTrackableUrl(rawUrl) {
   try {
     const url = new URL(rawUrl)
     if (!['http:', 'https:'].includes(url.protocol)) return false
     if (['localhost', '127.0.0.1'].includes(url.hostname)) return false
+    if (isPassThroughHost(url.hostname)) return false
     return true
   } catch {
     return false
@@ -244,9 +272,10 @@ function openBlockedPage(tabId, rawUrl, scan) {
 
 async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   if (!isTrackableUrl(rawUrl)) return null
+  const previewOnly = reason === 'google-search-result'
   const bypassActive = hasBypass(getHost(rawUrl))
 
-  const recentScan = getRecentScan(rawUrl)
+  const recentScan = previewOnly ? null : getRecentScan(rawUrl)
   if (recentScan) {
     if (isBlockedScan(recentScan) && !bypassActive) {
       await rememberBlockedSite(rawUrl, recentScan)
@@ -255,7 +284,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
     return recentScan
   }
 
-  remember(rawUrl)
+  if (!previewOnly) remember(rawUrl)
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -264,12 +293,13 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
         url: rawUrl,
         source: 'browser-extension',
         reason,
+        preview: previewOnly,
       }),
     })
 
     if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
     const scan = await response.json()
-    remember(rawUrl, scan)
+    if (!previewOnly) remember(rawUrl, scan)
     await saveStatus({
       ok: true,
       lastUrl: rawUrl,
@@ -277,7 +307,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       lastScore: scan.score,
     })
 
-    if (isBlockedScan(scan) && !bypassActive) {
+    if (!previewOnly && isBlockedScan(scan) && !bypassActive) {
       await rememberBlockedSite(rawUrl, scan)
       openBlockedPage(tabId, rawUrl, scan)
     }
@@ -374,6 +404,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 chrome.storage.local.remove('allowedHosts')
 
 loadBlockedHosts()
+  .then(clearPassThroughBlockRules)
   .then(syncBlockRules)
   .catch(() => {
     // Storage may be temporarily unavailable during extension startup.

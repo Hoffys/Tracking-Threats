@@ -14,7 +14,7 @@ export function ThreatIntelSummary({ providers = [] }) {
       <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
         {checkedProviders.map((provider) => {
           const state = provider.error
-            ? 'Lookup unavailable'
+            ? `Lookup unavailable - ${provider.error}`
             : provider.found
               ? 'Matched'
               : 'No match'

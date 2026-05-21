@@ -4,6 +4,17 @@ import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from 
 
 const requestTimeoutMs = 4500
 const dnsTimeoutMs = 2500
+const phishTankUserAgent = 'phishtank/tracking-threats'
+const phishTankPassThroughHosts = new Set([
+  'bing.com',
+  'duckduckgo.com',
+  'google.com',
+  'search.yahoo.com',
+  'www.bing.com',
+  'www.google.com',
+  'www.youtube.com',
+  'youtube.com',
+])
 
 const withTimeout = async (url, options) => {
   const controller = new AbortController()
@@ -81,6 +92,15 @@ const postForm = (url, values, extraHeaders = {}) =>
     },
     body: new URLSearchParams(values),
   })
+
+const requireUrlhausAuthKey = () => {
+  const authKey = process.env.URLHAUS_AUTH_KEY
+  if (!authKey) {
+    throw new Error('Set URLHAUS_AUTH_KEY to enable URLhaus lookups')
+  }
+
+  return authKey
+}
 
 async function checkVirusTotal(target) {
   const apiKey = process.env.VIRUSTOTAL_API_KEY
@@ -177,8 +197,15 @@ async function checkGoogleSafeBrowsing(target) {
 }
 
 async function checkUrlhausUrl(target) {
-  const response = await postForm('https://urlhaus-api.abuse.ch/v1/url/', { url: target })
+  const response = await postForm(
+    'https://urlhaus-api.abuse.ch/v1/url/',
+    { url: target },
+    { 'Auth-Key': requireUrlhausAuthKey() },
+  )
 
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('URLhaus rejected URLHAUS_AUTH_KEY')
+  }
   if (!response.ok) throw new Error(`URLhaus URL lookup returned ${response.status}`)
 
   const payload = await response.json()
@@ -202,8 +229,15 @@ async function checkUrlhausHost(target) {
   const host = getHost(target)
   if (!host || net.isIP(host)) return null
 
-  const response = await postForm('https://urlhaus-api.abuse.ch/v1/host/', { host })
+  const response = await postForm(
+    'https://urlhaus-api.abuse.ch/v1/host/',
+    { host },
+    { 'Auth-Key': requireUrlhausAuthKey() },
+  )
 
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('URLhaus rejected URLHAUS_AUTH_KEY')
+  }
   if (!response.ok) throw new Error(`URLhaus host lookup returned ${response.status}`)
 
   const payload = await response.json()
@@ -224,11 +258,20 @@ async function checkUrlhausHost(target) {
 }
 
 async function checkPhishTank(target) {
+  if (phishTankPassThroughHosts.has(parseTarget(target)?.hostname.toLowerCase())) return null
+
+  const appKey = process.env.PHISHTANK_APP_KEY
   const response = await postForm('https://checkurl.phishtank.com/checkurl/', {
     format: 'json',
     url: target,
+    ...(appKey ? { app_key: appKey } : {}),
+  }, {
+    'User-Agent': phishTankUserAgent,
   })
 
+  if (response.status === 509) {
+    throw new Error('PhishTank rate limit reached; set PHISHTANK_APP_KEY')
+  }
   if (!response.ok) throw new Error(`PhishTank returned ${response.status}`)
 
   const payload = await response.json()
@@ -253,24 +296,17 @@ async function resolveHostAddresses(host) {
   if (!host) return { addresses: [], errors: [] }
   if (net.isIP(host)) return { addresses: [host], errors: [] }
 
-  const results = await Promise.allSettled([
-    withDnsTimeout(dns.resolve4(host)),
-    withDnsTimeout(dns.resolve6(host)),
-  ])
+  try {
+    const results = await withDnsTimeout(dns.lookup(host, { all: true }))
+    const addresses = [...new Set(results.map((result) => result.address).filter(Boolean))]
+    return { addresses, errors: [] }
+  } catch (error) {
+    if (['ENODATA', 'ENOTFOUND', 'ENODOMAIN'].includes(error?.code)) {
+      return { addresses: [], errors: [error] }
+    }
 
-  const addresses = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-  const errors = results
-    .filter((result) => result.status === 'rejected')
-    .map((result) => result.reason)
-  const unavailableErrors = errors.filter(
-    (error) => !['ENODATA', 'ENOTFOUND', 'ENODOMAIN'].includes(error?.code),
-  )
-
-  if (addresses.length === 0 && unavailableErrors.length > 0) {
-    throw unavailableErrors[0]
+    throw error
   }
-
-  return { addresses, errors }
 }
 
 async function checkDnsReputation(target) {

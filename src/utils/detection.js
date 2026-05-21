@@ -182,6 +182,8 @@ const getRegistrableName = (host) => {
 const hasTyposquatting = (host) => {
   const domainName = getRegistrableName(host)
   const normalizedName = normalizeLookalikes(domainName)
+  const domainTokens = domainName.split(/[-_]/).filter((token) => token.length >= 5)
+  const normalizedTokens = domainTokens.map(normalizeLookalikes)
 
   return protectedBrands.some((brand) => {
     if (domainName === brand) return false
@@ -189,9 +191,22 @@ const hasTyposquatting = (host) => {
       normalizedName === brand ||
       domainName.includes(brand) ||
       normalizedName.includes(brand) ||
-      levenshtein(normalizedName, brand) <= 2
+      levenshtein(normalizedName, brand) <= 2 ||
+      normalizedTokens.some(
+        (token) =>
+          token !== brand &&
+          Math.abs(token.length - brand.length) <= 1 &&
+          levenshtein(token, brand) <= 1,
+      )
     )
   })
+}
+
+const hasShortRandomLookingName = (name) => {
+  if (!/^[a-z0-9]{5,8}$/i.test(name)) return false
+
+  const vowels = name.match(/[aeiou]/gi) ?? []
+  return /\d/.test(name) || vowels.length <= 1
 }
 
 export const extractLinks = (text) =>
@@ -256,7 +271,7 @@ export function scanUrl(input) {
   addWarning(warnings, shorteners.includes(host.replace(/^www\./, '')), 'Uses a URL shortener', 20)
   addWarning(warnings, hasTyposquatting(host), 'Possible typosquatting of a trusted brand', 25)
   addWarning(warnings, /login|verify|signin|account|password/.test(path), 'URL contains credential or account keywords', 14)
-  addWarning(warnings, /^[a-z0-9]{5,8}$/i.test(registrableName), 'Uses a short random-looking domain name', 14)
+  addWarning(warnings, hasShortRandomLookingName(registrableName), 'Uses a short random-looking domain name', 14)
   addWarning(warnings, path.length > 1 && path.length <= 8, 'Uses a short opaque URL path', 8)
   addWarning(warnings, host.split('.').length >= 4, 'Contains excessive subdomains', 8)
   addWarning(warnings, /%[0-9a-f]{2}/i.test(value), 'Contains encoded characters that may hide the destination', 8)

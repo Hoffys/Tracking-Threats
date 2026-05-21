@@ -1,9 +1,16 @@
+import { loadEnvFile } from 'node:process'
 import cors from 'cors'
 import express from 'express'
 import { initDatabase } from './db/database.js'
 import { dataRoutes } from './routes/dataRoutes.js'
 import { scanRoutes } from './routes/scanRoutes.js'
 import { startAutoMonitor } from './services/autoMonitor.js'
+
+try {
+  loadEnvFile()
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error
+}
 
 const app = express()
 const port = process.env.PORT ?? 4000

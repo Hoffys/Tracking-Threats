@@ -75,7 +75,7 @@ function addBadge(anchor, scan) {
 
   const badge = document.createElement('span')
   badge.className = 'threattrack-result-badge'
-  badge.textContent = scan.status === 'Dangerous' ? 'Blocked risk' : 'Caution'
+  badge.textContent = scan.status === 'Dangerous' ? 'Danger risk' : 'Caution'
   badge.style.cssText = [
     'all:initial',
     'box-sizing:border-box',

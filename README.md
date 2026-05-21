@@ -30,18 +30,41 @@ npm run dev:demo
 
 ## Optional threat intelligence
 
-The URL scanner works locally by default. URLhaus, PhishTank, and DNS
-reputation checks run without keys. To add more external reputation checks, set
-any of these environment variables before starting the backend:
+The URL scanner works locally by default. DNS reputation uses the machine's DNS
+resolver and does not need a key. External reputation checks can use these
+environment variables before starting the backend. For persistent local setup,
+copy `.env.example` to `.env` and fill in only the keys you have:
 
-```bash
+```dotenv
+URLHAUS_AUTH_KEY=your_urlhaus_auth_key
+PHISHTANK_APP_KEY=your_phishtank_app_key
 VIRUSTOTAL_API_KEY=your_virustotal_key
 GOOGLE_SAFE_BROWSING_API_KEY=your_google_safe_browsing_key
 ABUSEIPDB_API_KEY=your_abuseipdb_key
 ```
 
-When these keys are not set, the app continues to use the built-in local
-heuristic scanner plus no-key reputation sources where available.
+The backend loads the repo-root `.env` file on startup. `.env` is ignored by Git
+so personal API keys do not get committed.
+
+URLhaus Community API lookups need a free abuse.ch `Auth-Key`. PhishTank URL
+checks can run without an application key for a small number of lookups, but a
+free app key gives a better rate limit. VirusTotal, Google Safe Browsing, and
+AbuseIPDB are skipped until their keys are configured.
+
+For PowerShell on Windows:
+
+```powershell
+$env:URLHAUS_AUTH_KEY="your_urlhaus_auth_key"
+$env:PHISHTANK_APP_KEY="your_phishtank_app_key"
+$env:VIRUSTOTAL_API_KEY="your_virustotal_key"
+$env:GOOGLE_SAFE_BROWSING_API_KEY="your_google_safe_browsing_key"
+$env:ABUSEIPDB_API_KEY="your_abuseipdb_key"
+npm run dev
+```
+
+When a URLhaus key is missing or a provider rate-limits or rejects a lookup, the
+Threat intelligence summary shows the provider error instead of only a generic
+unavailable status.
 
 ## Pages
 
@@ -78,3 +101,6 @@ browser-extension
 ```
 
 The extension ignores `localhost` pages to avoid scanning the app itself.
+Google search-result links are preview-scanned for warnings before they are
+opened. A search result is not stored or added to the browser block list until
+the browser actually navigates to that URL.

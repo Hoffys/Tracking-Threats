@@ -257,6 +257,28 @@ export async function createUrlScan(target, source = 'api') {
   return persistScan({ type: 'URL', target, content: '', analysis, source })
 }
 
+export async function previewUrlScan(target) {
+  const baseAnalysis = scanUrl(target)
+  const analysis = await enrichUrlAnalysis(target, baseAnalysis)
+
+  return {
+    type: 'URL',
+    target,
+    content: '',
+    score: analysis.score,
+    status: analysis.status,
+    risk: analysis.risk,
+    action: analysis.action,
+    summary: analysis.summary,
+    warningSigns: analysis.warningSigns ?? [],
+    recommendations: analysis.recommendations ?? [],
+    recommendation: analysis.recommendation,
+    threatIntel: analysis.details?.threatIntel ?? [],
+    responseStatus: analysis.action === 'Blocked' ? 'Blocked' : null,
+    blocked: analysis.action === 'Blocked',
+  }
+}
+
 export async function createMessageScan({ target, content }, source = 'api') {
   const analysis = scanMessage(content)
   const scan = await persistScan({ type: 'Message', target, content, analysis, source })
@@ -329,6 +351,9 @@ export async function scanUrlHandler(req, res, next) {
     const target = req.body.url ?? req.body.target
     const source = req.body.source ?? 'api'
     if (!target) return res.status(400).json({ error: 'url is required' })
+    if (req.body.preview === true) {
+      return res.json(await previewUrlScan(target))
+    }
     res.status(201).json(await createUrlScan(target, source))
   } catch (error) {
     next(error)
