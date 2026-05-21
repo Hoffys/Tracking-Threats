@@ -34,11 +34,19 @@ function ToggleRow({ checked, description, label, onChange }) {
 }
 
 export function Settings() {
-  const { notificationSettings, setNotificationSettings } = useThreats()
+  const {
+    notificationSettings,
+    saveNotificationSettings,
+    sendHistoryDigest,
+    setNotificationSettings,
+  } = useThreats()
   const [draft, setDraft] = useState(notificationSettings)
   const [emailInput, setEmailInput] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [digestSent, setDigestSent] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSendingDigest, setIsSendingDigest] = useState(false)
 
   const canSave = useMemo(
     () => draft.reportEmails.length > 0,
@@ -48,6 +56,7 @@ export function Settings() {
   const updateDraft = (changes) => {
     setDraft((current) => ({ ...current, ...changes }))
     setSaved(false)
+    setDigestSent(false)
   }
 
   const addEmail = () => {
@@ -70,19 +79,42 @@ export function Settings() {
     updateDraft({ reportEmails: draft.reportEmails.filter((item) => item !== email) })
   }
 
-  const saveSettings = (event) => {
+  const saveSettings = async (event) => {
     event.preventDefault()
     if (!canSave) {
       setError('Maglagay ng kahit isang email.')
       return
     }
 
-    setNotificationSettings({
-      ...draft,
-      reportEmails: draft.reportEmails.map((email) => email.trim().toLowerCase()),
-    })
+    setIsSaving(true)
+    try {
+      const settings = {
+        ...draft,
+        reportEmails: draft.reportEmails.map((email) => email.trim().toLowerCase()),
+      }
+      setNotificationSettings(settings)
+      await saveNotificationSettings(settings)
+      setError('')
+      setSaved(true)
+    } catch {
+      setError('Hindi na-save ang email notification settings.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const emailDigest = async () => {
     setError('')
-    setSaved(true)
+    setDigestSent(false)
+    setIsSendingDigest(true)
+    try {
+      await sendHistoryDigest()
+      setDigestSent(true)
+    } catch {
+      setError('Hindi na-send ang history digest. Check SMTP settings and saved emails.')
+    } finally {
+      setIsSendingDigest(false)
+    }
   }
 
   return (
@@ -189,13 +221,33 @@ export function Settings() {
                 Settings saved
               </p>
             )}
+            {digestSent && (
+              <p className="mb-3 inline-flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-sm font-medium text-sky-700 dark:text-sky-300">
+                <CheckCircle2 size={17} />
+                History digest sent
+              </p>
+            )}
             <button
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               type="submit"
-              disabled={!canSave}
+              disabled={!canSave || isSaving}
             >
               <Save size={17} />
-              Save Settings
+              {isSaving ? 'Saving...' : 'Save Settings'}
+            </button>
+            <button
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:text-slate-200"
+              type="button"
+              onClick={emailDigest}
+              disabled={
+                !notificationSettings.mailConfigured ||
+                !draft.emailHistoryDigest ||
+                !canSave ||
+                isSendingDigest
+              }
+            >
+              <BellRing size={17} />
+              {isSendingDigest ? 'Sending digest...' : 'Send History Digest'}
             </button>
           </Panel>
         </div>

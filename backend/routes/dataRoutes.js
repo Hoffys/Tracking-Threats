@@ -6,14 +6,17 @@ import {
   clearReviewedThreats,
   clearThreatAuditLogs,
   dismissAlert,
+  emailHistoryDigest,
   getAlerts,
   getBlockedThreats,
   getHistory,
   getLiveFeed,
+  getNotificationSettings,
   getStats,
   getSystemLogs,
   getThreatAuditLogs,
   reviewBlockedThreat,
+  saveNotificationSettings,
 } from '../controllers/dataController.js'
 
 export const dataRoutes = Router()
@@ -32,3 +35,6 @@ dataRoutes.patch('/blocked-threats/clear-reviewed', clearReviewedThreats)
 dataRoutes.get('/system-logs', getSystemLogs)
 dataRoutes.get('/live-feed', getLiveFeed)
 dataRoutes.get('/stats', getStats)
+dataRoutes.get('/notification-settings', getNotificationSettings)
+dataRoutes.put('/notification-settings', saveNotificationSettings)
+dataRoutes.post('/notification-settings/history-digest', emailHistoryDigest)

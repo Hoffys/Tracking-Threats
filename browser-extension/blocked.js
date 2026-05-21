@@ -94,9 +94,11 @@ async function loadBlockedContext() {
 
   if (context?.expiresAt && Date.now() <= context.expiresAt) {
     renderBlockedPage(context)
+    chrome.runtime.sendMessage({ type: 'record-blocked-visit', url: context.url })
     return
   }
 
+  const fallbackUrl = `https://${blockedHost}/`
   renderBlockedPage({
     host: blockedHost,
     status: params.get('status') || 'Blocked',
@@ -104,6 +106,7 @@ async function loadBlockedContext() {
     threatType: params.get('threat') || undefined,
     primaryWarning: params.get('warning') || undefined,
   })
+  chrome.runtime.sendMessage({ type: 'record-blocked-visit', url: fallbackUrl })
 }
 
 document.getElementById('continue-button').addEventListener('click', () => {

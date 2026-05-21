@@ -1,5 +1,10 @@
 import { dbPromise, fromJson } from '../db/database.js'
 import { mapAlert, mapBlockedThreat, mapScan } from './scanController.js'
+import { isMailConfigured, sendHistoryDigest } from '../services/mailReporter.js'
+import {
+  readNotificationSettings,
+  writeNotificationSettings,
+} from '../services/notificationSettings.js'
 
 const getDisplayDomain = (target) => {
   try {
@@ -271,6 +276,47 @@ export async function getStats(_req, res, next) {
       liveScanCount: total.count,
       systemActive: true,
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getNotificationSettings(_req, res, next) {
+  try {
+    res.json({
+      ...(await readNotificationSettings()),
+      mailConfigured: isMailConfigured(),
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function saveNotificationSettings(req, res, next) {
+  try {
+    res.json({
+      ...(await writeNotificationSettings(req.body)),
+      mailConfigured: isMailConfigured(),
+    })
+  } catch (error) {
+    if (error.message.includes('reportEmails')) {
+      return res.status(400).json({ error: error.message })
+    }
+    next(error)
+  }
+}
+
+export async function emailHistoryDigest(_req, res, next) {
+  try {
+    if (!isMailConfigured()) {
+      return res.status(409).json({ error: 'SMTP is not configured' })
+    }
+
+    const result = await sendHistoryDigest()
+    if (result.skipped) {
+      return res.status(409).json({ error: 'Enable history digest and save a report email first' })
+    }
+    res.json({ ok: true })
   } catch (error) {
     next(error)
   }

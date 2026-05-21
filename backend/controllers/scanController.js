@@ -2,6 +2,7 @@ import { dbPromise, fromJson, toJson } from '../db/database.js'
 import { analyzeEmail } from '../services/emailAnalyzer.js'
 import { scanFile } from '../services/fileScanner.js'
 import { scanMessage } from '../services/messageScanner.js'
+import { sendScanReport } from '../services/mailReporter.js'
 import { enrichUrlAnalysis } from '../services/threatIntel.js'
 import { scanUrl } from '../services/urlScanner.js'
 
@@ -242,13 +243,33 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
 
   await enforceVisibleScanLimit(db)
 
-  return mapScan({
+  const savedScan = mapScan({
     ...scan,
     warning_signs: toJson(scan.warningSigns),
     recommendations: toJson(scan.recommendations),
     details: toJson({ ...(scan.details ?? {}), source }),
     created_at: scan.createdAt,
   })
+
+  try {
+    const report = await sendScanReport(savedScan)
+    if (report.sent) {
+      await createSystemLog({
+        event: 'scan_report_sent',
+        message: `${scan.type} scan report emailed for ${scan.target}`,
+        metadata: { scanId: scan.id },
+      })
+    }
+  } catch (error) {
+    await createSystemLog({
+      level: 'error',
+      event: 'scan_report_failed',
+      message: error.message,
+      metadata: { scanId: scan.id },
+    })
+  }
+
+  return savedScan
 }
 
 export async function createUrlScan(target, source = 'api') {

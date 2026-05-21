@@ -17,6 +17,7 @@ export const apiService = {
   getThreatAuditLogs: () => request('/threat-audit-logs'),
   getHistory: () => request('/history'),
   getLiveFeed: () => request('/live-feed'),
+  getNotificationSettings: () => request('/notification-settings'),
   getStats: () => request('/stats'),
   getSystemLogs: () => request('/system-logs'),
   clearAlerts: () => request('/alerts', { method: 'DELETE' }),
@@ -29,6 +30,15 @@ export const apiService = {
     request(`/blocked-threats/${id}/review`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+    }),
+  saveNotificationSettings: (settings) =>
+    request('/notification-settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    }),
+  sendHistoryDigest: () =>
+    request('/notification-settings/history-digest', {
+      method: 'POST',
     }),
   scanUrl: (url) =>
     request('/scan/url', {

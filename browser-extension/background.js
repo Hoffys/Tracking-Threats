@@ -323,6 +323,45 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   }
 }
 
+async function recordBlockedVisit(rawUrl) {
+  if (!isTrackableUrl(rawUrl)) return null
+
+  const cooldownKey = `blocked-visit:${rawUrl}`
+  if (getRecentScan(cooldownKey)) return null
+  remember(cooldownKey, { status: 'recording' })
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: rawUrl,
+        source: 'browser-extension',
+        reason: 'blocked-rule-hit',
+      }),
+    })
+
+    if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
+    const scan = await response.json()
+    remember(rawUrl, scan)
+    await rememberBlockedSite(rawUrl, scan)
+    await saveStatus({
+      ok: true,
+      lastUrl: rawUrl,
+      lastStatus: scan.status,
+      lastScore: scan.score,
+    })
+    return scan
+  } catch (error) {
+    await saveStatus({
+      ok: false,
+      lastUrl: rawUrl,
+      error: error.message,
+    })
+    return { ok: false, error: error.message }
+  }
+}
+
 async function scanEmailContent({ sender = '', subject = '', body = '' }) {
   try {
     const response = await fetch(EMAIL_API_URL, {
@@ -394,6 +433,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'unblock-site' && (message.url || message.host)) {
     unblockSite({ rawUrl: message.url, host: message.host })
       .then((ok) => sendResponse({ ok }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'record-blocked-visit' && message.url) {
+    recordBlockedVisit(message.url)
+      .then((scan) => sendResponse({ ok: true, scan }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }

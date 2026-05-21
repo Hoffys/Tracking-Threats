@@ -66,6 +66,25 @@ When a URLhaus key is missing or a provider rate-limits or rejects a lookup, the
 Threat intelligence summary shows the provider error instead of only a generic
 unavailable status.
 
+## Email reports
+
+Notification recipient emails are saved by the backend from the Settings page.
+To send scan summaries and manual history digests through Gmail SMTP, fill these
+repo-root `.env` values with a Gmail address and Gmail app password:
+
+```dotenv
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your_sender_gmail@gmail.com
+SMTP_PASS=your_gmail_app_password
+SMTP_FROM=your_sender_gmail@gmail.com
+```
+
+Do not use a normal Gmail account password. When SMTP is configured and the
+Settings toggle is enabled, each saved scan can email a summary to saved report
+emails. The Settings page can also send the current history digest on demand.
+
 ## Pages
 
 - Dashboard

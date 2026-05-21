@@ -13,6 +13,7 @@ const defaultNotificationSettings = {
   reportEmails: [],
   emailScanReports: true,
   emailHistoryDigest: true,
+  mailConfigured: false,
 }
 
 const readNotificationSettings = () => {
@@ -87,6 +88,13 @@ export function ThreatProvider({ children }) {
     localStorage.setItem('threattrack:dark-mode', JSON.stringify(darkMode))
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
+
+  useEffect(() => {
+    apiService
+      .getNotificationSettings()
+      .then((settings) => setNotificationSettings((current) => ({ ...current, ...settings })))
+      .catch(console.error)
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(
@@ -183,6 +191,14 @@ export function ThreatProvider({ children }) {
     await refreshData()
   }, [refreshData])
 
+  const saveNotificationSettings = useCallback(async (settings) => {
+    const savedSettings = await apiService.saveNotificationSettings(settings)
+    setNotificationSettings(savedSettings)
+    return savedSettings
+  }, [])
+
+  const sendHistoryDigest = useCallback(() => apiService.sendHistoryDigest(), [])
+
   const dismissNotification = () => setActiveNotification(null)
   const autoBlock = () => null
 
@@ -205,6 +221,8 @@ export function ThreatProvider({ children }) {
       liveScanCount,
       notificationSettings,
       scanHistory,
+      saveNotificationSettings,
+      sendHistoryDigest,
       setDarkMode,
       setNotificationSettings,
       stats,
@@ -227,6 +245,8 @@ export function ThreatProvider({ children }) {
       liveScanCount,
       notificationSettings,
       scanHistory,
+      saveNotificationSettings,
+      sendHistoryDigest,
       stats,
       systemLogs,
       systemActive,

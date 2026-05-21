@@ -117,6 +117,14 @@ export async function initDatabase() {
       metadata TEXT,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      id TEXT PRIMARY KEY,
+      report_emails TEXT NOT NULL,
+      email_scan_reports INTEGER NOT NULL DEFAULT 1,
+      email_history_digest INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL
+    );
   `)
 
   await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
@@ -125,6 +133,12 @@ export async function initDatabase() {
   await ensureColumn(db, 'blocked_threats', 'reviewed_at', 'TEXT')
   await ensureColumn(db, 'scans', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'live_monitor_activity', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
+  await db.run(
+    `INSERT OR IGNORE INTO notification_settings
+      (id, report_emails, email_scan_reports, email_history_digest, updated_at)
+      VALUES ('default', '[]', 1, 1, ?)`,
+    new Date().toISOString(),
+  )
 }
 
 async function ensureColumn(db, table, column, definition) {
