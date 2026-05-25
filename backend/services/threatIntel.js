@@ -27,6 +27,21 @@ const withTimeout = async (url, options) => {
   }
 }
 
+const formatProviderError = (error) => {
+  const code = error?.cause?.code ?? error?.code
+  const message = error?.cause?.message ?? error?.message ?? 'Threat intelligence lookup failed'
+
+  if (code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE') {
+    return 'TLS certificate verification failed; restart the backend with Node system CA support'
+  }
+
+  if (error?.name === 'AbortError') {
+    return 'Lookup timed out'
+  }
+
+  return code ? `${message} (${code})` : message
+}
+
 const getUrlIdentifier = (target) =>
   Buffer.from(target).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
@@ -394,7 +409,7 @@ export async function enrichUrlAnalysis(target, baseAnalysis) {
     return {
       provider: checks[index].provider,
       checked: true,
-      error: result.reason?.message ?? 'Threat intelligence lookup failed',
+      error: formatProviderError(result.reason),
     }
   })
 

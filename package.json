@@ -7,9 +7,9 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client\"",
     "dev:demo": "concurrently \"npm run server:dev:demo\" \"npm run client\"",
     "client": "vite",
-    "server": "node backend/server.js",
-    "server:dev": "nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
-    "server:dev:demo": "cross-env AUTO_MONITOR=true nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
+    "server": "node --use-system-ca backend/server.js",
+    "server:dev": "cross-env NODE_OPTIONS=--use-system-ca nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
+    "server:dev:demo": "cross-env NODE_OPTIONS=--use-system-ca AUTO_MONITOR=true nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
