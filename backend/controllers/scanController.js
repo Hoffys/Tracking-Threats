@@ -365,12 +365,15 @@ export async function createEmailScan({ sender, subject = '', body = '' }, sourc
   return scan
 }
 
-export async function createFileScan({ fileName, mimeType = '', size = 0, content = '' }, source = 'api') {
+export async function createFileScan(
+  { fileName, mimeType = '', size = 0, content = '', sha256 = '' },
+  source = 'api',
+) {
   return persistScan({
     type: 'File',
     target: fileName || 'Uploaded file',
     content,
-    analysis: scanFile({ fileName, mimeType, size, content }),
+    analysis: await scanFile({ fileName, mimeType, size, content, sha256 }),
     source,
   })
 }
@@ -406,8 +409,9 @@ export async function scanFileHandler(req, res, next) {
     const mimeType = req.body.mimeType ?? req.body.type ?? ''
     const size = Number(req.body.size ?? 0)
     const content = req.body.content ?? ''
+    const sha256 = req.body.sha256 ?? ''
     if (!fileName) return res.status(400).json({ error: 'fileName is required' })
-    res.status(201).json(await createFileScan({ fileName, mimeType, size, content }))
+    res.status(201).json(await createFileScan({ fileName, mimeType, size, content, sha256 }))
   } catch (error) {
     next(error)
   }

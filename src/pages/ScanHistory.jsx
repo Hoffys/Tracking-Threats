@@ -1,5 +1,5 @@
-import { FileClock, Trash2 } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { FileClock, Filter, Search, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
@@ -30,8 +30,37 @@ const matchesBlockedTarget = (scan, blockedTarget) => {
   return scanTarget === blocked || scanHost === blockedHost || scanTarget.includes(blockedHost)
 }
 
+const scanText = (scan) =>
+  [
+    scan.type,
+    scan.status,
+    scan.risk,
+    scan.source,
+    scan.target,
+    scan.content,
+    scan.summary,
+    ...(scan.warningSigns ?? []),
+    ...(scan.recommendations ?? []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+const typeOptions = ['All', 'URL', 'Email', 'Message', 'File']
+const statusOptions = [
+  { label: 'All', value: 'All' },
+  { label: 'Safe', value: 'Safe' },
+  { label: 'Caution', value: 'Suspicious' },
+  { label: 'Dangerous', value: 'Dangerous' },
+  { label: 'Blocked', value: 'Blocked' },
+]
+
 export function ScanHistory() {
   const { clearHistory, scanHistory, threatAuditLogs } = useThreats()
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [sourceFilter, setSourceFilter] = useState('All')
   const blockedTarget = useMemo(
     () => new URLSearchParams(window.location.search).get('blocked') ?? '',
     [],
@@ -40,6 +69,25 @@ export function ScanHistory() {
     () => scanHistory.find((scan) => matchesBlockedTarget(scan, blockedTarget)),
     [blockedTarget, scanHistory],
   )
+  const sourceOptions = useMemo(
+    () => ['All', ...new Set(scanHistory.map((scan) => scan.source).filter(Boolean))],
+    [scanHistory],
+  )
+  const filteredScans = useMemo(() => {
+    const searchText = query.trim().toLowerCase()
+
+    return scanHistory.filter((scan) => {
+      const matchesType = typeFilter === 'All' || scan.type === typeFilter
+      const matchesStatus =
+        statusFilter === 'All' ||
+        scan.status === statusFilter ||
+        scan.responseStatus === statusFilter
+      const matchesSource = sourceFilter === 'All' || scan.source === sourceFilter
+      const matchesSearch = !searchText || scanText(scan).includes(searchText)
+
+      return matchesType && matchesStatus && matchesSource && matchesSearch
+    })
+  }, [query, scanHistory, sourceFilter, statusFilter, typeFilter])
 
   useEffect(() => {
     if (!focusedScan) return
@@ -90,8 +138,74 @@ export function ScanHistory() {
             No scan yet. New email and manual scans will be saved.
           </p>
         ) : (
-          <div className="space-y-3">
-            {scanHistory.map((scan) => (
+          <div className="space-y-4">
+            <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
+              <div className="relative">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search target, domain, sender, source, or warning sign"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-800 dark:bg-slate-950"
+                  value={typeFilter}
+                  onChange={(event) => setTypeFilter(event.target.value)}
+                >
+                  {typeOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-800 dark:bg-slate-950"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-800 dark:bg-slate-950"
+                  value={sourceFilter}
+                  onChange={(event) => setSourceFilter(event.target.value)}
+                >
+                  {sourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Showing {filteredScans.length} of {scanHistory.length} records
+              </p>
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-medium text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                <Filter size={15} className="text-teal-500" />
+                History filters
+              </span>
+            </div>
+
+            {filteredScans.length === 0 && (
+              <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                No scan records match the current filters.
+              </div>
+            )}
+
+            {filteredScans.map((scan) => (
               <article
                 key={scan.id}
                 id={`scan-${scan.id}`}

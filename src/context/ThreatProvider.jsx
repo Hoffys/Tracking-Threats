@@ -118,15 +118,26 @@ export function ThreatProvider({ children }) {
   }, [refreshData])
 
   const createScan = useCallback(
-    async ({ type, target, content = '', fileName, mimeType, size }) => {
+    async ({
+      type,
+      target,
+      content = '',
+      fileName,
+      mimeType,
+      size,
+      sha256,
+      sender,
+      subject,
+      body,
+    }) => {
       const scan =
         type === 'URL' || type === 'Domain'
           ? await apiService.scanUrl(target)
           : type === 'Email'
             ? await apiService.scanEmail({
-                sender: target,
-                subject: content.split('\n')[0] ?? '',
-                body: content.split('\n').slice(1).join('\n') || content,
+                sender: sender ?? target,
+                subject: subject ?? content.split('\n')[0] ?? '',
+                body: body ?? (content.split('\n').slice(1).join('\n') || content),
               })
             : type === 'File'
               ? await apiService.scanFile({
@@ -134,6 +145,7 @@ export function ThreatProvider({ children }) {
                   mimeType,
                   size,
                   content,
+                  sha256,
                 })
               : await apiService.scanMessage({ target, content })
 

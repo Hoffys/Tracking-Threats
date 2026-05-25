@@ -3,7 +3,6 @@ import { ThreatProvider } from './context/ThreatProvider'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { LiveMonitor } from './pages/LiveMonitor'
-import { EmailAnalyzer } from './pages/EmailAnalyzer'
 import { ManualScan } from './pages/ManualScan'
 import { ScanHistory } from './pages/ScanHistory'
 import { Alerts } from './pages/Alerts'
@@ -13,7 +12,6 @@ import { useState } from 'react'
 const pages = {
   dashboard: Dashboard,
   monitor: LiveMonitor,
-  email: EmailAnalyzer,
   manual: ManualScan,
   history: ScanHistory,
   alerts: Alerts,
@@ -22,6 +20,7 @@ const pages = {
 
 const getInitialPage = () => {
   const page = new URLSearchParams(window.location.search).get('page')
+  if (page === 'email') return 'manual'
   return pages[page] ? page : 'dashboard'
 }
 
@@ -30,9 +29,10 @@ function AppShell() {
   const ActivePage = pages[activePage]
 
   const handleNavigate = (page) => {
-    setActivePage(page)
+    const nextPage = page === 'email' ? 'manual' : page
+    setActivePage(nextPage)
     const url = new URL(window.location.href)
-    url.searchParams.set('page', page)
+    url.searchParams.set('page', nextPage)
     url.searchParams.delete('blocked')
     window.history.replaceState({}, '', url)
   }

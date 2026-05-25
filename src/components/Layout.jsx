@@ -4,7 +4,6 @@ import {
   CircleX,
   History,
   LayoutDashboard,
-  MailSearch,
   Moon,
   Radar,
   ScanLine,
@@ -18,7 +17,6 @@ import { useThreats } from '../hooks/useThreats'
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'monitor', label: 'Monitor', icon: Radar },
-  { id: 'email', label: 'Manual', icon: MailSearch },
   { id: 'manual', label: 'Scan', icon: ScanLine },
   { id: 'history', label: 'History', icon: History },
   { id: 'alerts', label: 'Alerts', icon: Bell },
@@ -146,7 +144,7 @@ export function Layout({ activePage, children, onNavigate }) {
       </AnimatePresence>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-        <div className="mx-auto grid max-w-6xl grid-cols-7 px-2 py-2">
+        <div className="mx-auto grid max-w-6xl grid-cols-6 px-2 py-2">
           {navItems.map((item) => {
             const Icon = item.icon
             const active = activePage === item.id

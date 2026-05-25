@@ -1,20 +1,62 @@
 import {
   AlertTriangle,
+  BarChart3,
   BellRing,
   CheckCircle2,
   ClipboardList,
   MailCheck,
   MonitorDot,
+  PieChart,
   ScanSearch,
   ShieldAlert,
+  Target,
 } from 'lucide-react'
 import { useThreats } from '../hooks/useThreats'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { StatCard } from '../components/StatCard'
 
+const dayFormatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
+
+const getScanTime = (scan) => new Date(scan.date).getTime()
+
+const countBy = (items, getKey) =>
+  items.reduce((counts, item) => {
+    const key = getKey(item)
+    if (!key) return counts
+    counts[key] = (counts[key] ?? 0) + 1
+    return counts
+  }, {})
+
+const toSortedEntries = (counts, limit = 5) =>
+  Object.entries(counts)
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, limit)
+
+const getLastSevenDays = (scans) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(today)
+    day.setDate(today.getDate() - (6 - index))
+    const nextDay = new Date(day)
+    nextDay.setDate(day.getDate() + 1)
+    const dayScans = scans.filter((scan) => {
+      const time = getScanTime(scan)
+      return time >= day.getTime() && time < nextDay.getTime()
+    })
+
+    return {
+      label: dayFormatter.format(day),
+      total: dayScans.length,
+      blocked: dayScans.filter((scan) => scan.status === 'Dangerous' || scan.blocked).length,
+    }
+  })
+}
+
 export function Dashboard({ onNavigate }) {
-  const { alerts, scanHistory, stats } = useThreats()
+  const { alerts, flaggedThreats, scanHistory, stats, threatAuditLogs } = useThreats()
   const tutorialSteps = [
     {
       title: 'Check the dashboard',
@@ -27,8 +69,8 @@ export function Dashboard({ onNavigate }) {
       title: 'Manual email check',
       description: 'Paste a sender, subject, and email body when automatic webmail scanning is not available.',
       icon: MailCheck,
-      action: 'Manual Check',
-      page: 'email',
+      action: 'Open Scan',
+      page: 'manual',
     },
     {
       title: 'Scan links or files manually',
@@ -54,6 +96,29 @@ export function Dashboard({ onNavigate }) {
       return new Date(right.date).getTime() - new Date(left.date).getTime()
     })
     .slice(0, 4)
+  const trend = getLastSevenDays(scanHistory)
+  const maxTrendTotal = Math.max(1, ...trend.map((day) => day.total))
+  const typeBreakdown = toSortedEntries(countBy(scanHistory, (scan) => scan.type), 4)
+  const warningSigns = toSortedEntries(
+    countBy(
+      scanHistory.flatMap((scan) => scan.warningSigns ?? []),
+      (sign) => sign,
+    ),
+    5,
+  )
+  const riskyTargets = [...scanHistory]
+    .filter((scan) => scan.status === 'Dangerous' || scan.status === 'Suspicious' || scan.blocked)
+    .sort((left, right) => {
+      if (left.score !== right.score) return left.score - right.score
+      return getScanTime(right) - getScanTime(left)
+    })
+    .slice(0, 5)
+  const pendingReviews = flaggedThreats.filter((threat) => threat.reviewStatus === 'active')
+  const reviewedThreats = threatAuditLogs.length
+  const totalTypeBreakdown = Math.max(
+    1,
+    typeBreakdown.reduce((sum, [, count]) => sum + count, 0),
+  )
 
   return (
     <div className="space-y-5">
@@ -67,9 +132,9 @@ export function Dashboard({ onNavigate }) {
             <button
               className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-950"
               type="button"
-              onClick={() => onNavigate('email')}
+              onClick={() => onNavigate('manual')}
             >
-              Manual Check
+              Manual Scan
             </button>
             <button
               className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white"
@@ -165,6 +230,179 @@ export function Dashboard({ onNavigate }) {
           })}
         </div>
       </Panel>
+
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <Panel>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-teal-700 dark:text-teal-300">
+                Seven-day scan trend
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                Activity and blocked threats
+              </h2>
+            </div>
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
+              <BarChart3 size={20} />
+            </span>
+          </div>
+          <div className="grid h-48 grid-cols-7 items-end gap-3">
+            {trend.map((day) => (
+              <div key={day.label} className="flex h-full flex-col justify-end gap-2">
+                <div className="flex flex-1 items-end justify-center gap-1">
+                  <span
+                    className="w-3 rounded-t-md bg-teal-500 shadow-[0_0_12px_rgba(20,184,166,0.35)]"
+                    style={{ height: `${Math.max(8, (day.total / maxTrendTotal) * 100)}%` }}
+                    title={`${day.total} total scans`}
+                  />
+                  <span
+                    className="w-3 rounded-t-md bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.28)]"
+                    style={{ height: `${Math.max(4, (day.blocked / maxTrendTotal) * 100)}%` }}
+                    title={`${day.blocked} blocked threats`}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {day.total}
+                  </p>
+                  <p className="text-xs text-slate-400">{day.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-teal-500" />
+              Total scans
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+              Blocked
+            </span>
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-teal-700 dark:text-teal-300">
+                Threat breakdown
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                Scan types
+              </h2>
+            </div>
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              <PieChart size={20} />
+            </span>
+          </div>
+          <div className="space-y-3">
+            {typeBreakdown.length > 0 ? (
+              typeBreakdown.map(([type, count]) => (
+                <div key={type}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="font-medium">{type}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{count}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full bg-teal-500"
+                      style={{ width: `${(count / totalTypeBreakdown) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400">No scans yet.</p>
+            )}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Panel>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Common warning signs</h2>
+            <AlertTriangle size={19} className="text-amber-500" />
+          </div>
+          <div className="space-y-3">
+            {warningSigns.length > 0 ? (
+              warningSigns.map(([sign, count]) => (
+                <div
+                  key={sign}
+                  className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                >
+                  <p className="line-clamp-2 text-sm font-medium">{sign}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Seen {count} time{count === 1 ? '' : 's'}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No warning signs recorded.
+              </p>
+            )}
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Top risky targets</h2>
+            <Target size={19} className="text-rose-500" />
+          </div>
+          <div className="space-y-3">
+            {riskyTargets.length > 0 ? (
+              riskyTargets.map((scan) => (
+                <div
+                  key={scan.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{scan.target}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {scan.type} - Safety score {scan.score}/100
+                    </p>
+                  </div>
+                  <RiskBadge risk={scan.status ?? scan.risk} />
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No risky targets recorded.
+              </p>
+            )}
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Review queue</h2>
+            <ShieldAlert size={19} className="text-rose-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+              <p className="text-2xl font-semibold text-slate-950 dark:text-white">
+                {pendingReviews.length}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Pending</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+              <p className="text-2xl font-semibold text-slate-950 dark:text-white">
+                {reviewedThreats}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Reviewed</p>
+            </div>
+          </div>
+          <button
+            className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-teal-100 hover:text-teal-800 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-teal-950 dark:hover:text-teal-200"
+            type="button"
+            onClick={() => onNavigate('alerts')}
+          >
+            Open Alerts
+          </button>
+        </Panel>
+      </section>
 
       <Panel>
         <div className="mb-4 flex items-center justify-between gap-3">

@@ -5,7 +5,6 @@ import {
   CircleX,
   Eye,
   FileClock,
-  Info,
   ShieldCheck,
   ShieldX,
   Trash2,
@@ -312,7 +311,7 @@ export function Alerts() {
                     onClick={() => setSelectedThreat(threat)}
                   >
                     <Eye size={16} />
-                    Review
+                    Review details
                   </button>
                   <button
                     className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium dark:border-slate-800"
@@ -321,14 +320,6 @@ export function Alerts() {
                   >
                     <Archive size={16} />
                     Archive
-                  </button>
-                  <button
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium dark:border-slate-800"
-                    type="button"
-                    onClick={() => setSelectedThreat(threat)}
-                  >
-                    <Info size={16} />
-                    Details
                   </button>
                 </div>
               </article>

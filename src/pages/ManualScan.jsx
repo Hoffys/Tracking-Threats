@@ -5,9 +5,12 @@ import {
   CheckCircle2,
   FileText,
   Link2,
+  MailCheck,
   MailWarning,
   SearchCheck,
   ShieldX,
+  TextSearch,
+  UserRoundCheck,
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
@@ -19,12 +22,16 @@ export function ManualScan() {
   const [target, setTarget] = useState('')
   const [scanType, setScanType] = useState('URL')
   const [message, setMessage] = useState('')
+  const [emailSender, setEmailSender] = useState('')
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
   const [selectedFiles, setSelectedFiles] = useState([])
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const scanTypeLabels = {
     URL: 'URL',
+    Email: 'Email',
     Message: 'SMS',
     File: 'File',
   }
@@ -36,6 +43,14 @@ export function ManualScan() {
       reader.onerror = () => reject(reader.error)
       reader.readAsText(file.slice(0, 200 * 1024))
     })
+
+  const hashFile = async (file) => {
+    const buffer = await file.arrayBuffer()
+    const digest = await crypto.subtle.digest('SHA-256', buffer)
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('')
+  }
 
   const selectScanType = (type) => {
     setScanType(type)
@@ -50,6 +65,8 @@ export function ManualScan() {
         ? target
         : scanType === 'File'
           ? selectedFiles.map((file) => file.name).join(', ')
+          : scanType === 'Email'
+            ? emailSubject || emailSender || 'Email content without sender or subject'
           : target || message.slice(0, 56) || 'Manual SMS scan'
 
     setIsScanning(true)
@@ -60,7 +77,10 @@ export function ManualScan() {
         if (selectedFiles.length === 0) throw new Error('No file selected')
         const scans = await Promise.all(
           selectedFiles.map(async (selectedFile) => {
-            const content = await readFilePreview(selectedFile)
+            const [content, sha256] = await Promise.all([
+              readFilePreview(selectedFile),
+              hashFile(selectedFile),
+            ])
             return createScan({
               type: 'File',
               target: selectedFile.name,
@@ -68,10 +88,22 @@ export function ManualScan() {
               mimeType: selectedFile.type,
               size: selectedFile.size,
               content,
+              sha256,
             })
           }),
         )
         setResult(scans)
+      } else if (scanType === 'Email') {
+        setResult(
+          await createScan({
+            type: 'Email',
+            target: scanTarget,
+            sender: emailSender,
+            subject: emailSubject,
+            body: emailBody,
+            content: `${emailSubject}\n${emailBody}`.trim(),
+          }),
+        )
       } else {
         setResult(await createScan({ type: scanType, target: scanTarget, content: message }))
       }
@@ -157,6 +189,19 @@ export function ManualScan() {
         </p>
         <ThreatIntelSummary providers={scanResult.threatIntel} />
 
+        {scanResult.fileDetails?.sha256 && (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              SHA-256
+            </p>
+            <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-slate-200">
+              {scanResult.fileDetails.sha256}
+            </p>
+          </div>
+        )}
+
+        {renderEmailBreakdown(scanResult.emailBreakdown)}
+
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div>
             <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
@@ -194,15 +239,78 @@ export function ManualScan() {
     </div>
   )
 
+  const renderEmailBreakdown = (breakdown) => {
+    if (!breakdown) return null
+
+    const panels = [
+      { key: 'sender', title: 'Sender risk', icon: UserRoundCheck },
+      { key: 'content', title: 'Content risk', icon: TextSearch },
+      { key: 'links', title: 'Link risk', icon: Link2 },
+    ]
+
+    return (
+      <div className="mt-5 grid gap-3 lg:grid-cols-3">
+        {panels.map(({ key, title, icon: Icon }) => {
+          const analysis = breakdown[key]
+          if (!analysis) return null
+          const warnings = analysis.warningSigns ?? []
+
+          return (
+            <div key={key} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                    <Icon size={17} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{title}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Score {analysis.score}/100
+                    </p>
+                  </div>
+                </div>
+                <RiskBadge risk={analysis.status} />
+              </div>
+              {key === 'links' && analysis.extracted?.length > 0 && (
+                <div className="mb-2 space-y-1">
+                  {analysis.extracted.slice(0, 3).map((link) => (
+                    <p
+                      key={link}
+                      className="truncate rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300"
+                    >
+                      {link}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {warnings.length > 0 ? (
+                <ul className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                  {warnings.map((warning) => (
+                    <li key={warning}>- {warning}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  No strong indicators detected.
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
       <Panel>
         <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Manual Scan</p>
-        <h1 className="mt-1 text-2xl font-semibold">Scan a URL, SMS, or file</h1>
+        <h1 className="mt-1 text-2xl font-semibold">Scan a URL, email, SMS, or file</h1>
         <form className="mt-5 space-y-4" onSubmit={submit}>
-          <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950 sm:grid-cols-4">
             {[
               { type: 'URL', icon: Link2 },
+              { type: 'Email', icon: MailCheck },
               { type: 'Message', icon: MailWarning },
               { type: 'File', icon: FileText },
             ].map(({ type, icon: Icon }) => (
@@ -222,7 +330,7 @@ export function ManualScan() {
             ))}
           </div>
 
-          {scanType !== 'File' && (
+          {scanType !== 'File' && scanType !== 'Email' && (
             <label className="block">
               <span className="text-sm font-medium">
                 {scanType === 'URL' ? 'URL to scan' : 'Sender or subject'}
@@ -242,6 +350,48 @@ export function ManualScan() {
                 required={scanType === 'URL'}
               />
             </label>
+          )}
+
+          {scanType === 'Email' && (
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-sm font-medium">Sender</span>
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                  value={emailSender}
+                  onChange={(event) => {
+                    setEmailSender(event.target.value)
+                    setResult(null)
+                  }}
+                  placeholder="security@example.com"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Subject</span>
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                  value={emailSubject}
+                  onChange={(event) => {
+                    setEmailSubject(event.target.value)
+                    setResult(null)
+                  }}
+                  placeholder="Action required"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Email body</span>
+                <textarea
+                  className="mt-2 min-h-44 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                  value={emailBody}
+                  onChange={(event) => {
+                    setEmailBody(event.target.value)
+                    setResult(null)
+                  }}
+                  placeholder="Paste email content here..."
+                  required
+                />
+              </label>
+            </div>
           )}
 
           {scanType === 'File' && (

@@ -55,9 +55,9 @@ export const apiService = {
       method: 'POST',
       body: JSON.stringify({ target, message: content }),
     }),
-  scanFile: ({ fileName, mimeType, size, content }) =>
+  scanFile: ({ fileName, mimeType, size, content, sha256 }) =>
     request('/scan/file', {
       method: 'POST',
-      body: JSON.stringify({ fileName, mimeType, size, content }),
+      body: JSON.stringify({ fileName, mimeType, size, content, sha256 }),
     }),
 }
