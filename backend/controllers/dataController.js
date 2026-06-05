@@ -5,6 +5,7 @@ import {
   readNotificationSettings,
   writeNotificationSettings,
 } from '../services/notificationSettings.js'
+import { getMarkedSafeHosts } from '../services/safeHosts.js'
 
 const getDisplayDomain = (target) => {
   try {
@@ -135,6 +136,14 @@ export async function getBlockedThreats(_req, res, next) {
   }
 }
 
+export async function getSafeHosts(_req, res, next) {
+  try {
+    res.json({ hosts: await getMarkedSafeHosts() })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function getThreatAuditLogs(_req, res, next) {
   try {
     const db = await dbPromise
@@ -181,10 +190,11 @@ export async function reviewBlockedThreat(req, res, next) {
     }
 
     const db = await dbPromise
+    const activeVisible = status === 'confirmed_threat' ? 1 : 0
     await db.run(
       'UPDATE blocked_threats SET review_status = ?, active_visible = ?, reviewed_at = ? WHERE id = ?',
       status,
-      status === 'archived' ? 0 : 1,
+      activeVisible,
       new Date().toISOString(),
       req.params.id,
     )

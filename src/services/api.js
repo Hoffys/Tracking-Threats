@@ -14,6 +14,7 @@ const request = async (path, options) => {
 export const apiService = {
   getAlerts: () => request('/alerts'),
   getBlockedThreats: () => request('/blocked-threats'),
+  getSafeHosts: () => request('/safe-hosts'),
   getThreatAuditLogs: () => request('/threat-audit-logs'),
   getHistory: () => request('/history'),
   getLiveFeed: () => request('/live-feed'),

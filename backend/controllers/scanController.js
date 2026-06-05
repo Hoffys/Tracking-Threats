@@ -3,6 +3,7 @@ import { analyzeEmail } from '../services/emailAnalyzer.js'
 import { scanFile } from '../services/fileScanner.js'
 import { scanMessage } from '../services/messageScanner.js'
 import { sendScanReport } from '../services/mailReporter.js'
+import { isMarkedSafeUrlTarget } from '../services/safeHosts.js'
 import { enrichUrlAnalysis } from '../services/threatIntel.js'
 import { scanUrl } from '../services/urlScanner.js'
 
@@ -281,12 +282,51 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
 }
 
 export async function createUrlScan(target, source = 'api') {
+  if (await isMarkedSafeUrlTarget(target)) {
+    return persistScan({
+      type: 'URL',
+      target,
+      content: '',
+      analysis: {
+        score: 100,
+        status: 'Safe',
+        risk: 'low',
+        action: 'Allowed',
+        summary: 'This URL was previously marked safe during review.',
+        warningSigns: [],
+        recommendations: ['Allow this URL unless new suspicious behavior appears.'],
+        recommendation: 'Allow this URL unless new suspicious behavior appears.',
+        details: { threatIntel: [] },
+      },
+      source,
+    })
+  }
+
   const baseAnalysis = scanUrl(target)
   const analysis = await enrichUrlAnalysis(target, baseAnalysis)
   return persistScan({ type: 'URL', target, content: '', analysis, source })
 }
 
 export async function previewUrlScan(target) {
+  if (await isMarkedSafeUrlTarget(target)) {
+    return {
+      type: 'URL',
+      target,
+      content: '',
+      score: 100,
+      status: 'Safe',
+      risk: 'low',
+      action: 'Allowed',
+      summary: 'This URL was previously marked safe during review.',
+      warningSigns: [],
+      recommendations: ['Allow this URL unless new suspicious behavior appears.'],
+      recommendation: 'Allow this URL unless new suspicious behavior appears.',
+      threatIntel: [],
+      responseStatus: null,
+      blocked: false,
+    }
+  }
+
   const baseAnalysis = scanUrl(target)
   const analysis = await enrichUrlAnalysis(target, baseAnalysis)
 

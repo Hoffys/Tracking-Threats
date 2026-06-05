@@ -12,6 +12,7 @@ import {
   getHistory,
   getLiveFeed,
   getNotificationSettings,
+  getSafeHosts,
   getStats,
   getSystemLogs,
   getThreatAuditLogs,
@@ -27,6 +28,7 @@ dataRoutes.get('/alerts', getAlerts)
 dataRoutes.delete('/alerts', clearAlerts)
 dataRoutes.patch('/alerts/:id/dismiss', dismissAlert)
 dataRoutes.get('/blocked-threats', getBlockedThreats)
+dataRoutes.get('/safe-hosts', getSafeHosts)
 dataRoutes.get('/threat-audit-logs', getThreatAuditLogs)
 dataRoutes.patch('/threat-audit-logs/clear', clearThreatAuditLogs)
 dataRoutes.patch('/blocked-threats/:id/review', reviewBlockedThreat)

@@ -5,6 +5,7 @@ import {
   Brain,
   CheckCircle2,
   ChevronRight,
+  X,
   FileWarning,
   Globe2,
   GraduationCap,
@@ -29,6 +30,15 @@ const modules = [
     accent: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300',
   },
   {
+    title: 'Email Red Flags',
+    level: 'Beginner',
+    time: '6 min',
+    icon: MailWarning,
+    summary: 'Practice spotting suspicious greetings, spelling issues, and unexpected requests.',
+    lessons: ['Generic greetings', 'Unusual sender tone', 'Unexpected requests'],
+    accent: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300',
+  },
+  {
     title: 'Safe URL Checking',
     level: 'Beginner',
     time: '10 min',
@@ -38,12 +48,48 @@ const modules = [
     accent: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300',
   },
   {
+    title: 'Message Scam Detection',
+    level: 'Beginner',
+    time: '7 min',
+    icon: MessageSquareWarning,
+    summary: 'Identify suspicious SMS, chat, and social messages asking for money or codes.',
+    lessons: ['OTP requests', 'Payment pressure', 'Impersonation'],
+    accent: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
+  },
+  {
+    title: 'Safe Browsing Habits',
+    level: 'Beginner',
+    time: '7 min',
+    icon: Globe2,
+    summary: 'Build daily habits for checking websites before trusting downloads or forms.',
+    lessons: ['Check domains', 'Avoid popups', 'Use trusted bookmarks'],
+    accent: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300',
+  },
+  {
+    title: 'Fake Login Pages',
+    level: 'Beginner',
+    time: '8 min',
+    icon: KeyRound,
+    summary: 'Recognize login pages that copy trusted brands to steal usernames and passwords.',
+    lessons: ['Check the address bar', 'Avoid copied forms', 'Use official apps'],
+    accent: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-300',
+  },
+  {
     title: 'Password Defense',
     level: 'Intermediate',
     time: '12 min',
     icon: KeyRound,
     summary: 'Use stronger account habits to reduce damage after a phishing attempt.',
     lessons: ['Password managers', 'MFA prompts', 'Credential reset steps'],
+    accent: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-300',
+  },
+  {
+    title: 'Multi-Factor Authentication',
+    level: 'Intermediate',
+    time: '11 min',
+    icon: KeyRound,
+    summary: 'Understand MFA prompts, backup codes, and suspicious approval requests.',
+    lessons: ['Push fatigue', 'Backup codes', 'Authenticator apps'],
     accent: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-300',
   },
   {
@@ -56,13 +102,31 @@ const modules = [
     accent: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
   },
   {
-    title: 'Message Scam Detection',
-    level: 'Beginner',
-    time: '7 min',
-    icon: MessageSquareWarning,
-    summary: 'Identify suspicious SMS, chat, and social messages asking for money or codes.',
-    lessons: ['OTP requests', 'Payment pressure', 'Impersonation'],
+    title: 'Social Engineering Tactics',
+    level: 'Intermediate',
+    time: '13 min',
+    icon: Brain,
+    summary: 'Learn how attackers use trust, authority, fear, and rewards to influence decisions.',
+    lessons: ['Authority pressure', 'Urgent rewards', 'Trust verification'],
+    accent: 'text-cyan-700 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-300',
+  },
+  {
+    title: 'Report Quality',
+    level: 'Intermediate',
+    time: '10 min',
+    icon: BookOpenCheck,
+    summary: 'Capture useful evidence so suspicious activity can be reviewed quickly.',
+    lessons: ['Save URLs', 'Capture screenshots', 'Write clear context'],
     accent: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
+  },
+  {
+    title: 'Browser Extension Safety',
+    level: 'Intermediate',
+    time: '10 min',
+    icon: ShieldCheck,
+    summary: 'Review permissions and warning signs before installing browser tools.',
+    lessons: ['Permission review', 'Trusted sources', 'Extension cleanup'],
+    accent: 'text-cyan-700 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-300',
   },
   {
     title: 'Incident Response',
@@ -72,6 +136,51 @@ const modules = [
     summary: 'Know what to do after a user clicks a suspicious link or opens a bad file.',
     lessons: ['Containment', 'Evidence capture', 'Reporting'],
     accent: 'text-cyan-700 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-300',
+  },
+  {
+    title: 'Threat Triage',
+    level: 'Advanced',
+    time: '14 min',
+    icon: ShieldCheck,
+    summary: 'Prioritize blocked threats by severity, source, and potential business impact.',
+    lessons: ['Severity ranking', 'Source review', 'Impact notes'],
+    accent: 'text-cyan-700 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-300',
+  },
+  {
+    title: 'Domain Investigation',
+    level: 'Advanced',
+    time: '16 min',
+    icon: Globe2,
+    summary: 'Review domain age signals, redirects, and reputation clues before allowing a site.',
+    lessons: ['Redirect chains', 'Reputation signals', 'Domain patterns'],
+    accent: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300',
+  },
+  {
+    title: 'Attachment Analysis',
+    level: 'Advanced',
+    time: '15 min',
+    icon: FileWarning,
+    summary: 'Evaluate high-risk files using names, hashes, content indicators, and context.',
+    lessons: ['Hash checking', 'Script indicators', 'Context review'],
+    accent: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
+  },
+  {
+    title: 'Security Coaching',
+    level: 'Advanced',
+    time: '12 min',
+    icon: GraduationCap,
+    summary: 'Turn risky events into clear reminders that help users improve safely.',
+    lessons: ['Calm feedback', 'Actionable tips', 'Follow-up review'],
+    accent: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
+  },
+  {
+    title: 'Policy & Allowlist Review',
+    level: 'Advanced',
+    time: '13 min',
+    icon: ListChecks,
+    summary: 'Decide when a blocked site should stay blocked or be safely allowed.',
+    lessons: ['False positive review', 'Allowlist notes', 'Recheck schedule'],
+    accent: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
   },
 ]
 
@@ -105,7 +214,7 @@ const scenarios = [
 ]
 
 export function Learn({ onNavigate }) {
-  const [activeModule, setActiveModule] = useState(modules[0].title)
+  const [activeModule, setActiveModule] = useState('')
   const [activeLessonIndex, setActiveLessonIndex] = useState(0)
   const [checkedItems, setCheckedItems] = useState([])
   const [completedModules, setCompletedModules] = useState([])
@@ -114,15 +223,15 @@ export function Learn({ onNavigate }) {
   const [moduleNotes, setModuleNotes] = useState({})
   const [query, setQuery] = useState('')
   const [scenarioAnswers, setScenarioAnswers] = useState({})
-  const selectedModule = modules.find((module) => module.title === activeModule) ?? modules[0]
-  const SelectedIcon = selectedModule.icon
+  const selectedModule = modules.find((module) => module.title === activeModule)
+  const SelectedIcon = selectedModule?.icon
   const progress = Math.round((completedModules.length / modules.length) * 100)
   const isComplete = progress === 100
   const quizAnswered = Object.keys(scenarioAnswers).length
   const quizScore = scenarios.filter(
     (scenario) => scenarioAnswers[scenario.prompt] === scenario.answer,
   ).length
-  const activeLesson = selectedModule.lessons[activeLessonIndex] ?? selectedModule.lessons[0]
+  const activeLesson = selectedModule?.lessons[activeLessonIndex] ?? selectedModule?.lessons[0]
   const filteredModules = modules.filter((module) => {
     const matchesLevel = levelFilter === 'All' || module.level === levelFilter
     const searchText = `${module.title} ${module.summary} ${module.lessons.join(' ')}`.toLowerCase()
@@ -153,7 +262,7 @@ export function Learn({ onNavigate }) {
   }
 
   const resetLearn = () => {
-    setActiveModule(modules[0].title)
+    setActiveModule('')
     setActiveLessonIndex(0)
     setCheckedItems([])
     setCompletionDismissed(false)
@@ -335,115 +444,6 @@ export function Learn({ onNavigate }) {
 
       <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <Panel>
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                Selected module
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                {selectedModule.title}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {selectedModule.summary}
-              </p>
-            </div>
-            <span
-              className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg ${selectedModule.accent}`}
-            >
-              <SelectedIcon size={22} />
-            </span>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {selectedModule.lessons.map((lesson, index) => (
-              <button
-                key={lesson}
-                type="button"
-                onClick={() => setActiveLessonIndex(index)}
-                className={`rounded-lg border p-3 text-left transition ${
-                  activeLessonIndex === index
-                    ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-950/40'
-                    : 'border-emerald-100 bg-emerald-50/60 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900/60'
-                }`}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                  Lesson {index + 1}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
-                  {lesson}
-                </p>
-              </button>
-            ))}
-          </div>
-          <div className="mt-4 rounded-lg border border-emerald-100 bg-white/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-              Active lesson
-            </p>
-            <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-              {activeLesson}
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Review this concept, then mark the module complete when you can explain the risk and
-              the safe action in your own words.
-            </p>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setActiveLessonIndex((current) =>
-                    current === 0 ? selectedModule.lessons.length - 1 : current - 1,
-                  )
-                }
-                className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-slate-700 dark:text-emerald-300"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setActiveLessonIndex((current) =>
-                    current === selectedModule.lessons.length - 1 ? 0 : current + 1,
-                  )
-                }
-                className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
-              >
-                Next lesson
-              </button>
-            </div>
-          </div>
-          <label className="mt-4 block">
-            <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-950 dark:text-white">
-              <ListChecks size={17} className="text-emerald-500" />
-              My notes for this module
-            </span>
-            <textarea
-              className="min-h-28 w-full resize-y rounded-lg border border-emerald-100 bg-white/80 px-3 py-3 text-sm outline-none transition focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900/70"
-              value={moduleNotes[selectedModule.title] ?? ''}
-              onChange={(event) =>
-                setModuleNotes((current) => ({
-                  ...current,
-                  [selectedModule.title]: event.target.value,
-                }))
-              }
-              placeholder="Type reminders, warning signs, or examples here"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => toggleComplete(selectedModule.title)}
-            className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition ${
-              completedModules.includes(selectedModule.title)
-                ? 'border border-emerald-200 bg-white text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-300'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-            }`}
-          >
-            <CheckCircle2 size={17} />
-            {completedModules.includes(selectedModule.title)
-              ? 'Mark as not finished'
-              : 'Mark module complete'}
-          </button>
-        </Panel>
-
-        <Panel>
           <div className="mb-4 flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
               <BookOpenCheck size={20} />
@@ -563,6 +563,129 @@ export function Learn({ onNavigate }) {
           )}
         </Panel>
       </section>
+
+      {selectedModule && SelectedIcon && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-sm">
+          <div className="max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-auto rounded-lg border border-emerald-200 bg-white/90 p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900/90">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 gap-3">
+                <span
+                  className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg ${selectedModule.accent}`}
+                >
+                  <SelectedIcon size={22} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                    Selected module
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+                    {selectedModule.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    {selectedModule.summary}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Close selected module"
+                onClick={() => setActiveModule('')}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-emerald-100 bg-white/80 text-slate-500 transition hover:border-emerald-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {selectedModule.lessons.map((lesson, index) => (
+                <button
+                  key={lesson}
+                  type="button"
+                  onClick={() => setActiveLessonIndex(index)}
+                  className={`rounded-lg border p-3 text-left transition ${
+                    activeLessonIndex === index
+                      ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-950/40'
+                      : 'border-emerald-100 bg-emerald-50/60 hover:border-emerald-300 dark:border-slate-700 dark:bg-slate-900/60'
+                  }`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                    Lesson {index + 1}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950 dark:text-white">
+                    {lesson}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 rounded-lg border border-emerald-100 bg-white/70 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                Active lesson
+              </p>
+              <h3 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                {activeLesson}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Review this concept, then mark the module complete when you can explain the risk and
+                the safe action in your own words.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveLessonIndex((current) =>
+                      current === 0 ? selectedModule.lessons.length - 1 : current - 1,
+                    )
+                  }
+                  className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-slate-700 dark:text-emerald-300"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveLessonIndex((current) =>
+                      current === selectedModule.lessons.length - 1 ? 0 : current + 1,
+                    )
+                  }
+                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  Next lesson
+                </button>
+              </div>
+            </div>
+            <label className="mt-4 block">
+              <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-950 dark:text-white">
+                <ListChecks size={17} className="text-emerald-500" />
+                My notes for this module
+              </span>
+              <textarea
+                className="min-h-28 w-full resize-y rounded-lg border border-emerald-100 bg-white/80 px-3 py-3 text-sm outline-none transition focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900/70"
+                value={moduleNotes[selectedModule.title] ?? ''}
+                onChange={(event) =>
+                  setModuleNotes((current) => ({
+                    ...current,
+                    [selectedModule.title]: event.target.value,
+                  }))
+                }
+                placeholder="Type reminders, warning signs, or examples here"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => toggleComplete(selectedModule.title)}
+              className={`mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                completedModules.includes(selectedModule.title)
+                  ? 'border border-emerald-200 bg-white text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-emerald-300'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+              }`}
+            >
+              <CheckCircle2 size={17} />
+              {completedModules.includes(selectedModule.title)
+                ? 'Mark as not finished'
+                : 'Mark module complete'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,9 @@
 const API_URL = 'http://localhost:4000/api/scan/url'
 const EMAIL_API_URL = 'http://localhost:4000/api/scan/email'
+const SAFE_HOSTS_URL = 'http://localhost:4000/api/safe-hosts'
 const APP_URL = 'http://localhost:5173/'
 const COOLDOWN_MS = 15000
+const SAFE_HOST_SYNC_MS = 5000
 const MAX_TRACKED = 200
 const BLOCK_RULE_ID_BASE = 10000
 const MAX_BLOCK_RULES = 250
@@ -17,6 +19,7 @@ const PASS_THROUGH_HOSTS = new Set([
 const recentScans = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
+let safeHosts = new Set()
 
 async function loadBlockedHosts() {
   const stored = await chrome.storage.local.get('blockedHosts')
@@ -43,6 +46,13 @@ function getHost(rawUrl) {
 
 function isPassThroughHost(host) {
   return PASS_THROUGH_HOSTS.has(normalizeHost(host))
+}
+
+function isMarkedSafeHost(host) {
+  const normalizedHost = normalizeHost(host)
+  return Array.from(safeHosts).some(
+    (safeHost) => normalizedHost === safeHost || normalizedHost.endsWith(`.${safeHost}`),
+  )
 }
 
 function getNextRuleId() {
@@ -152,6 +162,39 @@ async function clearPassThroughBlockRules() {
   await saveBlockedHosts()
 }
 
+async function syncSafeHosts() {
+  try {
+    const response = await fetch(SAFE_HOSTS_URL)
+    if (!response.ok) throw new Error(`Safe host sync returned ${response.status}`)
+    const payload = await response.json()
+    safeHosts = new Set((payload.hosts ?? []).map(normalizeHost).filter(Boolean))
+
+    const entriesToRemove = Array.from(blockedHosts.entries()).filter(([host]) =>
+      isMarkedSafeHost(host),
+    )
+    if (entriesToRemove.length > 0) {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: entriesToRemove.map(([, ruleId]) => ruleId),
+      })
+      for (const [host] of entriesToRemove) {
+        blockedHosts.delete(host)
+        bypassHosts.set(host, Date.now() + UNBLOCK_BYPASS_MS)
+        await chrome.storage.local.remove(getBlockContextKey(host))
+      }
+      await saveBlockedHosts()
+    }
+
+    return true
+  } catch (error) {
+    await saveStatus({
+      ok: false,
+      lastUrl: 'Safe host sync',
+      error: error.message,
+    })
+    return false
+  }
+}
+
 function isTrackableUrl(rawUrl) {
   try {
     const url = new URL(rawUrl)
@@ -199,6 +242,7 @@ function hasBypass(host) {
 async function rememberBlockedSite(rawUrl, scan = null) {
   const host = getHost(rawUrl)
   if (!host) return
+  if (isMarkedSafeHost(host)) return
 
   await saveBlockedContext(host, rawUrl, scan)
 
@@ -272,6 +316,29 @@ function openBlockedPage(tabId, rawUrl, scan) {
 
 async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   if (!isTrackableUrl(rawUrl)) return null
+  await syncSafeHosts()
+  const host = getHost(rawUrl)
+  if (isMarkedSafeHost(host)) {
+    const safeScan = {
+      type: 'URL',
+      target: rawUrl,
+      score: 100,
+      status: 'Safe',
+      action: 'Allowed',
+      blocked: false,
+      warningSigns: [],
+      recommendations: ['This site was marked safe in Tracking Threats.'],
+    }
+    remember(rawUrl, safeScan)
+    await unblockSite({ rawUrl, host })
+    await saveStatus({
+      ok: true,
+      lastUrl: rawUrl,
+      lastStatus: 'Safe',
+      lastScore: 100,
+    })
+    return safeScan
+  }
   const previewOnly = reason === 'google-search-result'
   const bypassActive = hasBypass(getHost(rawUrl))
 
@@ -325,6 +392,11 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
 
 async function recordBlockedVisit(rawUrl) {
   if (!isTrackableUrl(rawUrl)) return null
+  await syncSafeHosts()
+  if (isMarkedSafeHost(getHost(rawUrl))) {
+    await unblockSite({ rawUrl, host: getHost(rawUrl) })
+    return { status: 'Safe', score: 100, blocked: false }
+  }
 
   const cooldownKey = `blocked-visit:${rawUrl}`
   if (getRecentScan(cooldownKey)) return null
@@ -450,8 +522,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 chrome.storage.local.remove('allowedHosts')
 
 loadBlockedHosts()
+  .then(syncSafeHosts)
   .then(clearPassThroughBlockRules)
   .then(syncBlockRules)
   .catch(() => {
     // Storage may be temporarily unavailable during extension startup.
   })
+
+setInterval(syncSafeHosts, SAFE_HOST_SYNC_MS)
