@@ -6,6 +6,7 @@ import { LiveMonitor } from './pages/LiveMonitor'
 import { ManualScan } from './pages/ManualScan'
 import { ScanHistory } from './pages/ScanHistory'
 import { Alerts } from './pages/Alerts'
+import { Learn } from './pages/Learn'
 import { Settings } from './pages/Settings'
 import { useState } from 'react'
 
@@ -15,6 +16,7 @@ const pages = {
   manual: ManualScan,
   history: ScanHistory,
   alerts: Alerts,
+  learn: Learn,
   settings: Settings,
 }
 

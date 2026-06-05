@@ -123,25 +123,53 @@ export function Dashboard({ onNavigate }) {
   return (
     <div className="space-y-5">
       <section className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-lg bg-slate-950 p-5 text-white dark:bg-slate-900">
-          <p className="text-sm font-medium text-teal-300">Detection overview</p>
-          <h1 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight sm:text-4xl">
-            Monitor suspicious mail, URLs, and scan activity from one local console.
-          </h1>
+        <div className="rounded-lg border border-emerald-300 bg-emerald-100/80 p-5 text-emerald-950 shadow-[0_16px_36px_rgba(5,150,105,0.12)] dark:border-emerald-700 dark:bg-emerald-950/35 dark:text-white">
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+            Automated threat detection
+          </p>
+          <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-emerald-500 text-white shadow-[0_14px_28px_rgba(5,150,105,0.25)]">
+                <ShieldAlert size={30} />
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
+                  System Active & Monitoring
+                </h1>
+                <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
+                  All protection modules operational
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-5 text-right">
+              <div>
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  Total Scans
+                </p>
+                <p className="text-3xl font-semibold">{stats.total}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  Blocked
+                </p>
+                <p className="text-3xl font-semibold">{stats.blocked}</p>
+              </div>
+            </div>
+          </div>
           <div className="mt-5 flex flex-wrap gap-2">
             <button
-              className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-slate-950"
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
               type="button"
               onClick={() => onNavigate('manual')}
             >
               Manual Scan
             </button>
             <button
-              className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-lg border border-emerald-300 bg-white/60 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-white dark:border-emerald-700 dark:bg-slate-900/40 dark:text-emerald-200 dark:hover:bg-slate-900"
               type="button"
-              onClick={() => onNavigate('manual')}
+              onClick={() => onNavigate('monitor')}
             >
-              Manual Scan
+              Live Monitor
             </button>
           </div>
         </div>
