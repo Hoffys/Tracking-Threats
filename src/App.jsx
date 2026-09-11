@@ -8,6 +8,7 @@ import { ScanHistory } from './pages/ScanHistory'
 import { Alerts } from './pages/Alerts'
 import { Learn } from './pages/Learn'
 import { Settings } from './pages/Settings'
+import { isPublicDeployment } from './config/deployment'
 import { useState } from 'react'
 
 const pages = {
@@ -20,9 +21,12 @@ const pages = {
   settings: Settings,
 }
 
+const publicPages = new Set(['manual', 'learn'])
+
 const getInitialPage = () => {
   const page = new URLSearchParams(window.location.search).get('page')
   if (page === 'email') return 'manual'
+  if (isPublicDeployment) return publicPages.has(page) ? page : 'manual'
   return pages[page] ? page : 'dashboard'
 }
 
@@ -32,9 +36,10 @@ function AppShell() {
 
   const handleNavigate = (page) => {
     const nextPage = page === 'email' ? 'manual' : page
-    setActivePage(nextPage)
+    const safePage = isPublicDeployment && !publicPages.has(nextPage) ? 'manual' : nextPage
+    setActivePage(safePage)
     const url = new URL(window.location.href)
-    url.searchParams.set('page', nextPage)
+    url.searchParams.set('page', safePage)
     url.searchParams.delete('blocked')
     window.history.replaceState({}, '', url)
   }

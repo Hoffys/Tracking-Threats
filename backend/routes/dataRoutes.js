@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { requireAdmin } from '../middleware/adminAuth.js'
 import {
   clearHistory,
   clearAlerts,
@@ -22,13 +23,17 @@ import {
 
 export const dataRoutes = Router()
 
+dataRoutes.get('/safe-hosts', getSafeHosts)
+dataRoutes.get('/stats', getStats)
+
+dataRoutes.use(requireAdmin)
+
 dataRoutes.get('/history', getHistory)
 dataRoutes.delete('/history', clearHistory)
 dataRoutes.get('/alerts', getAlerts)
 dataRoutes.delete('/alerts', clearAlerts)
 dataRoutes.patch('/alerts/:id/dismiss', dismissAlert)
 dataRoutes.get('/blocked-threats', getBlockedThreats)
-dataRoutes.get('/safe-hosts', getSafeHosts)
 dataRoutes.get('/threat-audit-logs', getThreatAuditLogs)
 dataRoutes.patch('/threat-audit-logs/clear', clearThreatAuditLogs)
 dataRoutes.patch('/blocked-threats/:id/review', reviewBlockedThreat)
@@ -36,7 +41,6 @@ dataRoutes.patch('/blocked-threats/clear-active', clearFlaggedThreats)
 dataRoutes.patch('/blocked-threats/clear-reviewed', clearReviewedThreats)
 dataRoutes.get('/system-logs', getSystemLogs)
 dataRoutes.get('/live-feed', getLiveFeed)
-dataRoutes.get('/stats', getStats)
 dataRoutes.get('/notification-settings', getNotificationSettings)
 dataRoutes.put('/notification-settings', saveNotificationSettings)
 dataRoutes.post('/notification-settings/history-digest', emailHistoryDigest)

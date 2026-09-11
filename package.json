@@ -7,6 +7,7 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client\"",
     "dev:demo": "concurrently \"npm run server:dev:demo\" \"npm run client\"",
     "client": "vite",
+    "start": "node --use-system-ca backend/server.js",
     "server": "node --use-system-ca backend/server.js",
     "server:dev": "cross-env NODE_OPTIONS=--use-system-ca nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
     "server:dev:demo": "cross-env NODE_OPTIONS=--use-system-ca AUTO_MONITOR=true nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
@@ -20,9 +21,11 @@
     "cors": "^2.8.6",
     "cross-env": "^10.1.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "framer-motion": "^12.38.0",
+    "helmet": "^8.3.0",
     "lucide-react": "^1.11.0",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^9.0.5",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "sqlite": "^5.1.1",
@@ -40,5 +43,8 @@
     "globals": "^17.5.0",
     "nodemon": "^3.1.14",
     "vite": "^8.0.10"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true
   }
 }

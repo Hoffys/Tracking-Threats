@@ -6,7 +6,7 @@ const SEARCH_ENGINE_HOSTS = [
   'duckduckgo.com',
   'yahoo.com',
 ]
-const APP_URL = 'http://localhost:5173/'
+const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const scannedResults = new Map()
 const riskyResults = new Map()
 let scanTimer = null
@@ -49,8 +49,8 @@ function isRiskyScan(scan) {
 
 function getDetailsUrl(url) {
   const detailsUrl = new URL(APP_URL)
-  detailsUrl.searchParams.set('page', 'history')
-  detailsUrl.searchParams.set('blocked', url)
+  detailsUrl.searchParams.set('page', 'manual')
+  detailsUrl.searchParams.set('target', url)
   return detailsUrl.toString()
 }
 

@@ -1,6 +1,7 @@
 # Tracking Threats Phishing Detection
 
-A local-only React + Vite phishing detection system.
+A React + Vite phishing detection system with an Express API, SQLite storage,
+and an optional browser extension.
 
 ## Stack
 
@@ -27,6 +28,43 @@ with sample scans while you work. To run the app with generated demo traffic:
 ```bash
 npm run dev:demo
 ```
+
+## Railway deployment
+
+This repository is prepared for a single Railway web service. The production
+backend serves the built React app from `dist` and the API from `/api`.
+
+Railway uses `railway.json` for the deploy settings:
+
+```text
+Build command: npm ci && npm run build
+Start command: npm start
+Health check: /api/health
+```
+
+Recommended production variables:
+
+```dotenv
+NODE_ENV=production
+PUBLIC_DEPLOYMENT=true
+VITE_PUBLIC_DEPLOYMENT=true
+STORE_SCAN_CONTENT=false
+SMTP_ENABLED=false
+ADMIN_API_TOKEN=replace-with-a-long-random-secret
+DATABASE_PATH=/data/threattrack.sqlite
+FRONTEND_ORIGIN=https://your-railway-domain.up.railway.app
+CORS_ORIGINS=https://your-railway-domain.up.railway.app
+VITE_API_BASE_URL=
+CORS_ALLOW_CHROME_EXTENSIONS=false
+```
+
+If you attach a Railway volume for SQLite, mount it at `/data` so
+`DATABASE_PATH=/data/threattrack.sqlite` persists scan records across restarts.
+
+After Railway gives you the public domain, update `FRONTEND_ORIGIN` and
+`CORS_ORIGINS` to that exact origin, then redeploy. If you use the browser
+extension with the hosted backend, set `CORS_ALLOW_CHROME_EXTENSIONS=true` and
+update `browser-extension/config.js` and `browser-extension/manifest.json`.
 
 ## Optional threat intelligence
 

@@ -11,11 +11,16 @@
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "nodemailer": "^8.0.7",
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "nodemailer": "^9.0.5",
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true
   }
 }

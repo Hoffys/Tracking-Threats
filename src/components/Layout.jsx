@@ -13,9 +13,10 @@ import {
   Sun,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { isPublicDeployment } from '../config/deployment'
 import { useThreats } from '../hooks/useThreats'
 
-const navItems = [
+const allNavItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'learn', label: 'Learn', icon: BookOpenCheck },
   { id: 'monitor', label: 'Monitor', icon: Radar },
@@ -24,6 +25,9 @@ const navItems = [
   { id: 'alerts', label: 'Alerts', icon: Bell },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
+
+const publicNavItems = allNavItems.filter((item) => ['manual', 'learn'].includes(item.id))
+const navItems = isPublicDeployment ? publicNavItems : allNavItems
 
 export function Layout({ activePage, children, onNavigate }) {
   const {
@@ -98,7 +102,7 @@ export function Layout({ activePage, children, onNavigate }) {
           <span className="min-w-0">
             <span className="block truncate text-base font-semibold">Tracking Threats</span>
             <span className="block truncate text-xs text-emerald-700 dark:text-emerald-300">
-              Local phishing defense
+              {isPublicDeployment ? 'Public phishing scanner' : 'Local phishing defense'}
             </span>
           </span>
         </button>

@@ -1,15 +1,24 @@
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const databasePath = path.join(__dirname, '..', 'threattrack.sqlite')
+const databasePath = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.join(__dirname, '..', 'threattrack.sqlite')
 
-export const dbPromise = open({
-  filename: databasePath,
-  driver: sqlite3.Database,
-})
+const openDatabase = async () => {
+  await fs.mkdir(path.dirname(databasePath), { recursive: true })
+
+  return open({
+    filename: databasePath,
+    driver: sqlite3.Database,
+  })
+}
+
+export const dbPromise = openDatabase()
 
 export async function initDatabase() {
   const db = await dbPromise

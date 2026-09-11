@@ -2,6 +2,8 @@ const message = document.querySelector('#message')
 const pill = document.querySelector('#pill')
 const openApp = document.querySelector('#openApp')
 
+openApp.href = TRACKING_THREATS_CONFIG.APP_URL
+
 chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => {
   if (!threattrackStatus) return
 

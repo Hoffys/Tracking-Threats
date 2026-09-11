@@ -10,6 +10,12 @@ import { scanUrl } from '../services/urlScanner.js'
 const now = () => new Date().toISOString()
 const uuid = () => crypto.randomUUID()
 const visibleScanLimit = 50
+const isPublicDeployment = () => process.env.PUBLIC_DEPLOYMENT === 'true'
+const shouldStoreScanContent = () =>
+  process.env.STORE_SCAN_CONTENT === 'true' ||
+  (!isPublicDeployment() && process.env.STORE_SCAN_CONTENT !== 'false')
+
+const getStoredContent = (content) => (shouldStoreScanContent() ? content : '')
 
 const getDisplayDomain = (target) => {
   try {
@@ -17,6 +23,11 @@ const getDisplayDomain = (target) => {
   } catch {
     return target
   }
+}
+
+const getEmailDomain = (sender = '') => {
+  const match = sender.trim().toLowerCase().match(/@([a-z0-9.-]+\.[a-z]{2,})/i)
+  return match?.[1] ?? ''
 }
 
 export const mapScan = (row) => {
@@ -128,11 +139,12 @@ async function enforceVisibleScanLimit(db) {
 async function persistScan({ type, target, content, analysis, source = 'api' }) {
   const db = await dbPromise
   const createdAt = now()
+  const storedContent = getStoredContent(content)
   const scan = {
     id: uuid(),
     type,
     target,
-    content,
+    content: storedContent,
     createdAt,
     ...analysis,
   }
@@ -172,7 +184,7 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
     scan.target,
     scan.type === 'URL' ? getDisplayDomain(scan.target) : scan.target,
     source === 'browser-extension' ? 'Browser URL scan' : `${scan.type} scan`,
-    scan.content || scan.target,
+    storedContent || scan.target,
     scan.score,
     scan.status === 'Dangerous' ? 'Blocked' : scan.status,
     scan.status,
@@ -191,7 +203,7 @@ async function persistScan({ type, target, content, analysis, source = 'api' }) 
       scan.id,
       scan.type,
       scan.target,
-      scan.content,
+      storedContent,
       scan.score,
       'Dangerous',
       'Blocked',
@@ -350,7 +362,15 @@ export async function previewUrlScan(target) {
 
 export async function createMessageScan({ target, content }, source = 'api') {
   const analysis = scanMessage(content)
-  const scan = await persistScan({ type: 'Message', target, content, analysis, source })
+  const storedTarget = shouldStoreScanContent() ? target : 'Public message scan'
+  const scan = await persistScan({
+    type: 'Message',
+    target: storedTarget,
+    content,
+    analysis,
+    source,
+  })
+  const storedMessage = getStoredContent(content)
 
   const db = await dbPromise
   await db.run(
@@ -359,8 +379,8 @@ export async function createMessageScan({ target, content }, source = 'api') {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     uuid(),
     scan.id,
-    target,
-    content,
+    storedTarget,
+    storedMessage,
     scan.score,
     scan.status,
     scan.risk,
@@ -375,9 +395,16 @@ export async function createMessageScan({ target, content }, source = 'api') {
 
 export async function createEmailScan({ sender, subject = '', body = '' }, source = 'api') {
   const analysis = analyzeEmail({ sender, subject, body })
+  const storedSubject = getStoredContent(subject)
+  const storedBody = getStoredContent(body)
+  const storedSender = shouldStoreScanContent()
+    ? sender || 'Unknown sender'
+    : getEmailDomain(sender) || 'Sender redacted'
   const scan = await persistScan({
     type: 'Email',
-    target: subject || sender || 'Email content without sender or subject',
+    target: shouldStoreScanContent()
+      ? subject || sender || 'Email content without sender or subject'
+      : getEmailDomain(sender) || 'Public email scan',
     content: `${subject}\n${body}`.trim(),
     analysis,
     source,
@@ -390,9 +417,9 @@ export async function createEmailScan({ sender, subject = '', body = '' }, sourc
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     uuid(),
     scan.id,
-    sender || 'Unknown sender',
-    subject,
-    body,
+    storedSender,
+    storedSubject,
+    storedBody,
     scan.score,
     scan.status,
     scan.risk,
@@ -435,7 +462,10 @@ export async function scanUrlHandler(req, res, next) {
 export async function scanMessageHandler(req, res, next) {
   try {
     const content = req.body.message ?? req.body.content ?? req.body.body
-    const target = req.body.target ?? content?.slice(0, 56) ?? 'Manual message scan'
+    const target =
+      req.body.target ??
+      (shouldStoreScanContent() ? content?.slice(0, 56) : 'Public message scan') ??
+      'Manual message scan'
     if (!content) return res.status(400).json({ error: 'message is required' })
     res.status(201).json(await createMessageScan({ target, content }))
   } catch (error) {

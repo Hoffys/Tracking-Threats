@@ -1,7 +1,16 @@
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
+
 const request = async (path, options) => {
-  const response = await fetch(`/api${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+  const adminToken = localStorage.getItem('threattrack:admin-token')
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(adminToken ? { 'X-Admin-Token': adminToken } : {}),
+    ...(options?.headers ?? {}),
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api${path}`, {
     ...options,
+    headers,
   })
 
   if (!response.ok) {
@@ -12,6 +21,7 @@ const request = async (path, options) => {
 }
 
 export const apiService = {
+  getHealth: () => request('/health'),
   getAlerts: () => request('/alerts'),
   getBlockedThreats: () => request('/blocked-threats'),
   getSafeHosts: () => request('/safe-hosts'),

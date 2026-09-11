@@ -1,6 +1,6 @@
 const params = new URLSearchParams(window.location.search)
 const blockedHost = params.get('host') || ''
-const APP_URL = 'http://localhost:5173/'
+const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 
 let blockedUrl = params.get('url') || ''
 
@@ -45,9 +45,9 @@ function inferThreatFromUrl(url = '', host = '') {
 
 function getDetailsUrl({ page = 'history', url = '', host = '' } = {}) {
   const detailsUrl = new URL(APP_URL)
-  detailsUrl.searchParams.set('page', page)
+  detailsUrl.searchParams.set('page', page === 'history' ? 'manual' : page)
   const target = url || host
-  if (target) detailsUrl.searchParams.set('blocked', target)
+  if (target) detailsUrl.searchParams.set('target', target)
   return detailsUrl.toString()
 }
 
@@ -70,7 +70,7 @@ function renderBlockedPage({
   document.getElementById('threat-type').textContent = `Detected threat: ${displayedThreatType}`
   document.getElementById('threat-reason').textContent = displayedPrimaryWarning
   document.getElementById('details-link').href = getDetailsUrl({
-    page: 'history',
+    page: 'manual',
     url: blockedUrl,
     host,
   })

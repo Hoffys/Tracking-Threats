@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ThreatContext } from './ThreatContext'
+import { isPublicDeployment } from '../config/deployment'
 import { apiService } from '../services/api'
 
 const emptyStats = {
@@ -50,6 +51,29 @@ export function ThreatProvider({ children }) {
   const latestDangerousAlertId = useRef(null)
 
   const refreshData = useCallback(async () => {
+    if (isPublicDeployment) {
+      const [health, nextStats] = await Promise.all([
+        apiService.getHealth(),
+        apiService.getStats(),
+      ])
+
+      setScanHistory([])
+      setAlerts([])
+      setFlaggedThreats([])
+      setThreatAuditLogs([])
+      setLiveFeed([])
+      setSystemLogs([])
+      setLiveScanCount(nextStats.liveScanCount ?? nextStats.total ?? 0)
+      setSystemActive(Boolean(health.systemActive ?? nextStats.systemActive))
+      setStats({
+        blocked: nextStats.blocked,
+        clean: nextStats.clean,
+        total: nextStats.total,
+        unreadAlerts: nextStats.unreadAlerts,
+      })
+      return
+    }
+
     const [scans, nextAlerts, blockedThreats, auditLogs, feed, logs, nextStats] = await Promise.all([
       apiService.getHistory(),
       apiService.getAlerts(),
@@ -90,6 +114,8 @@ export function ThreatProvider({ children }) {
   }, [darkMode])
 
   useEffect(() => {
+    if (isPublicDeployment) return
+
     apiService
       .getNotificationSettings()
       .then((settings) => setNotificationSettings((current) => ({ ...current, ...settings })))

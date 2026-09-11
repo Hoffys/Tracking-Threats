@@ -7,7 +7,12 @@ import { readNotificationSettings } from './notificationSettings.js'
 let transporter
 let transporterKey
 
+const isSmtpEnabled = () =>
+  process.env.SMTP_ENABLED === 'true' || process.env.PUBLIC_DEPLOYMENT !== 'true'
+
 const getSmtpConfig = () => {
+  if (!isSmtpEnabled()) return null
+
   const host = process.env.SMTP_HOST
   const user = process.env.SMTP_USER
   const pass = process.env.SMTP_PASS

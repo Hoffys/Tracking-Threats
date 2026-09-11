@@ -1,6 +1,6 @@
 const MIN_EMAIL_TEXT_LENGTH = 40
 const SCAN_DEBOUNCE_MS = 1400
-const APP_URL = 'http://localhost:5173/'
+const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 
 let scanTimer = null
 let lastScanKey = ''
@@ -113,8 +113,8 @@ function getStatusLabel(status) {
 
 function getDetailsUrl(target) {
   const url = new URL(APP_URL)
-  url.searchParams.set('page', 'history')
-  if (target) url.searchParams.set('blocked', target)
+  url.searchParams.set('page', 'manual')
+  if (target) url.searchParams.set('target', target)
   return url.toString()
 }
 

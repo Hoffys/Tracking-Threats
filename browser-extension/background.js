@@ -1,7 +1,10 @@
-const API_URL = 'http://localhost:4000/api/scan/url'
-const EMAIL_API_URL = 'http://localhost:4000/api/scan/email'
-const SAFE_HOSTS_URL = 'http://localhost:4000/api/safe-hosts'
-const APP_URL = 'http://localhost:5173/'
+importScripts('config.js')
+
+const API_BASE_URL = TRACKING_THREATS_CONFIG.API_BASE_URL.replace(/\/$/, '')
+const API_URL = `${API_BASE_URL}/api/scan/url`
+const EMAIL_API_URL = `${API_BASE_URL}/api/scan/email`
+const SAFE_HOSTS_URL = `${API_BASE_URL}/api/safe-hosts`
+const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const COOLDOWN_MS = 15000
 const SAFE_HOST_SYNC_MS = 5000
 const MAX_TRACKED = 200
