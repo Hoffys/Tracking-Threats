@@ -138,19 +138,6 @@ function setDetailsHref(anchor, url) {
   })
 }
 
-function getWarningText(scan, url) {
-  const warningSigns = scan.warningSigns?.length
-    ? `\n\nWarning signs:\n- ${scan.warningSigns.slice(0, 4).join('\n- ')}`
-    : ''
-  const recommendations = scan.recommendations?.length
-    ? `\n\nRecommendations:\n- ${scan.recommendations.slice(0, 3).join('\n- ')}`
-    : ''
-
-  return `Tracking Threats warning\n\n${url}\n\nStatus: ${scan.status} - Safety score ${
-    scan.score
-  }/100${warningSigns}${recommendations}\n\nContinue to this link?`
-}
-
 function addBadge(anchor, scan) {
   if (anchor.dataset.threattrackMarked === 'true') return false
 
@@ -419,6 +406,143 @@ function showResultPopup(url, scan) {
   if (!existing) document.body.appendChild(popup)
 }
 
+function createPreviewButton(text, variant = 'secondary') {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = text
+  const primary = variant === 'primary'
+  const danger = variant === 'danger'
+  button.style.cssText = [
+    'all:initial',
+    'box-sizing:border-box',
+    'display:inline-flex',
+    'align-items:center',
+    'justify-content:center',
+    'min-height:38px',
+    'border-radius:8px',
+    `border:1px solid ${primary ? 'rgba(20,184,166,.55)' : danger ? 'rgba(225,29,72,.55)' : 'rgba(148,163,184,.35)'}`,
+    `background:${primary ? '#0f766e' : danger ? '#ffe4e6' : 'rgba(15,23,42,.8)'}`,
+    `color:${primary ? '#fff' : danger ? '#9f1239' : '#e2e8f0'}`,
+    'cursor:pointer',
+    'font:700 13px/1 Arial,sans-serif',
+    'padding:0 12px',
+    'white-space:nowrap',
+  ].join(';')
+  return button
+}
+
+function showClickPreview(url, scan, anchor) {
+  document.getElementById('threattrack-click-preview')?.remove()
+
+  const style = getResultStyle(scan)
+  const level = getScanLevel(scan)
+  const accentColor =
+    level === 'dangerous'
+      ? '#fecdd3'
+      : level === 'caution'
+        ? '#fde68a'
+        : '#6ee7b7'
+  const warnings = scan.warningSigns?.slice(0, 4) ?? []
+  const recommendations = scan.recommendations?.slice(0, 2) ?? []
+  const overlay = document.createElement('div')
+  overlay.id = 'threattrack-click-preview'
+  overlay.style.cssText = [
+    'position:fixed',
+    'inset:0',
+    'z-index:2147483647',
+    'box-sizing:border-box',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'background:rgba(2,6,23,.58)',
+    'padding:20px',
+  ].join(';')
+
+  const card = document.createElement('section')
+  card.style.cssText = [
+    'box-sizing:border-box',
+    'width:min(560px,calc(100vw - 32px))',
+    `border:1px solid ${style.border}`,
+    'border-radius:10px',
+    'background:#111827',
+    'color:#f8fafc',
+    'box-shadow:0 24px 80px rgba(0,0,0,.52)',
+    'font:14px/1.45 Arial,sans-serif',
+    'padding:18px',
+  ].join(';')
+
+  const heading = document.createElement('div')
+  heading.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:12px'
+
+  const title = document.createElement('div')
+  title.innerHTML = `<strong style="display:block;font-size:16px;color:${accentColor}">Tracking Threats Link Preview</strong><span style="color:#cbd5e1">Review this result before opening it.</span>`
+
+  const close = createPreviewButton('x')
+  close.style.width = '34px'
+  close.style.minHeight = '34px'
+  close.style.padding = '0'
+  close.addEventListener('click', () => overlay.remove())
+
+  heading.append(title, close)
+  card.appendChild(heading)
+
+  const urlText = document.createElement('p')
+  urlText.textContent = url
+  urlText.style.cssText = 'margin:14px 0 0;overflow-wrap:anywhere;color:#e2e8f0'
+  card.appendChild(urlText)
+
+  const score = document.createElement('p')
+  score.textContent = `Status: ${scan.status} - Safety score ${scan.score}/100`
+  score.style.cssText = `margin:10px 0 0;color:${accentColor};font-weight:700`
+  card.appendChild(score)
+
+  if (warnings.length > 0) {
+    const list = document.createElement('ul')
+    list.style.cssText = 'margin:12px 0 0;padding-left:18px;color:#f1f5f9'
+    warnings.forEach((warning) => {
+      const item = document.createElement('li')
+      item.textContent = warning
+      list.appendChild(item)
+    })
+    card.appendChild(list)
+  }
+
+  if (recommendations.length > 0) {
+    const recommendation = document.createElement('p')
+    recommendation.textContent = recommendations[0]
+    recommendation.style.cssText = 'margin:12px 0 0;color:#cbd5e1'
+    card.appendChild(recommendation)
+  }
+
+  const actions = document.createElement('div')
+  actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;margin-top:16px'
+
+  const details = document.createElement('a')
+  setDetailsHref(details, url)
+  details.target = '_blank'
+  details.rel = 'noreferrer'
+  details.textContent = 'Open details'
+  details.style.cssText = createPreviewButton('Open details', 'primary').style.cssText
+
+  const cancel = createPreviewButton('Stay on results')
+  cancel.addEventListener('click', () => overlay.remove())
+
+  const continueButton = createPreviewButton('Continue anyway', 'danger')
+  continueButton.addEventListener('click', () => {
+    overlay.remove()
+    if (anchor.target === '_blank') {
+      window.open(url, '_blank', 'noopener,noreferrer')
+      return
+    }
+    window.location.href = url
+  })
+
+  actions.append(details, cancel, continueButton)
+  card.appendChild(actions)
+  overlay.appendChild(card)
+  document.body.appendChild(overlay)
+}
+
 function scanGoogleResults() {
   showSearchStatus()
   collectResultLinks().forEach((url) => {
@@ -459,11 +583,9 @@ document.addEventListener(
     const scan = scannedResults.get(normalized)
     if (!scan || !isRiskyScan(scan)) return
 
-    const shouldContinue = window.confirm(getWarningText(scan, normalized))
-    if (!shouldContinue) {
-      event.preventDefault()
-      event.stopPropagation()
-    }
+    event.preventDefault()
+    event.stopPropagation()
+    showClickPreview(normalized, scan, anchor)
   },
   true,
 )
