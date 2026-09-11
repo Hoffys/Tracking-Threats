@@ -43,12 +43,23 @@ function inferThreatFromUrl(url = '', host = '') {
   }
 }
 
-function getDetailsUrl({ page = 'history', url = '', host = '' } = {}) {
+function getDetailsUrl({ appUrl = APP_URL, url = '', host = '' } = {}) {
   const detailsUrl = new URL(APP_URL)
-  detailsUrl.searchParams.set('page', page === 'history' ? 'manual' : page)
+  detailsUrl.href = appUrl
+  detailsUrl.searchParams.set('page', 'history')
   const target = url || host
-  if (target) detailsUrl.searchParams.set('target', target)
+  if (target) detailsUrl.searchParams.set('blocked', target)
   return detailsUrl.toString()
+}
+
+function updateDetailsLink({ url = '', host = '' } = {}) {
+  const detailsLink = document.getElementById('details-link')
+  detailsLink.href = getDetailsUrl({ url, host })
+
+  chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+    if (chrome.runtime.lastError || !response?.ok || !response.appUrl) return
+    detailsLink.href = getDetailsUrl({ appUrl: response.appUrl, url, host })
+  })
 }
 
 function renderBlockedPage({
@@ -69,11 +80,7 @@ function renderBlockedPage({
   document.getElementById('score').textContent = `Status: ${status} - Safety score ${score}/100`
   document.getElementById('threat-type').textContent = `Detected threat: ${displayedThreatType}`
   document.getElementById('threat-reason').textContent = displayedPrimaryWarning
-  document.getElementById('details-link').href = getDetailsUrl({
-    page: 'manual',
-    url: blockedUrl,
-    host,
-  })
+  updateDetailsLink({ url: blockedUrl, host })
 }
 
 async function loadBlockedContext() {
