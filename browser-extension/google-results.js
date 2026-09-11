@@ -9,6 +9,7 @@ const SEARCH_ENGINE_HOSTS = [
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const scannedResults = new Map()
 const riskyResults = new Map()
+const latestResults = new Map()
 let scanTimer = null
 
 function isSearchEngineHost(hostname) {
@@ -47,11 +48,20 @@ function isRiskyScan(scan) {
   return scan?.status === 'Dangerous' || scan?.status === 'Suspicious' || scan?.blocked
 }
 
-function getDetailsUrl(url) {
+function getDetailsUrl(url, appUrl = APP_URL) {
   const detailsUrl = new URL(APP_URL)
-  detailsUrl.searchParams.set('page', 'manual')
-  detailsUrl.searchParams.set('target', url)
+  detailsUrl.href = appUrl
+  detailsUrl.searchParams.set('page', 'history')
+  detailsUrl.searchParams.set('blocked', url)
   return detailsUrl.toString()
+}
+
+function setDetailsHref(anchor, url) {
+  anchor.href = getDetailsUrl(url)
+  chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+    if (chrome.runtime.lastError || !response?.ok || !response.appUrl) return
+    anchor.href = getDetailsUrl(url, response.appUrl)
+  })
 }
 
 function getWarningText(scan, url) {
@@ -73,9 +83,11 @@ function addBadge(anchor, scan) {
   anchor.dataset.threattrackMarked = 'true'
   anchor.dataset.threattrackStatus = scan.status
 
+  const isSafe = scan.status === 'Safe'
+  const isDangerous = scan.status === 'Dangerous' || scan.blocked
   const badge = document.createElement('span')
   badge.className = 'threattrack-result-badge'
-  badge.textContent = scan.status === 'Dangerous' ? 'Danger risk' : 'Caution'
+  badge.textContent = isDangerous ? 'Danger risk' : isSafe ? 'Safe' : 'Caution'
   badge.style.cssText = [
     'all:initial',
     'box-sizing:border-box',
@@ -90,10 +102,10 @@ function addBadge(anchor, scan) {
     'min-height:20px',
     'max-height:20px',
     'margin-left:8px',
-    'border:1px solid rgba(225,29,72,.35)',
+    `border:1px solid ${isDangerous ? 'rgba(225,29,72,.35)' : isSafe ? 'rgba(16,185,129,.38)' : 'rgba(245,158,11,.42)'}`,
     'border-radius:999px',
-    'background:#ffe4e6',
-    'color:#9f1239',
+    `background:${isDangerous ? '#ffe4e6' : isSafe ? '#ccfbf1' : '#fef3c7'}`,
+    `color:${isDangerous ? '#9f1239' : isSafe ? '#115e59' : '#92400e'}`,
     'font:700 11px/20px Arial,sans-serif',
     'padding:0 8px',
     'white-space:nowrap',
@@ -133,15 +145,26 @@ function markGoogleLinks(url, scan) {
   }
 }
 
-function showRiskPopup() {
+function showResultPopup(url, scan) {
   const existing = document.getElementById('threattrack-google-warning')
-  const results = Array.from(riskyResults.entries())
-  if (results.length === 0) return
+  const results = Array.from(latestResults.entries())
+  const topUrl = url || results[0]?.[0]
+  const topScan = scan || results[0]?.[1]
+  if (!topUrl || !topScan) return
 
-  const [topUrl, topScan] = results[0]
   const warningSigns = topScan.warningSigns?.slice(0, 3) ?? []
   const recommendations = topScan.recommendations?.slice(0, 2) ?? []
   const popup = existing ?? document.createElement('aside')
+  const isSafe = topScan.status === 'Safe'
+  const isDangerous = topScan.status === 'Dangerous' || topScan.blocked
+  const borderColor = isDangerous
+    ? 'rgba(225,29,72,.45)'
+    : isSafe
+      ? 'rgba(16,185,129,.45)'
+      : 'rgba(245,158,11,.45)'
+  const accentColor = isDangerous ? '#fecdd3' : isSafe ? '#6ee7b7' : '#fde68a'
+  const buttonColor = isDangerous ? '#9f1239' : isSafe ? '#065f46' : '#92400e'
+  const statusText = isDangerous ? 'Danger risk' : isSafe ? 'Safe result' : 'Caution'
 
   popup.id = 'threattrack-google-warning'
   popup.style.cssText = [
@@ -151,7 +174,7 @@ function showRiskPopup() {
     'z-index:2147483647',
     'box-sizing:border-box',
     'width:min(360px,calc(100vw - 32px))',
-    'border:1px solid rgba(225,29,72,.45)',
+    `border:1px solid ${borderColor}`,
     'border-radius:8px',
     'background:#111827',
     'color:#f8fafc',
@@ -166,7 +189,7 @@ function showRiskPopup() {
   header.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:12px'
 
   const title = document.createElement('div')
-  title.innerHTML = `<strong style="display:block;font-size:14px;color:#fecdd3">Tracking Threats Warning</strong><span style="color:#cbd5e1">${results.length} risky Google result${results.length === 1 ? '' : 's'} detected before opening.</span>`
+  title.innerHTML = `<strong style="display:block;font-size:14px;color:${accentColor}">Tracking Threats Result</strong><span style="color:#cbd5e1">${statusText} detected before opening this result.</span>`
 
   const close = document.createElement('button')
   close.type = 'button'
@@ -194,8 +217,15 @@ function showRiskPopup() {
 
   const score = document.createElement('p')
   score.textContent = `Status: ${topScan.status} - Safety score ${topScan.score}/100`
-  score.style.cssText = 'margin:8px 0 0;color:#fecdd3;font-weight:700'
+  score.style.cssText = `margin:8px 0 0;color:${accentColor};font-weight:700`
   popup.appendChild(score)
+
+  if (isSafe) {
+    const safeText = document.createElement('p')
+    safeText.textContent = 'No strong phishing indicators were found for this result.'
+    safeText.style.cssText = 'margin:10px 0 0;color:#cbd5e1'
+    popup.appendChild(safeText)
+  }
 
   if (warningSigns.length > 0) {
     const list = document.createElement('ul')
@@ -216,16 +246,16 @@ function showRiskPopup() {
   }
 
   const details = document.createElement('a')
-  details.href = getDetailsUrl(topUrl)
+  setDetailsHref(details, topUrl)
   details.target = '_blank'
   details.rel = 'noreferrer'
-  details.textContent = 'See why this was flagged'
+  details.textContent = 'Open in Tracking Threats'
   details.style.cssText = [
     'display:inline-flex',
     'margin-top:12px',
     'border-radius:8px',
     'background:#f8fafc',
-    'color:#9f1239',
+    `color:${buttonColor}`,
     'font-weight:700',
     'padding:8px 10px',
     'text-decoration:none',
@@ -245,11 +275,12 @@ function scanGoogleResults() {
       url,
       reason: 'google-search-result',
     }, (response) => {
-      if (!response?.ok || !isRiskyScan(response.scan)) return
       scannedResults.set(url, response.scan)
-      riskyResults.set(url, response.scan)
+      if (!response?.ok || !response.scan) return
+      latestResults.set(url, response.scan)
+      if (isRiskyScan(response.scan)) riskyResults.set(url, response.scan)
       markGoogleLinks(url, response.scan)
-      showRiskPopup()
+      showResultPopup(url, response.scan)
     })
   })
 }

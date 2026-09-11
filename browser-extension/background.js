@@ -15,6 +15,7 @@ const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
 const CLIENT_ID_KEY = 'threattrackClientId'
 const BYPASS_HOSTS_KEY = 'bypassHosts'
 const ALLOWED_HOSTS_KEY = 'allowedHosts'
+const NOTIFICATION_PREFIX = 'threattrack-scan:'
 const PASS_THROUGH_HOSTS = new Set([
   'bing.com',
   'duckduckgo.com',
@@ -27,6 +28,7 @@ const PASS_THROUGH_HOSTS = new Set([
 const recentScans = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
+const notificationTargets = new Map()
 let allowedHosts = new Set()
 let safeHosts = new Set()
 
@@ -42,6 +44,13 @@ async function getClientId() {
 function getLinkedAppUrl(clientId) {
   const url = new URL(APP_URL)
   url.searchParams.set('client', clientId)
+  return url.toString()
+}
+
+function getHistoryUrl(clientId, target = '') {
+  const url = new URL(getLinkedAppUrl(clientId))
+  url.searchParams.set('page', 'history')
+  if (target) url.searchParams.set('blocked', target)
   return url.toString()
 }
 
@@ -379,6 +388,52 @@ async function saveStatus(status) {
   })
 }
 
+function getScanNotification(scan, rawUrl) {
+  const score = Number(scan?.score ?? 0)
+  const status = scan?.status === 'Dangerous' || scan?.blocked ? 'Blocked' : scan?.status
+  const host = getHost(rawUrl) || rawUrl
+
+  if (status === 'Blocked') {
+    return {
+      title: 'Tracking Threats blocked a risky site',
+      message: `${host} was marked Dangerous. Safety score ${score}/100.`,
+    }
+  }
+
+  if (status === 'Suspicious') {
+    return {
+      title: 'Tracking Threats caution',
+      message: `${host} has warning signs. Safety score ${score}/100.`,
+    }
+  }
+
+  return {
+    title: 'Tracking Threats scan complete',
+    message: `${host} looks safe. Safety score ${score}/100.`,
+  }
+}
+
+async function notifyScanResult(rawUrl, scan) {
+  if (!rawUrl || !scan || scan.ok === false) return
+
+  try {
+    const clientId = await getClientId()
+    const notificationId = `${NOTIFICATION_PREFIX}${scan.id ?? Date.now()}`
+    const notification = getScanNotification(scan, rawUrl)
+    notificationTargets.set(notificationId, getHistoryUrl(clientId, rawUrl))
+
+    await chrome.notifications.create(notificationId, {
+      type: 'basic',
+      iconUrl: 'icons/icon-128.png',
+      title: notification.title,
+      message: notification.message,
+      priority: scan.status === 'Dangerous' || scan.blocked ? 2 : 0,
+    })
+  } catch {
+    // Browser or OS notification settings should not stop scanning or blocking.
+  }
+}
+
 function openBlockedPage(tabId, rawUrl, scan) {
   if (!tabId || tabId < 0) return
 
@@ -467,6 +522,9 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       lastStatus: scan.status,
       lastScore: scan.score,
     })
+    if (!previewOnly) {
+      await notifyScanResult(rawUrl, scan)
+    }
 
     if (!previewOnly && isBlockedScan(scan) && !bypassActive) {
       await rememberBlockedSite(rawUrl, scan)
@@ -527,6 +585,7 @@ async function recordBlockedVisit(rawUrl) {
       lastStatus: scan.status,
       lastScore: scan.score,
     })
+    await notifyScanResult(rawUrl, scan)
     return scan
   } catch (error) {
     await saveStatus({
@@ -561,6 +620,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
       lastStatus: scan.status,
       lastScore: scan.score,
     })
+    await notifyScanResult(sender || subject || 'Opened email', scan)
     return scan
   } catch (error) {
     await saveStatus({
@@ -630,6 +690,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   return false
+})
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  const targetUrl = notificationTargets.get(notificationId)
+  if (!targetUrl) return
+  chrome.tabs.create({ url: targetUrl })
+  chrome.notifications.clear(notificationId)
 })
 
 Promise.all([loadBlockedHosts(), loadBypassHosts(), loadAllowedHosts()])
