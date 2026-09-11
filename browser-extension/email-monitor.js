@@ -1,9 +1,13 @@
 const MIN_EMAIL_TEXT_LENGTH = 40
 const SCAN_DEBOUNCE_MS = 1400
+const INBOX_SCAN_DEBOUNCE_MS = 2200
+const MAX_INBOX_ROWS_PER_PASS = 12
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 
 let scanTimer = null
+let inboxScanTimer = null
 let lastScanKey = ''
+const inboxScanKeys = new Set()
 
 function cleanText(value = '') {
   return value.replace(/\s+/g, ' ').trim()
@@ -93,6 +97,101 @@ function getGmailEmail() {
       '[role="main"] .a3s',
     ]),
   }
+}
+
+function getGmailInboxRows() {
+  return Array.from(document.querySelectorAll('tr.zA, div[role="main"] tr[role="link"]'))
+    .filter(isVisible)
+    .filter((row) => {
+      const email = getGmailInboxEmail(row)
+      return email.subject || email.body
+    })
+    .slice(0, MAX_INBOX_ROWS_PER_PASS)
+}
+
+function getRowText(row, selector) {
+  return cleanText(row.querySelector(selector)?.textContent ?? '')
+}
+
+function getRowAttribute(row, selector, attribute) {
+  return cleanText(row.querySelector(selector)?.getAttribute(attribute) ?? '')
+}
+
+function getGmailInboxEmail(row) {
+  const sender =
+    getRowAttribute(row, '.yX.xY .yP[email], .yW .yP[email], [email]', 'email') ||
+    getRowAttribute(row, '.yX.xY .yP[name], .yW .yP[name]', 'name') ||
+    getRowText(row, '.yX.xY, .yW')
+  const subject = getRowText(row, '.bog, .y6 span[id]')
+  const snippet = getRowText(row, '.y2')
+  const link = row.querySelector('a[href]')?.href ?? ''
+
+  return {
+    sender,
+    subject,
+    body: [snippet, link ? `Email row link: ${link}` : ''].filter(Boolean).join('\n'),
+  }
+}
+
+function getInboxBadgeStyle(scan) {
+  const dangerous = scan.status === 'Dangerous' || scan.blocked
+  return {
+    text: dangerous ? 'PHISHING RISK' : 'CAUTION',
+    border: dangerous ? 'rgba(225,29,72,.65)' : 'rgba(245,158,11,.7)',
+    background: dangerous ? '#ffe4e6' : '#fef3c7',
+    color: dangerous ? '#9f1239' : '#92400e',
+  }
+}
+
+function markGmailInboxRow(row, scan) {
+  if (!isRiskyScan(scan)) return
+
+  const style = getInboxBadgeStyle(scan)
+  const existing = row.querySelector('.threattrack-inbox-label')
+  const label = existing ?? document.createElement('span')
+  label.className = 'threattrack-inbox-label'
+  label.textContent = `${style.text} ${scan.score}/100`
+  label.title = 'Tracking Threats detected phishing indicators in this email.'
+  label.style.cssText = [
+    'all:initial',
+    'box-sizing:border-box',
+    'display:inline-flex',
+    'align-items:center',
+    'min-height:20px',
+    'margin-left:8px',
+    `border:1px solid ${style.border}`,
+    'border-radius:999px',
+    `background:${style.background}`,
+    `color:${style.color}`,
+    'font:700 11px/18px Arial,sans-serif',
+    'padding:0 8px',
+    'white-space:nowrap',
+    'vertical-align:middle',
+    'cursor:pointer',
+  ].join(';')
+  label.onclick = (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const rowEmail = getGmailInboxEmail(row)
+    const scanTarget = scan.target || rowEmail.sender || rowEmail.subject
+    chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+      const appUrl =
+        chrome.runtime.lastError || !response?.ok || !response.appUrl ? APP_URL : response.appUrl
+      window.open(getDetailsUrl(scanTarget, appUrl), '_blank', 'noopener,noreferrer')
+    })
+  }
+
+  const subjectContainer =
+    row.querySelector('.bog')?.parentElement ||
+    row.querySelector('.y6') ||
+    row.querySelector('td[role="gridcell"]:last-child') ||
+    row
+
+  if (!existing) subjectContainer.appendChild(label)
+  row.style.boxShadow = `inset 4px 0 0 ${style.color}`
+  row.style.backgroundColor =
+    scan.status === 'Dangerous' || scan.blocked ? 'rgba(225,29,72,.12)' : 'rgba(245,158,11,.12)'
+  row.dataset.threattrackRisk = scan.status
 }
 
 function getOutlookEmail() {
@@ -359,6 +458,47 @@ function showEmailWarning(scan, email) {
   if (!existing) document.body.appendChild(banner)
 }
 
+function showInboxRiskWarning(scan, email) {
+  showEmailWarning(scan, {
+    sender: email.sender,
+    subject: email.subject || 'Inbox email',
+    body: email.body,
+  })
+}
+
+function scanGmailInboxRow(row) {
+  const email = getGmailInboxEmail(row)
+  const content = `${email.subject}\n${email.body}`.trim()
+  if (
+    (!email.sender && !email.subject) ||
+    isTrackingThreatsReport(email) ||
+    content.length < 12
+  ) {
+    return
+  }
+
+  const scanKey = getScanKey(email)
+  if (inboxScanKeys.has(scanKey)) return
+  inboxScanKeys.add(scanKey)
+
+  chrome.runtime.sendMessage(
+    {
+      type: 'scan-email-content',
+      email,
+    },
+    (response) => {
+      if (chrome.runtime.lastError || !response?.ok || !response.scan) return
+      markGmailInboxRow(row, response.scan)
+      if (isRiskyScan(response.scan)) showInboxRiskWarning(response.scan, email)
+    },
+  )
+}
+
+function scanGmailInbox() {
+  if (window.location.hostname !== 'mail.google.com') return
+  getGmailInboxRows().forEach(scanGmailInboxRow)
+}
+
 function scanOpenedEmail() {
   const email = getOpenedEmail()
   const content = `${email.subject}\n${email.body}`.trim()
@@ -392,7 +532,17 @@ function scheduleScan() {
   scanTimer = window.setTimeout(scanOpenedEmail, SCAN_DEBOUNCE_MS)
 }
 
-scheduleScan()
+function scheduleInboxScan() {
+  window.clearTimeout(inboxScanTimer)
+  inboxScanTimer = window.setTimeout(scanGmailInbox, INBOX_SCAN_DEBOUNCE_MS)
+}
 
-const observer = new MutationObserver(scheduleScan)
+function scheduleEmailChecks() {
+  scheduleScan()
+  scheduleInboxScan()
+}
+
+scheduleEmailChecks()
+
+const observer = new MutationObserver(scheduleEmailChecks)
 observer.observe(document.body, { childList: true, subtree: true })

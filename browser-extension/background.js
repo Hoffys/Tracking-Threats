@@ -620,7 +620,6 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
       lastStatus: scan.status,
       lastScore: scan.score,
     })
-    await notifyScanResult(sender || subject || 'Opened email', scan)
     return scan
   } catch (error) {
     await saveStatus({
