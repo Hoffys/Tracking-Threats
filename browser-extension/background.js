@@ -13,6 +13,7 @@ const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
 const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
 const CLIENT_ID_KEY = 'threattrackClientId'
+const BYPASS_HOSTS_KEY = 'bypassHosts'
 const PASS_THROUGH_HOSTS = new Set([
   'bing.com',
   'duckduckgo.com',
@@ -50,6 +51,25 @@ async function loadBlockedHosts() {
 async function saveBlockedHosts() {
   await chrome.storage.local.set({
     blockedHosts: Array.from(blockedHosts.entries()),
+  })
+}
+
+async function loadBypassHosts() {
+  const stored = await chrome.storage.local.get(BYPASS_HOSTS_KEY)
+  const now = Date.now()
+  const activeEntries = (stored[BYPASS_HOSTS_KEY] ?? []).filter(
+    ([, expiresAt]) => Number(expiresAt) > now,
+  )
+  bypassHosts.clear()
+  activeEntries.forEach(([host, expiresAt]) => bypassHosts.set(host, expiresAt))
+  if (activeEntries.length !== (stored[BYPASS_HOSTS_KEY] ?? []).length) {
+    await saveBypassHosts()
+  }
+}
+
+async function saveBypassHosts() {
+  await chrome.storage.local.set({
+    [BYPASS_HOSTS_KEY]: Array.from(bypassHosts.entries()),
   })
 }
 
@@ -255,6 +275,7 @@ function hasBypass(host) {
   if (!expiresAt) return false
   if (Date.now() > expiresAt) {
     bypassHosts.delete(host)
+    saveBypassHosts().catch(() => {})
     return false
   }
   return true
@@ -264,6 +285,7 @@ async function rememberBlockedSite(rawUrl, scan = null) {
   const host = getHost(rawUrl)
   if (!host) return
   if (isMarkedSafeHost(host)) return
+  if (hasBypass(host)) return
 
   await saveBlockedContext(host, rawUrl, scan)
 
@@ -291,6 +313,10 @@ async function unblockSite({ rawUrl, host: fallbackHost }) {
   if (!host) return false
 
   bypassHosts.set(host, Date.now() + UNBLOCK_BYPASS_MS)
+  await saveBypassHosts()
+  recentScans.delete(rawUrl)
+  recentScans.delete(`blocked-visit:${rawUrl}`)
+  await chrome.storage.local.remove(getBlockContextKey(host))
 
   if (!ruleId) return true
 
@@ -418,8 +444,10 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
 async function recordBlockedVisit(rawUrl) {
   if (!isTrackableUrl(rawUrl)) return null
   await syncSafeHosts()
-  if (isMarkedSafeHost(getHost(rawUrl))) {
-    await unblockSite({ rawUrl, host: getHost(rawUrl) })
+  const host = getHost(rawUrl)
+  if (hasBypass(host)) return { status: 'Allowed', score: 100, blocked: false }
+  if (isMarkedSafeHost(host)) {
+    await unblockSite({ rawUrl, host })
     return { status: 'Safe', score: 100, blocked: false }
   }
 
@@ -443,7 +471,9 @@ async function recordBlockedVisit(rawUrl) {
     if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
     const scan = await response.json()
     remember(rawUrl, scan)
-    await rememberBlockedSite(rawUrl, scan)
+    if (!hasBypass(host)) {
+      await rememberBlockedSite(rawUrl, scan)
+    }
     await saveStatus({
       ok: true,
       lastUrl: rawUrl,
@@ -557,7 +587,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 chrome.storage.local.remove('allowedHosts')
 
-loadBlockedHosts()
+Promise.all([loadBlockedHosts(), loadBypassHosts()])
   .then(syncSafeHosts)
   .then(clearPassThroughBlockRules)
   .then(syncBlockRules)
