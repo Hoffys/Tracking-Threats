@@ -19,6 +19,7 @@ const defaultNotificationSettings = {
 
 const publicScansStorageKey = 'threattrack:public-scans'
 const publicClientStorageKey = 'threattrack:public-client-id'
+const publicHiddenScansStorageKey = 'threattrack:public-hidden-scan-ids'
 
 const normalizeClientId = (clientId) => {
   const normalized = String(clientId ?? '').trim()
@@ -56,6 +57,27 @@ const readPublicScans = () => {
 
 const writePublicScans = (scans) => {
   localStorage.setItem(publicScansStorageKey, JSON.stringify(scans.slice(0, 50)))
+}
+
+const readPublicHiddenScanIds = () => {
+  try {
+    const stored = localStorage.getItem(publicHiddenScansStorageKey)
+    return new Set(stored ? JSON.parse(stored) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+const writePublicHiddenScanIds = (scanIds) => {
+  localStorage.setItem(
+    publicHiddenScansStorageKey,
+    JSON.stringify(Array.from(scanIds).filter(Boolean).slice(-300)),
+  )
+}
+
+const filterVisiblePublicScans = (scans) => {
+  const hiddenScanIds = readPublicHiddenScanIds()
+  return scans.filter((scan) => !hiddenScanIds.has(scan.id))
 }
 
 const mergePublicScans = (...scanGroups) => {
@@ -215,8 +237,8 @@ export function ThreatProvider({ children }) {
           : Promise.resolve(null),
       ])
       const nextScans = activity?.scans
-        ? mergePublicScans(activity.scans, readPublicScans())
-        : readPublicScans()
+        ? filterVisiblePublicScans(mergePublicScans(activity.scans, readPublicScans()))
+        : filterVisiblePublicScans(readPublicScans())
       writePublicScans(nextScans)
       applyPublicScans(nextScans, health)
       return
@@ -363,6 +385,13 @@ export function ThreatProvider({ children }) {
 
   const clearHistory = useCallback(async () => {
     if (isPublicDeployment) {
+      writePublicHiddenScanIds(
+        new Set([
+          ...readPublicHiddenScanIds(),
+          ...scanHistory.map((scan) => scan.id),
+          ...readPublicScans().map((scan) => scan.id),
+        ]),
+      )
       writePublicScans([])
       applyPublicScans([], { systemActive: true })
       return
@@ -371,7 +400,7 @@ export function ThreatProvider({ children }) {
     await apiService.clearHistory()
     await apiService.clearThreatAuditLogs()
     await refreshData()
-  }, [applyPublicScans, refreshData])
+  }, [applyPublicScans, refreshData, scanHistory])
 
   const acknowledgeAlert = useCallback(
     async (id) => {
