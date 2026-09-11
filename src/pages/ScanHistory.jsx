@@ -30,6 +30,20 @@ const matchesBlockedTarget = (scan, blockedTarget) => {
   return scanTarget === blocked || scanHost === blockedHost || scanTarget.includes(blockedHost)
 }
 
+const isDangerousScan = (scan) =>
+  scan?.status === 'Dangerous' || scan?.responseStatus === 'Blocked' || scan?.blocked
+
+const getFocusedScanClassName = (scan, blockedTarget) => {
+  if (!matchesBlockedTarget(scan, blockedTarget)) return 'border-slate-200 dark:border-slate-800'
+  if (isDangerousScan(scan)) {
+    return 'border-rose-500 bg-rose-500/10 shadow-sm shadow-rose-500/10'
+  }
+  if (scan.status === 'Suspicious') {
+    return 'border-amber-500 bg-amber-500/10 shadow-sm shadow-amber-500/10'
+  }
+  return 'border-emerald-500 bg-emerald-500/10 shadow-sm shadow-emerald-500/10'
+}
+
 const scanText = (scan) =>
   [
     scan.type,
@@ -69,6 +83,7 @@ export function ScanHistory() {
     () => scanHistory.find((scan) => matchesBlockedTarget(scan, blockedTarget)),
     [blockedTarget, scanHistory],
   )
+  const focusedScanIsDangerous = isDangerousScan(focusedScan)
   const sourceOptions = useMemo(
     () => ['All', ...new Set(scanHistory.map((scan) => scan.source).filter(Boolean))],
     [scanHistory],
@@ -118,13 +133,19 @@ export function ScanHistory() {
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-rose-600 dark:text-rose-300">
-                Blocked site review
+              <p
+                className={`text-sm font-semibold ${
+                  focusedScanIsDangerous
+                    ? 'text-rose-600 dark:text-rose-300'
+                    : 'text-emerald-600 dark:text-emerald-300'
+                }`}
+              >
+                {focusedScanIsDangerous ? 'Blocked site review' : 'Scan result review'}
               </p>
               <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-300">
                 {focusedScan
-                  ? 'The matching blocked scan is highlighted below with warning signs and recommendations.'
-                  : 'Waiting for the matching blocked scan record to appear here.'}
+                  ? 'The matching scan is highlighted below with warning signs and recommendations.'
+                  : 'Waiting for the matching scan record to appear here.'}
               </p>
             </div>
             {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} />}
@@ -209,11 +230,10 @@ export function ScanHistory() {
               <article
                 key={scan.id}
                 id={`scan-${scan.id}`}
-                className={`rounded-lg border p-4 ${
-                  matchesBlockedTarget(scan, blockedTarget)
-                    ? 'border-rose-500 bg-rose-500/10 shadow-sm shadow-rose-500/10'
-                    : 'border-slate-200 dark:border-slate-800'
-                }`}
+                className={`rounded-lg border p-4 ${getFocusedScanClassName(
+                  scan,
+                  blockedTarget,
+                )}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
