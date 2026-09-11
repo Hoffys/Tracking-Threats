@@ -1,4 +1,4 @@
 const TRACKING_THREATS_CONFIG = {
-  API_BASE_URL: 'http://localhost:4000',
-  APP_URL: 'http://localhost:5173/',
+  API_BASE_URL: 'https://tracking-threats-production.up.railway.app',
+  APP_URL: 'https://tracking-threats-production.up.railway.app/',
 }

@@ -10,7 +10,11 @@
     "128": "icons/icon-128.png"
   },
   "permissions": ["storage", "tabs", "webNavigation", "declarativeNetRequest"],
-  "host_permissions": ["<all_urls>", "http://localhost:4000/*", "https://your-backend-domain.com/*"],
+  "host_permissions": [
+    "<all_urls>",
+    "http://localhost:4000/*",
+    "https://tracking-threats-production.up.railway.app/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
