@@ -8,6 +8,12 @@ let scanTimer = null
 let inboxScanTimer = null
 let lastScanKey = ''
 const inboxScanKeys = new Set()
+const inboxStats = {
+  checked: 0,
+  safe: 0,
+  caution: 0,
+  dangerous: 0,
+}
 
 function cleanText(value = '') {
   return value.replace(/\s+/g, ' ').trim()
@@ -134,18 +140,35 @@ function getGmailInboxEmail(row) {
 }
 
 function getInboxBadgeStyle(scan) {
-  const dangerous = scan.status === 'Dangerous' || scan.blocked
+  const level = getScanLevel(scan)
+  if (level === 'dangerous') {
+    return {
+      text: 'PHISHING RISK',
+      border: 'rgba(225,29,72,.65)',
+      background: '#ffe4e6',
+      color: '#9f1239',
+      rowBackground: 'rgba(225,29,72,.12)',
+    }
+  }
+  if (level === 'caution') {
+    return {
+      text: 'CAUTION',
+      border: 'rgba(245,158,11,.7)',
+      background: '#fef3c7',
+      color: '#92400e',
+      rowBackground: 'rgba(245,158,11,.12)',
+    }
+  }
   return {
-    text: dangerous ? 'PHISHING RISK' : 'CAUTION',
-    border: dangerous ? 'rgba(225,29,72,.65)' : 'rgba(245,158,11,.7)',
-    background: dangerous ? '#ffe4e6' : '#fef3c7',
-    color: dangerous ? '#9f1239' : '#92400e',
+    text: 'SAFE',
+    border: 'rgba(16,185,129,.55)',
+    background: '#ccfbf1',
+    color: '#065f46',
+    rowBackground: 'rgba(16,185,129,.08)',
   }
 }
 
 function markGmailInboxRow(row, scan) {
-  if (!isRiskyScan(scan)) return
-
   const style = getInboxBadgeStyle(scan)
   const existing = row.querySelector('.threattrack-inbox-label')
   const label = existing ?? document.createElement('span')
@@ -189,9 +212,64 @@ function markGmailInboxRow(row, scan) {
 
   if (!existing) subjectContainer.appendChild(label)
   row.style.boxShadow = `inset 4px 0 0 ${style.color}`
-  row.style.backgroundColor =
-    scan.status === 'Dangerous' || scan.blocked ? 'rgba(225,29,72,.12)' : 'rgba(245,158,11,.12)'
+  row.style.backgroundColor = style.rowBackground
   row.dataset.threattrackRisk = scan.status
+}
+
+function showInboxStatus() {
+  if (window.location.hostname !== 'mail.google.com') return
+
+  const existing = document.getElementById('threattrack-inbox-status')
+  const banner = existing ?? document.createElement('aside')
+  const riskyCount = inboxStats.caution + inboxStats.dangerous
+  const hasRisk = riskyCount > 0
+  const accentColor = inboxStats.dangerous > 0 ? '#fecdd3' : hasRisk ? '#fde68a' : '#6ee7b7'
+  const borderColor =
+    inboxStats.dangerous > 0
+      ? 'rgba(225,29,72,.45)'
+      : hasRisk
+        ? 'rgba(245,158,11,.45)'
+        : 'rgba(16,185,129,.45)'
+  const statusText =
+    inboxStats.checked === 0
+      ? 'Scanning visible Gmail inbox messages...'
+      : hasRisk
+        ? `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
+        : 'No risky email found in visible inbox'
+
+  banner.id = 'threattrack-inbox-status'
+  banner.style.cssText = [
+    'position:fixed',
+    'right:20px',
+    'top:92px',
+    'z-index:2147483646',
+    'box-sizing:border-box',
+    'width:min(330px,calc(100vw - 32px))',
+    `border:1px solid ${borderColor}`,
+    'border-radius:8px',
+    'background:#111827',
+    'color:#f8fafc',
+    'box-shadow:0 18px 50px rgba(0,0,0,.32)',
+    'font:13px/1.45 Arial,sans-serif',
+    'padding:12px',
+  ].join(';')
+
+  banner.innerHTML = ''
+
+  const title = document.createElement('strong')
+  title.textContent = 'Tracking Threats Gmail Monitor'
+  title.style.cssText = `display:block;font-size:14px;color:${accentColor}`
+
+  const body = document.createElement('p')
+  body.textContent = statusText
+  body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
+
+  const counts = document.createElement('p')
+  counts.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} safe - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk`
+  counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
+
+  banner.append(title, body, counts)
+  if (!existing) document.body.appendChild(banner)
 }
 
 function getOutlookEmail() {
@@ -326,6 +404,12 @@ function isTrackingThreatsReport(email) {
 
 function isRiskyScan(scan) {
   return scan?.status === 'Dangerous' || scan?.status === 'Suspicious' || scan?.blocked
+}
+
+function getScanLevel(scan) {
+  if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
+  if (scan?.status === 'Suspicious') return 'caution'
+  return 'safe'
 }
 
 function getStatusLabel(status) {
@@ -488,7 +572,17 @@ function scanGmailInboxRow(row) {
     },
     (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.scan) return
+      const previousLevel = row.dataset.threattrackLevel
+      if (!previousLevel) {
+        inboxStats.checked += 1
+      } else if (inboxStats[previousLevel] > 0) {
+        inboxStats[previousLevel] -= 1
+      }
+      const nextLevel = getScanLevel(response.scan)
+      inboxStats[nextLevel] += 1
+      row.dataset.threattrackLevel = nextLevel
       markGmailInboxRow(row, response.scan)
+      showInboxStatus()
       if (isRiskyScan(response.scan)) showInboxRiskWarning(response.scan, email)
     },
   )
@@ -496,6 +590,7 @@ function scanGmailInboxRow(row) {
 
 function scanGmailInbox() {
   if (window.location.hostname !== 'mail.google.com') return
+  showInboxStatus()
   getGmailInboxRows().forEach(scanGmailInboxRow)
 }
 
