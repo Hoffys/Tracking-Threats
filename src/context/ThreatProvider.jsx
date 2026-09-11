@@ -17,6 +17,95 @@ const defaultNotificationSettings = {
   mailConfigured: false,
 }
 
+const publicScansStorageKey = 'threattrack:public-scans'
+
+const readPublicScans = () => {
+  try {
+    const stored = localStorage.getItem(publicScansStorageKey)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+const writePublicScans = (scans) => {
+  localStorage.setItem(publicScansStorageKey, JSON.stringify(scans.slice(0, 50)))
+}
+
+const toPublicScanRecord = (scan) => ({
+  id: scan.id ?? crypto.randomUUID(),
+  type: scan.type,
+  target: scan.target,
+  source: 'public-web-scan',
+  status: scan.status,
+  risk: scan.risk,
+  score: scan.score,
+  summary: scan.summary,
+  responseStatus: scan.responseStatus,
+  warningSigns: scan.warningSigns ?? [],
+  recommendations: scan.recommendations ?? (scan.recommendation ? [scan.recommendation] : []),
+  recommendation: scan.recommendation,
+  threatIntel: scan.threatIntel,
+  emailBreakdown: scan.emailBreakdown,
+  fileDetails: scan.fileDetails
+    ? {
+        name: scan.fileDetails.name,
+        mimeType: scan.fileDetails.mimeType,
+        size: scan.fileDetails.size,
+        sha256: scan.fileDetails.sha256,
+      }
+    : undefined,
+  blocked: Boolean(scan.blocked),
+  date: scan.date ?? new Date().toISOString(),
+})
+
+const getDisplayDomain = (target = '') => {
+  try {
+    return new URL(target.includes('://') ? target : `https://${target}`).hostname
+  } catch {
+    return target
+  }
+}
+
+const toPublicLiveEvent = (scan) => ({
+  id: scan.id,
+  activityType: scan.type,
+  source: scan.source ?? 'public-web-scan',
+  target: scan.target,
+  domain: scan.type === 'URL' ? getDisplayDomain(scan.target) : scan.target,
+  title: `${scan.type} scan`,
+  detail: scan.summary || scan.target,
+  score: scan.score,
+  status: scan.status === 'Dangerous' ? 'Blocked' : scan.status,
+  riskStatus: scan.status,
+  timestamp: scan.date,
+  warningSigns: scan.warningSigns ?? [],
+})
+
+const toPublicAlert = (scan) => ({
+  id: scan.id,
+  title: `${scan.type} risk found`,
+  source: scan.target,
+  time: scan.date,
+  severity: scan.status,
+  riskLevel: scan.status,
+  threatType: scan.type,
+  status: 'new',
+  message: scan.summary,
+  recommendedAction:
+    scan.recommendations?.[0] ?? scan.recommendation ?? 'Review before trusting this item.',
+})
+
+const getPublicStats = (scans) => {
+  const riskyScans = scans.filter((scan) => scan.status === 'Dangerous' || scan.blocked)
+  return {
+    total: scans.length,
+    blocked: riskyScans.length,
+    clean: scans.filter((scan) => scan.status === 'Safe').length,
+    unreadAlerts: riskyScans.length,
+  }
+}
+
 const readNotificationSettings = () => {
   try {
     const stored = localStorage.getItem('threattrack:notification-settings')
@@ -29,16 +118,29 @@ const readNotificationSettings = () => {
 }
 
 export function ThreatProvider({ children }) {
-  const [scanHistory, setScanHistory] = useState([])
-  const [alerts, setAlerts] = useState([])
+  const initialPublicScans = isPublicDeployment ? readPublicScans() : []
+  const [scanHistory, setScanHistory] = useState(initialPublicScans)
+  const [alerts, setAlerts] = useState(
+    isPublicDeployment
+      ? initialPublicScans
+          .filter((scan) => scan.status === 'Dangerous' || scan.blocked)
+          .map(toPublicAlert)
+      : [],
+  )
   const [flaggedThreats, setFlaggedThreats] = useState([])
   const [threatAuditLogs, setThreatAuditLogs] = useState([])
   const [activeNotification, setActiveNotification] = useState(null)
-  const [liveFeed, setLiveFeed] = useState([])
-  const [liveScanCount, setLiveScanCount] = useState(0)
+  const [liveFeed, setLiveFeed] = useState(
+    isPublicDeployment ? initialPublicScans.map(toPublicLiveEvent) : [],
+  )
+  const [liveScanCount, setLiveScanCount] = useState(
+    isPublicDeployment ? initialPublicScans.length : 0,
+  )
   const [systemLogs, setSystemLogs] = useState([])
   const [systemActive, setSystemActive] = useState(false)
-  const [stats, setStats] = useState(emptyStats)
+  const [stats, setStats] = useState(
+    isPublicDeployment ? getPublicStats(initialPublicScans) : emptyStats,
+  )
   const [notificationSettings, setNotificationSettings] = useState(readNotificationSettings)
   const [darkMode, setDarkMode] = useState(() => {
     try {
@@ -50,27 +152,26 @@ export function ThreatProvider({ children }) {
   })
   const latestDangerousAlertId = useRef(null)
 
+  const applyPublicScans = useCallback((nextScans, health = {}) => {
+    const publicAlerts = nextScans
+      .filter((scan) => scan.status === 'Dangerous' || scan.blocked)
+      .map(toPublicAlert)
+
+    setScanHistory(nextScans)
+    setAlerts(publicAlerts)
+    setFlaggedThreats([])
+    setThreatAuditLogs([])
+    setLiveFeed(nextScans.map(toPublicLiveEvent))
+    setSystemLogs([])
+    setLiveScanCount(nextScans.length)
+    setSystemActive(Boolean(health.systemActive ?? true))
+    setStats(getPublicStats(nextScans))
+  }, [])
+
   const refreshData = useCallback(async () => {
     if (isPublicDeployment) {
-      const [health, nextStats] = await Promise.all([
-        apiService.getHealth(),
-        apiService.getStats(),
-      ])
-
-      setScanHistory([])
-      setAlerts([])
-      setFlaggedThreats([])
-      setThreatAuditLogs([])
-      setLiveFeed([])
-      setSystemLogs([])
-      setLiveScanCount(nextStats.liveScanCount ?? nextStats.total ?? 0)
-      setSystemActive(Boolean(health.systemActive ?? nextStats.systemActive))
-      setStats({
-        blocked: nextStats.blocked,
-        clean: nextStats.clean,
-        total: nextStats.total,
-        unreadAlerts: nextStats.unreadAlerts,
-      })
+      const health = await apiService.getHealth()
+      applyPublicScans(readPublicScans(), health)
       return
     }
 
@@ -106,7 +207,7 @@ export function ThreatProvider({ children }) {
       latestDangerousAlertId.current = dangerousAlert.id
       setActiveNotification(dangerousAlert)
     }
-  }, [])
+  }, [applyPublicScans])
 
   useEffect(() => {
     localStorage.setItem('threattrack:dark-mode', JSON.stringify(darkMode))
@@ -175,7 +276,18 @@ export function ThreatProvider({ children }) {
                 })
               : await apiService.scanMessage({ target, content })
 
-      refreshData().catch(console.error)
+      if (isPublicDeployment) {
+        const publicScan = toPublicScanRecord(scan)
+        const nextScans = [
+          publicScan,
+          ...readPublicScans().filter((storedScan) => storedScan.id !== publicScan.id),
+        ].slice(0, 50)
+        writePublicScans(nextScans)
+        applyPublicScans(nextScans, { systemActive: true })
+      } else {
+        refreshData().catch(console.error)
+      }
+
       if (scan.status === 'Dangerous') {
         setActiveNotification({
           id: scan.id,
@@ -187,17 +299,28 @@ export function ThreatProvider({ children }) {
       }
       return scan
     },
-    [refreshData],
+    [applyPublicScans, refreshData],
   )
 
   const clearHistory = useCallback(async () => {
+    if (isPublicDeployment) {
+      writePublicScans([])
+      applyPublicScans([], { systemActive: true })
+      return
+    }
+
     await apiService.clearHistory()
     await apiService.clearThreatAuditLogs()
     await refreshData()
-  }, [refreshData])
+  }, [applyPublicScans, refreshData])
 
   const acknowledgeAlert = useCallback(
     async (id) => {
+      if (isPublicDeployment) {
+        setAlerts((current) => current.filter((alert) => alert.id !== id))
+        return
+      }
+
       await apiService.dismissAlert(id)
       await refreshData()
     },
@@ -205,6 +328,13 @@ export function ThreatProvider({ children }) {
   )
 
   const clearAlerts = useCallback(async () => {
+    if (isPublicDeployment) {
+      setAlerts([])
+      setActiveNotification(null)
+      latestDangerousAlertId.current = null
+      return
+    }
+
     await apiService.clearAlerts()
     setActiveNotification(null)
     latestDangerousAlertId.current = null

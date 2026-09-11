@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { useThreats } from '../hooks/useThreats'
+import { isPublicDeployment } from '../config/deployment'
 
 const formatTime = (date) =>
   new Intl.DateTimeFormat(undefined, {
@@ -206,7 +207,9 @@ export function LiveMonitor({ onNavigate }) {
             {systemActive ? 'System Active' : 'System Idle'}
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Local backend is collecting live activity.
+            {isPublicDeployment
+              ? 'This browser is tracking your recent scan activity.'
+              : 'Local backend is collecting live activity.'}
           </p>
         </motion.div>
 
@@ -301,7 +304,11 @@ export function LiveMonitor({ onNavigate }) {
             >
               <Radio size={17} />
             </motion.span>
-            {isPaused ? 'Live feed paused' : 'Browser link monitoring is ready'}
+            {isPaused
+              ? 'Live feed paused'
+              : isPublicDeployment
+                ? 'Recent scan monitoring is ready'
+                : 'Browser link monitoring is ready'}
           </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-medium text-slate-500 dark:border-slate-800 dark:text-slate-400">
             <ShieldCheck size={15} className="text-teal-500" />
@@ -311,7 +318,9 @@ export function LiveMonitor({ onNavigate }) {
 
         {visibleFeed.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            Waiting for the first browser, email, file, URL, or manual scan...
+            {isPublicDeployment
+              ? 'Run your first URL, email, SMS, or file scan to start the live feed.'
+              : 'Waiting for the first browser, email, file, URL, or manual scan...'}
           </div>
         ) : (
           <div className="max-h-[620px] space-y-3 overflow-auto pr-1">
@@ -379,7 +388,9 @@ export function LiveMonitor({ onNavigate }) {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">System logs</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Latest backend events</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isPublicDeployment ? 'This browser session' : 'Latest backend events'}
+            </p>
           </div>
           <button
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-700 dark:border-slate-800 dark:text-slate-200 dark:hover:border-teal-500 dark:hover:text-teal-300"
@@ -396,7 +407,9 @@ export function LiveMonitor({ onNavigate }) {
         {showSystemLogs &&
           (systemLogs.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Waiting for backend scan logs...
+              {isPublicDeployment
+                ? 'Public mode keeps detailed system logs private.'
+                : 'Waiting for backend scan logs...'}
             </p>
           ) : (
             <div className="space-y-2">
@@ -527,10 +540,10 @@ export function LiveMonitor({ onNavigate }) {
                 <button
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-500/30 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950 sm:col-span-2"
                   type="button"
-                  onClick={() => onNavigate('alerts')}
+                  onClick={() => onNavigate(isPublicDeployment ? 'history' : 'alerts')}
                 >
                   <ShieldAlert size={16} />
-                  Open in Alerts
+                  {isPublicDeployment ? 'Open in History' : 'Open in Alerts'}
                 </button>
               </div>
             </motion.aside>

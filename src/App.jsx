@@ -21,12 +21,12 @@ const pages = {
   settings: Settings,
 }
 
-const publicPages = new Set(['manual', 'learn'])
+const publicPages = new Set(['dashboard', 'learn', 'monitor', 'manual', 'history'])
 
 const getInitialPage = () => {
   const page = new URLSearchParams(window.location.search).get('page')
   if (page === 'email') return 'manual'
-  if (isPublicDeployment) return publicPages.has(page) ? page : 'manual'
+  if (isPublicDeployment) return publicPages.has(page) ? page : 'dashboard'
   return pages[page] ? page : 'dashboard'
 }
 

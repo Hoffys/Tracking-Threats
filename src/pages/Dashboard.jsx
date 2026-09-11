@@ -15,6 +15,7 @@ import { useThreats } from '../hooks/useThreats'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { StatCard } from '../components/StatCard'
+import { isPublicDeployment } from '../config/deployment'
 
 const dayFormatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
 
@@ -57,36 +58,67 @@ const getLastSevenDays = (scans) => {
 
 export function Dashboard({ onNavigate }) {
   const { alerts, flaggedThreats, scanHistory, stats, threatAuditLogs } = useThreats()
-  const tutorialSteps = [
-    {
-      title: 'Check the dashboard',
-      description: 'Start by reviewing total scans, blocked threats, clean results, and new alerts.',
-      icon: ClipboardList,
-      action: 'Dashboard',
-      page: 'dashboard',
-    },
-    {
-      title: 'Manual email check',
-      description: 'Paste a sender, subject, and email body when automatic webmail scanning is not available.',
-      icon: MailCheck,
-      action: 'Open Scan',
-      page: 'manual',
-    },
-    {
-      title: 'Scan links or files manually',
-      description: 'Use manual scan when you need to check a URL, message, or file name.',
-      icon: ScanSearch,
-      action: 'Manual Scan',
-      page: 'manual',
-    },
-    {
-      title: 'Review alerts and history',
-      description: 'Review flagged threats, scan history, and live activity to decide the next action.',
-      icon: BellRing,
-      action: 'View Alerts',
-      page: 'alerts',
-    },
-  ]
+  const tutorialSteps = isPublicDeployment
+    ? [
+        {
+          title: 'Check your dashboard',
+          description: 'Review the scan totals, blocked items, clean results, and current risk for this browser.',
+          icon: ClipboardList,
+          action: 'Dashboard',
+          page: 'dashboard',
+        },
+        {
+          title: 'Scan suspicious content',
+          description: 'Paste a URL, email, SMS, or file name to check for phishing indicators.',
+          icon: ScanSearch,
+          action: 'Open Scan',
+          page: 'manual',
+        },
+        {
+          title: 'Watch live activity',
+          description: 'Use the monitor to see your recent scans, risk levels, and warning signs.',
+          icon: MonitorDot,
+          action: 'Live Monitor',
+          page: 'monitor',
+        },
+        {
+          title: 'Review your history',
+          description: 'Track previously scanned items from this browser without exposing server records.',
+          icon: BellRing,
+          action: 'View History',
+          page: 'history',
+        },
+      ]
+    : [
+        {
+          title: 'Check the dashboard',
+          description: 'Start by reviewing total scans, blocked threats, clean results, and new alerts.',
+          icon: ClipboardList,
+          action: 'Dashboard',
+          page: 'dashboard',
+        },
+        {
+          title: 'Manual email check',
+          description: 'Paste a sender, subject, and email body when automatic webmail scanning is not available.',
+          icon: MailCheck,
+          action: 'Open Scan',
+          page: 'manual',
+        },
+        {
+          title: 'Scan links or files manually',
+          description: 'Use manual scan when you need to check a URL, message, or file name.',
+          icon: ScanSearch,
+          action: 'Manual Scan',
+          page: 'manual',
+        },
+        {
+          title: 'Review alerts and history',
+          description: 'Review flagged threats, scan history, and live activity to decide the next action.',
+          icon: BellRing,
+          action: 'View Alerts',
+          page: 'alerts',
+        },
+      ]
   const riskOrder = { Dangerous: 0, Suspicious: 1, Safe: 2 }
   const recent = [...scanHistory]
     .sort((left, right) => {
@@ -137,7 +169,9 @@ export function Dashboard({ onNavigate }) {
                   System Active & Monitoring
                 </h1>
                 <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
-                  All protection modules operational
+                  {isPublicDeployment
+                    ? 'Personal scan tracking is active in this browser'
+                    : 'All protection modules operational'}
                 </p>
               </div>
             </div>
@@ -210,7 +244,7 @@ export function Dashboard({ onNavigate }) {
               First-time user guide
             </p>
             <h2 className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
-              How to use Tracking Threats
+              {isPublicDeployment ? 'Track your phishing risk' : 'How to use Tracking Threats'}
             </h2>
           </div>
           <button
@@ -425,9 +459,9 @@ export function Dashboard({ onNavigate }) {
           <button
             className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-teal-100 hover:text-teal-800 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-teal-950 dark:hover:text-teal-200"
             type="button"
-            onClick={() => onNavigate('alerts')}
+            onClick={() => onNavigate(isPublicDeployment ? 'history' : 'alerts')}
           >
-            Open Alerts
+            {isPublicDeployment ? 'Open History' : 'Open Alerts'}
           </button>
         </Panel>
       </section>

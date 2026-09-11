@@ -26,7 +26,9 @@ const allNavItems = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-const publicNavItems = allNavItems.filter((item) => ['manual', 'learn'].includes(item.id))
+const publicNavItems = allNavItems.filter((item) =>
+  ['dashboard', 'learn', 'monitor', 'manual', 'history'].includes(item.id),
+)
 const navItems = isPublicDeployment ? publicNavItems : allNavItems
 
 export function Layout({ activePage, children, onNavigate }) {
