@@ -59,7 +59,7 @@ const corsOptions = {
 app.disable('x-powered-by')
 app.set('trust proxy', 1)
 app.use(helmet())
-app.use(cors(corsOptions))
+app.use('/api', cors(corsOptions))
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? '512kb' }))
 app.use('/api', (_req, res, next) => {
   res.set('Cache-Control', 'no-store')
