@@ -15,6 +15,26 @@ const getDisplayDomain = (target) => {
   }
 }
 
+const normalizeClientId = (clientId) => {
+  const normalized = String(clientId ?? '').trim()
+  return /^[a-zA-Z0-9_-]{12,80}$/.test(normalized) ? normalized : null
+}
+
+const mapScanToPublicAlert = (scan) => ({
+  id: scan.id,
+  scanId: scan.id,
+  title: `${scan.type} risk found`,
+  source: scan.target,
+  severity: scan.status,
+  status: 'new',
+  threatType: scan.type,
+  riskLevel: scan.status,
+  recommendedAction:
+    scan.recommendations?.[0] ?? scan.recommendation ?? 'Review before trusting this item.',
+  message: scan.summary,
+  time: scan.date,
+})
+
 async function syncLiveMonitorActivity(db) {
   const rows = await db.all(`
     SELECT scans.*
@@ -139,6 +159,57 @@ export async function getBlockedThreats(_req, res, next) {
 export async function getSafeHosts(_req, res, next) {
   try {
     res.json({ hosts: await getMarkedSafeHosts() })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function getPublicActivity(req, res, next) {
+  try {
+    const clientId = normalizeClientId(req.params.clientId)
+    if (!clientId) return res.status(400).json({ error: 'invalid client id' })
+
+    const db = await dbPromise
+    const rows = await db.all(
+      `
+        SELECT * FROM scans
+        WHERE history_visible = 1
+          AND client_id = ?
+        ORDER BY created_at DESC
+        LIMIT 50
+      `,
+      clientId,
+    )
+    const scans = rows.map(mapScan)
+    const liveFeed = scans.map((scan) => ({
+      id: scan.id,
+      activityType: scan.type,
+      source: scan.source,
+      target: scan.target,
+      domain: scan.type === 'URL' ? getDisplayDomain(scan.target) : scan.target,
+      title: scan.source === 'browser-extension' ? 'Browser URL scan' : `${scan.type} scan`,
+      detail: scan.summary || scan.target,
+      score: scan.score,
+      status: scan.status === 'Dangerous' ? 'Blocked' : scan.status,
+      riskStatus: scan.status,
+      timestamp: scan.date,
+      warningSigns: scan.warningSigns ?? [],
+    }))
+    const riskyScans = scans.filter((scan) => scan.status === 'Dangerous' || scan.blocked)
+
+    res.json({
+      scans,
+      liveFeed,
+      alerts: riskyScans.map(mapScanToPublicAlert),
+      stats: {
+        total: scans.length,
+        blocked: riskyScans.length,
+        clean: scans.filter((scan) => scan.status === 'Safe').length,
+        unreadAlerts: riskyScans.length,
+        liveScanCount: scans.length,
+        systemActive: true,
+      },
+    })
   } catch (error) {
     next(error)
   }

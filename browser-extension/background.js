@@ -12,17 +12,35 @@ const BLOCK_RULE_ID_BASE = 10000
 const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
 const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
+const CLIENT_ID_KEY = 'threattrackClientId'
 const PASS_THROUGH_HOSTS = new Set([
   'bing.com',
   'duckduckgo.com',
+  'github.com',
   'google.com',
   'search.yahoo.com',
+  'tracking-threats-production.up.railway.app',
 ])
 
 const recentScans = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
 let safeHosts = new Set()
+
+async function getClientId() {
+  const stored = await chrome.storage.local.get(CLIENT_ID_KEY)
+  if (stored[CLIENT_ID_KEY]) return stored[CLIENT_ID_KEY]
+
+  const clientId = crypto.randomUUID()
+  await chrome.storage.local.set({ [CLIENT_ID_KEY]: clientId })
+  return clientId
+}
+
+function getLinkedAppUrl(clientId) {
+  const url = new URL(APP_URL)
+  url.searchParams.set('client', clientId)
+  return url.toString()
+}
 
 async function loadBlockedHosts() {
   const stored = await chrome.storage.local.get('blockedHosts')
@@ -285,11 +303,13 @@ async function unblockSite({ rawUrl, host: fallbackHost }) {
 }
 
 async function saveStatus(status) {
+  const clientId = await getClientId()
   await chrome.storage.local.set({
     threattrackStatus: {
       ...status,
+      clientId,
       updatedAt: new Date().toISOString(),
-      appUrl: APP_URL,
+      appUrl: getLinkedAppUrl(clientId),
     },
   })
 }
@@ -356,6 +376,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
 
   if (!previewOnly) remember(rawUrl)
   try {
+    const clientId = await getClientId()
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -364,6 +385,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
         source: 'browser-extension',
         reason,
         preview: previewOnly,
+        clientId,
       }),
     })
 
@@ -406,6 +428,7 @@ async function recordBlockedVisit(rawUrl) {
   remember(cooldownKey, { status: 'recording' })
 
   try {
+    const clientId = await getClientId()
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -413,6 +436,7 @@ async function recordBlockedVisit(rawUrl) {
         url: rawUrl,
         source: 'browser-extension',
         reason: 'blocked-rule-hit',
+        clientId,
       }),
     })
 
@@ -439,6 +463,7 @@ async function recordBlockedVisit(rawUrl) {
 
 async function scanEmailContent({ sender = '', subject = '', body = '' }) {
   try {
+    const clientId = await getClientId()
     const response = await fetch(EMAIL_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -447,6 +472,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
         subject,
         body,
         source: 'browser-email-monitor',
+        clientId,
       }),
     })
 
@@ -515,6 +541,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'record-blocked-visit' && message.url) {
     recordBlockedVisit(message.url)
       .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'get-linked-app-url') {
+    getClientId()
+      .then((clientId) => sendResponse({ ok: true, clientId, appUrl: getLinkedAppUrl(clientId) }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }

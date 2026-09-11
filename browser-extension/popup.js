@@ -4,6 +4,12 @@ const openApp = document.querySelector('#openApp')
 
 openApp.href = TRACKING_THREATS_CONFIG.APP_URL
 
+chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+  if (response?.ok && response.appUrl) {
+    openApp.href = response.appUrl
+  }
+})
+
 chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => {
   if (!threattrackStatus) return
 

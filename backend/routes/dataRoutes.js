@@ -13,6 +13,7 @@ import {
   getHistory,
   getLiveFeed,
   getNotificationSettings,
+  getPublicActivity,
   getSafeHosts,
   getStats,
   getSystemLogs,
@@ -25,6 +26,7 @@ export const dataRoutes = Router()
 
 dataRoutes.get('/safe-hosts', getSafeHosts)
 dataRoutes.get('/stats', getStats)
+dataRoutes.get('/public/activity/:clientId', getPublicActivity)
 
 dataRoutes.use(requireAdmin)
 

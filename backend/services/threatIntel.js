@@ -8,9 +8,12 @@ const phishTankUserAgent = 'phishtank/tracking-threats'
 const phishTankPassThroughHosts = new Set([
   'bing.com',
   'duckduckgo.com',
+  'github.com',
   'google.com',
   'search.yahoo.com',
+  'tracking-threats-production.up.railway.app',
   'www.bing.com',
+  'www.github.com',
   'www.google.com',
   'www.youtube.com',
   'youtube.com',

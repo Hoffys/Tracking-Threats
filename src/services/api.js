@@ -22,6 +22,8 @@ const request = async (path, options) => {
 
 export const apiService = {
   getHealth: () => request('/health'),
+  getPublicActivity: (clientId) =>
+    request(`/public/activity/${encodeURIComponent(clientId)}`),
   getAlerts: () => request('/alerts'),
   getBlockedThreats: () => request('/blocked-threats'),
   getSafeHosts: () => request('/safe-hosts'),
@@ -51,24 +53,24 @@ export const apiService = {
     request('/notification-settings/history-digest', {
       method: 'POST',
     }),
-  scanUrl: (url) =>
+  scanUrl: (url, metadata = {}) =>
     request('/scan/url', {
       method: 'POST',
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, ...metadata }),
     }),
-  scanEmail: ({ sender, subject, body }) =>
+  scanEmail: ({ sender, subject, body, ...metadata }) =>
     request('/scan/email', {
       method: 'POST',
-      body: JSON.stringify({ sender, subject, body }),
+      body: JSON.stringify({ sender, subject, body, ...metadata }),
     }),
-  scanMessage: ({ target, content }) =>
+  scanMessage: ({ target, content, ...metadata }) =>
     request('/scan/message', {
       method: 'POST',
-      body: JSON.stringify({ target, message: content }),
+      body: JSON.stringify({ target, message: content, ...metadata }),
     }),
-  scanFile: ({ fileName, mimeType, size, content, sha256 }) =>
+  scanFile: ({ fileName, mimeType, size, content, sha256, ...metadata }) =>
     request('/scan/file', {
       method: 'POST',
-      body: JSON.stringify({ fileName, mimeType, size, content, sha256 }),
+      body: JSON.stringify({ fileName, mimeType, size, content, sha256, ...metadata }),
     }),
 }

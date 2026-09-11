@@ -36,6 +36,7 @@ export async function initDatabase() {
       warning_signs TEXT,
       recommendations TEXT,
       details TEXT,
+      client_id TEXT,
       history_visible INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
@@ -51,6 +52,7 @@ export async function initDatabase() {
       risk_level TEXT,
       recommended_action TEXT,
       message TEXT,
+      client_id TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -69,6 +71,7 @@ export async function initDatabase() {
       active_visible INTEGER NOT NULL DEFAULT 1,
       audit_visible INTEGER NOT NULL DEFAULT 1,
       reviewed_at TEXT,
+      client_id TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -84,6 +87,7 @@ export async function initDatabase() {
       summary TEXT,
       warning_signs TEXT,
       recommendations TEXT,
+      client_id TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -98,6 +102,7 @@ export async function initDatabase() {
       summary TEXT,
       warning_signs TEXT,
       recommendations TEXT,
+      client_id TEXT,
       created_at TEXT NOT NULL
     );
 
@@ -114,6 +119,7 @@ export async function initDatabase() {
       status TEXT NOT NULL,
       risk_status TEXT NOT NULL,
       warning_signs TEXT,
+      client_id TEXT,
       history_visible INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
@@ -141,7 +147,13 @@ export async function initDatabase() {
   await ensureColumn(db, 'blocked_threats', 'audit_visible', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'blocked_threats', 'reviewed_at', 'TEXT')
   await ensureColumn(db, 'scans', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'scans', 'client_id', 'TEXT')
+  await ensureColumn(db, 'alerts', 'client_id', 'TEXT')
+  await ensureColumn(db, 'blocked_threats', 'client_id', 'TEXT')
+  await ensureColumn(db, 'email_scans', 'client_id', 'TEXT')
+  await ensureColumn(db, 'message_scans', 'client_id', 'TEXT')
   await ensureColumn(db, 'live_monitor_activity', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'live_monitor_activity', 'client_id', 'TEXT')
   await db.run(
     `INSERT OR IGNORE INTO notification_settings
       (id, report_emails, email_scan_reports, email_history_digest, updated_at)

@@ -18,6 +18,32 @@ const defaultNotificationSettings = {
 }
 
 const publicScansStorageKey = 'threattrack:public-scans'
+const publicClientStorageKey = 'threattrack:public-client-id'
+
+const normalizeClientId = (clientId) => {
+  const normalized = String(clientId ?? '').trim()
+  return /^[a-zA-Z0-9_-]{12,80}$/.test(normalized) ? normalized : ''
+}
+
+const readPublicClientId = () => {
+  const params = new URLSearchParams(window.location.search)
+  const linkedClientId = normalizeClientId(params.get('client'))
+  if (linkedClientId) {
+    localStorage.setItem(publicClientStorageKey, linkedClientId)
+    return linkedClientId
+  }
+
+  try {
+    const stored = normalizeClientId(localStorage.getItem(publicClientStorageKey))
+    if (stored) return stored
+  } catch {
+    // Fall through to creating a browser-local public session id.
+  }
+
+  const nextClientId = crypto.randomUUID()
+  localStorage.setItem(publicClientStorageKey, nextClientId)
+  return nextClientId
+}
 
 const readPublicScans = () => {
   try {
@@ -30,6 +56,17 @@ const readPublicScans = () => {
 
 const writePublicScans = (scans) => {
   localStorage.setItem(publicScansStorageKey, JSON.stringify(scans.slice(0, 50)))
+}
+
+const mergePublicScans = (...scanGroups) => {
+  const byId = new Map()
+  scanGroups.flat().forEach((scan) => {
+    if (!scan?.id) return
+    byId.set(scan.id, scan)
+  })
+  return Array.from(byId.values())
+    .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())
+    .slice(0, 50)
 }
 
 const toPublicScanRecord = (scan) => ({
@@ -118,6 +155,7 @@ const readNotificationSettings = () => {
 }
 
 export function ThreatProvider({ children }) {
+  const [publicClientId] = useState(() => (isPublicDeployment ? readPublicClientId() : ''))
   const initialPublicScans = isPublicDeployment ? readPublicScans() : []
   const [scanHistory, setScanHistory] = useState(initialPublicScans)
   const [alerts, setAlerts] = useState(
@@ -170,8 +208,17 @@ export function ThreatProvider({ children }) {
 
   const refreshData = useCallback(async () => {
     if (isPublicDeployment) {
-      const health = await apiService.getHealth()
-      applyPublicScans(readPublicScans(), health)
+      const [health, activity] = await Promise.all([
+        apiService.getHealth(),
+        publicClientId
+          ? apiService.getPublicActivity(publicClientId).catch(() => null)
+          : Promise.resolve(null),
+      ])
+      const nextScans = activity?.scans
+        ? mergePublicScans(activity.scans, readPublicScans())
+        : readPublicScans()
+      writePublicScans(nextScans)
+      applyPublicScans(nextScans, health)
       return
     }
 
@@ -207,7 +254,7 @@ export function ThreatProvider({ children }) {
       latestDangerousAlertId.current = dangerousAlert.id
       setActiveNotification(dangerousAlert)
     }
-  }, [applyPublicScans])
+  }, [applyPublicScans, publicClientId])
 
   useEffect(() => {
     localStorage.setItem('threattrack:dark-mode', JSON.stringify(darkMode))
@@ -259,12 +306,17 @@ export function ThreatProvider({ children }) {
     }) => {
       const scan =
         type === 'URL' || type === 'Domain'
-          ? await apiService.scanUrl(target)
+          ? await apiService.scanUrl(target, {
+              source: isPublicDeployment ? 'public-web-scan' : 'api',
+              clientId: publicClientId,
+            })
           : type === 'Email'
             ? await apiService.scanEmail({
                 sender: sender ?? target,
                 subject: subject ?? content.split('\n')[0] ?? '',
                 body: body ?? (content.split('\n').slice(1).join('\n') || content),
+                source: isPublicDeployment ? 'public-web-scan' : 'api',
+                clientId: publicClientId,
               })
             : type === 'File'
               ? await apiService.scanFile({
@@ -273,8 +325,15 @@ export function ThreatProvider({ children }) {
                   size,
                   content,
                   sha256,
+                  source: isPublicDeployment ? 'public-web-scan' : 'api',
+                  clientId: publicClientId,
                 })
-              : await apiService.scanMessage({ target, content })
+              : await apiService.scanMessage({
+                  target,
+                  content,
+                  source: isPublicDeployment ? 'public-web-scan' : 'api',
+                  clientId: publicClientId,
+                })
 
       if (isPublicDeployment) {
         const publicScan = toPublicScanRecord(scan)
@@ -299,7 +358,7 @@ export function ThreatProvider({ children }) {
       }
       return scan
     },
-    [applyPublicScans, refreshData],
+    [applyPublicScans, publicClientId, refreshData],
   )
 
   const clearHistory = useCallback(async () => {
