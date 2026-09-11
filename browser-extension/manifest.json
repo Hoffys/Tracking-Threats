@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tracking Threats Browser Monitor",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Scans visited pages and supported webmail content with Tracking Threats.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -42,7 +42,14 @@
         "https://mail.google.com/*",
         "https://outlook.live.com/*",
         "https://outlook.office.com/*",
-        "https://mail.yahoo.com/*"
+        "https://outlook.office365.com/*",
+        "https://mail.yahoo.com/*",
+        "https://mail.proton.me/*",
+        "https://app.proton.me/*",
+        "https://www.icloud.com/*",
+        "https://mail.zoho.com/*",
+        "https://mail.aol.com/*",
+        "https://*.mail.com/*"
       ],
       "js": ["config.js", "email-monitor.js"],
       "run_at": "document_idle"

@@ -5,46 +5,93 @@ const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 let scanTimer = null
 let lastScanKey = ''
 
-function getVisibleText(selector) {
-  const element = Array.from(document.querySelectorAll(selector)).find((item) => {
-    const rect = item.getBoundingClientRect()
-    return rect.width > 0 && rect.height > 0
-  })
-  return element?.textContent?.trim() ?? ''
+function cleanText(value = '') {
+  return value.replace(/\s+/g, ' ').trim()
 }
 
-function getLargestVisibleText(selectors) {
+function isVisible(element) {
+  const rect = element.getBoundingClientRect()
+  return rect.width > 0 && rect.height > 0
+}
+
+function getVisibleText(selector) {
+  const element = Array.from(document.querySelectorAll(selector)).find((item) => {
+    return isVisible(item)
+  })
+  return cleanText(element?.textContent ?? '')
+}
+
+function getVisibleAttribute(selector, attribute) {
+  const element = Array.from(document.querySelectorAll(selector))
+    .filter(isVisible)
+    .at(-1)
+  return cleanText(element?.getAttribute(attribute) ?? '')
+}
+
+function getVisibleElements(selectors) {
+  return selectors.flatMap((selector) =>
+    Array.from(document.querySelectorAll(selector)).filter((element) => {
+      return isVisible(element) && cleanText(element.textContent).length > 0
+    }),
+  )
+}
+
+function getVisibleLinks(elements) {
+  return [
+    ...new Set(
+      elements
+        .flatMap((element) => Array.from(element.querySelectorAll('a[href]')))
+        .map((anchor) => anchor.href)
+        .filter((href) => /^https?:\/\//i.test(href)),
+    ),
+  ]
+}
+
+function getTextWithLinks(element) {
+  if (!element) return ''
+  const text = cleanText(element.textContent ?? '')
+  const links = getVisibleLinks([element])
+  if (links.length === 0) return text
+  return `${text}\n\nVisible links:\n${links.join('\n')}`
+}
+
+function getBodyFromSelectors(selectors) {
+  const elements = getVisibleElements(selectors)
+  if (elements.length > 0) return getTextWithLinks(elements.at(-1))
+  return getTextWithLinks(getLargestVisibleElement(selectors))
+}
+
+function getLargestVisibleElement(selectors) {
   return selectors
     .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
     .map((element) => {
       const rect = element.getBoundingClientRect()
       return {
         element,
-        text: element.textContent?.trim() ?? '',
+        text: cleanText(element.textContent ?? ''),
         area: rect.width * rect.height,
-        visible: rect.width > 0 && rect.height > 0,
+        visible: isVisible(element),
       }
     })
     .filter((item) => item.visible && item.text.length > 0)
     .sort((left, right) => right.text.length + right.area - (left.text.length + left.area))[0]
-    ?.text ?? ''
+    ?.element
 }
 
 function getGmailEmail() {
-  const bodies = Array.from(document.querySelectorAll('.a3s.aiL, .adn.ads .a3s, div[role="listitem"] .a3s, .ii.gt'))
-    .filter((item) => {
-      const rect = item.getBoundingClientRect()
-      return rect.width > 0 && rect.height > 0 && item.textContent.trim().length > 0
-    })
-    .map((item) => item.textContent.trim())
-
   return {
     sender:
-      document.querySelector('.gD[email]')?.getAttribute('email') ||
+      getVisibleAttribute('.gD[email]', 'email') ||
       getVisibleText('.gD') ||
       getVisibleText('.go'),
     subject: getVisibleText('h2.hP') || getVisibleText('[data-thread-perm-id] h2'),
-    body: bodies.at(-1) ?? getLargestVisibleText(['[role="main"] .a3s']),
+    body: getBodyFromSelectors([
+      '.a3s.aiL',
+      '.adn.ads .a3s',
+      'div[role="listitem"] .a3s',
+      '.ii.gt',
+      '[role="main"] .a3s',
+    ]),
   }
 }
 
@@ -55,10 +102,13 @@ function getOutlookEmail() {
       getVisibleText('[aria-label*="From"]') ||
       getVisibleText('[role="heading"]'),
     subject: getVisibleText('[role="heading"][aria-level="1"]') || getVisibleText('h1'),
-    body:
-      getVisibleText('[aria-label="Message body"]') ||
-      getVisibleText('[role="document"]') ||
-      getVisibleText('main'),
+    body: getBodyFromSelectors([
+      '[aria-label="Message body"]',
+      '[role="document"]',
+      '[data-testid="messageBodyContent"]',
+      '[data-testid*="message-body"]',
+      'main',
+    ]),
   }
 }
 
@@ -71,10 +121,77 @@ function getYahooEmail() {
       getVisibleText('[data-test-id="message-view-subject"]') ||
       getVisibleText('[data-test-id="message-subject"]') ||
       getVisibleText('h1'),
-    body:
-      getVisibleText('[data-test-id="message-view-body"]') ||
-      getVisibleText('[data-test-id="message-body"]') ||
-      getVisibleText('main'),
+    body: getBodyFromSelectors([
+      '[data-test-id="message-view-body"]',
+      '[data-test-id="message-body"]',
+      '[role="document"]',
+      'main',
+    ]),
+  }
+}
+
+function getProtonEmail() {
+  return {
+    sender:
+      getVisibleText('[data-testid*="sender"]') ||
+      getVisibleText('[class*="sender"]') ||
+      getVisibleText('[title*="@"]'),
+    subject:
+      getVisibleText('[data-testid*="subject"]') ||
+      getVisibleText('[class*="subject"]') ||
+      getVisibleText('h1'),
+    body: getBodyFromSelectors([
+      '[data-testid*="message-content"]',
+      '[class*="message-content"]',
+      '[role="document"]',
+      'article',
+    ]),
+  }
+}
+
+function getIcloudEmail() {
+  return {
+    sender:
+      getVisibleText('[aria-label*="From"]') ||
+      getVisibleText('[class*="sender"]') ||
+      getVisibleText('[title*="@"]'),
+    subject:
+      getVisibleText('[aria-label*="Subject"]') ||
+      getVisibleText('[class*="subject"]') ||
+      getVisibleText('h1'),
+    body: getBodyFromSelectors([
+      '[aria-label="Message body"]',
+      '[class*="message-body"]',
+      '[role="document"]',
+      'article',
+    ]),
+  }
+}
+
+function getGenericWebmailEmail() {
+  return {
+    sender:
+      getVisibleText('[aria-label*="From"]') ||
+      getVisibleText('[data-testid*="sender"]') ||
+      getVisibleText('[data-test-id*="sender"]') ||
+      getVisibleText('[class*="sender"]') ||
+      getVisibleText('[title*="@"]'),
+    subject:
+      getVisibleText('[aria-label*="Subject"]') ||
+      getVisibleText('[data-testid*="subject"]') ||
+      getVisibleText('[data-test-id*="subject"]') ||
+      getVisibleText('[class*="subject"]') ||
+      getVisibleText('h1, h2'),
+    body: getBodyFromSelectors([
+      '[aria-label="Message body"]',
+      '[data-testid*="message-body"]',
+      '[data-test-id*="message-body"]',
+      '[data-testid*="message-content"]',
+      '[class*="message-body"]',
+      '[class*="message-content"]',
+      '[role="document"]',
+      'article',
+    ]),
   }
 }
 
@@ -83,11 +200,16 @@ function getOpenedEmail() {
   if (host === 'mail.google.com') return getGmailEmail()
   if (host.includes('outlook.')) return getOutlookEmail()
   if (host.includes('mail.yahoo.')) return getYahooEmail()
+  if (host.includes('proton.')) return getProtonEmail()
+  if (host.includes('icloud.com')) return getIcloudEmail()
+  if (host.includes('zoho.') || host.includes('mail.com') || host.includes('aol.com')) {
+    return getGenericWebmailEmail()
+  }
 
   return {
     sender: '',
     subject: getVisibleText('h1, [role="heading"]'),
-    body: getVisibleText('main, article, [role="main"]'),
+    body: getBodyFromSelectors(['main, article, [role="main"]']),
   }
 }
 
@@ -111,11 +233,19 @@ function getStatusLabel(status) {
   return status === 'Suspicious' ? 'Caution' : status
 }
 
-function getDetailsUrl(target) {
-  const url = new URL(APP_URL)
-  url.searchParams.set('page', 'manual')
-  if (target) url.searchParams.set('target', target)
+function getDetailsUrl(target, appUrl = APP_URL) {
+  const url = new URL(appUrl)
+  url.searchParams.set('page', 'history')
+  if (target) url.searchParams.set('blocked', target)
   return url.toString()
+}
+
+function setDetailsHref(anchor, target) {
+  anchor.href = getDetailsUrl(target)
+  chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+    if (chrome.runtime.lastError || !response?.ok || !response.appUrl) return
+    anchor.href = getDetailsUrl(target, response.appUrl)
+  })
 }
 
 function showEmailWarning(scan, email) {
@@ -128,6 +258,7 @@ function showEmailWarning(scan, email) {
   const accentColor = isSafe ? '#6ee7b7' : '#fecdd3'
   const buttonColor = isSafe ? '#065f46' : '#9f1239'
   const titleText = isSafe ? 'Tracking Threats Email Scan' : 'Tracking Threats Email Warning'
+  const scanTarget = scan.target || email.sender || email.subject || 'Opened email'
 
   banner.id = 'threattrack-email-warning'
   banner.style.cssText = [
@@ -209,7 +340,7 @@ function showEmailWarning(scan, email) {
   }
 
   const details = document.createElement('a')
-  details.href = getDetailsUrl(email.sender || email.subject)
+  setDetailsHref(details, scanTarget)
   details.target = '_blank'
   details.rel = 'noreferrer'
   details.textContent = 'Open scan details'
@@ -249,6 +380,7 @@ function scanOpenedEmail() {
       email,
     },
     (response) => {
+      if (chrome.runtime.lastError) return
       if (!response?.ok || !response.scan) return
       showEmailWarning(response.scan, email)
     },
