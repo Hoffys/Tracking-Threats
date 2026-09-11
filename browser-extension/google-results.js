@@ -1,19 +1,53 @@
-const MAX_RESULTS_TO_SCAN = 12
+const MAX_RESULTS_TO_SCAN = 50
 const GOOGLE_REDIRECT_PATHS = new Set(['/url', '/interstitial'])
 const SEARCH_ENGINE_HOSTS = [
   'google.com',
   'bing.com',
   'duckduckgo.com',
+  'ecosia.org',
+  'search.brave.com',
+  'search.yahoo.com',
+  'startpage.com',
   'yahoo.com',
+  'yandex.com',
+]
+const SEARCH_RESULT_SELECTORS = [
+  'a[href] h3',
+  '[data-testid="result-title-a"]',
+  '.result__title a[href]',
+  '.b_algo h2 a[href]',
+  '.algo h3 a[href]',
+  'a[href][data-testid*="result"]',
+  'main a[href]',
+]
+const RESULT_CONTAINER_SELECTORS = [
+  'article',
+  '.b_algo',
+  '.g',
+  '.result',
+  '[data-testid*="result"]',
+  'li',
+  'div',
 ]
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const scannedResults = new Map()
 const riskyResults = new Map()
 const latestResults = new Map()
+const scanStats = {
+  checked: 0,
+  safe: 0,
+  caution: 0,
+  dangerous: 0,
+}
 let scanTimer = null
 
 function isSearchEngineHost(hostname) {
   return SEARCH_ENGINE_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`))
+}
+
+function isVisible(element) {
+  const rect = element.getBoundingClientRect()
+  return rect.width > 0 && rect.height > 0
 }
 
 function normalizeCandidate(rawHref) {
@@ -33,19 +67,59 @@ function normalizeCandidate(rawHref) {
 }
 
 function collectResultLinks() {
-  const candidates = new Set()
+  const candidates = []
+  const seen = new Set()
 
-  document.querySelectorAll('a[href]').forEach((anchor) => {
+  document.querySelectorAll(SEARCH_RESULT_SELECTORS.join(',')).forEach((element) => {
+    const anchor = element.matches('a[href]') ? element : element.closest('a[href]')
+    if (!anchor || !isVisible(anchor)) return
     const href = anchor.getAttribute('href')
     const normalized = href ? normalizeCandidate(href) : null
-    if (normalized) candidates.add(normalized)
+    if (!normalized || seen.has(normalized)) return
+    seen.add(normalized)
+    candidates.push(normalized)
   })
 
-  return Array.from(candidates).slice(0, MAX_RESULTS_TO_SCAN)
+  return candidates.slice(0, MAX_RESULTS_TO_SCAN)
 }
 
 function isRiskyScan(scan) {
   return scan?.status === 'Dangerous' || scan?.status === 'Suspicious' || scan?.blocked
+}
+
+function getScanLevel(scan) {
+  if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
+  if (scan?.status === 'Suspicious') return 'caution'
+  return 'safe'
+}
+
+function getResultStyle(scan) {
+  const level = getScanLevel(scan)
+  if (level === 'dangerous') {
+    return {
+      label: 'DANGER',
+      border: 'rgba(225,29,72,.5)',
+      background: '#ffe4e6',
+      color: '#9f1239',
+      rowBackground: 'rgba(225,29,72,.12)',
+    }
+  }
+  if (level === 'caution') {
+    return {
+      label: 'CAUTION',
+      border: 'rgba(245,158,11,.55)',
+      background: '#fef3c7',
+      color: '#92400e',
+      rowBackground: 'rgba(245,158,11,.12)',
+    }
+  }
+  return {
+    label: 'SAFE',
+    border: 'rgba(16,185,129,.45)',
+    background: '#ccfbf1',
+    color: '#115e59',
+    rowBackground: 'rgba(16,185,129,.08)',
+  }
 }
 
 function getDetailsUrl(url, appUrl = APP_URL) {
@@ -83,11 +157,10 @@ function addBadge(anchor, scan) {
   anchor.dataset.threattrackMarked = 'true'
   anchor.dataset.threattrackStatus = scan.status
 
-  const isSafe = scan.status === 'Safe'
-  const isDangerous = scan.status === 'Dangerous' || scan.blocked
+  const style = getResultStyle(scan)
   const badge = document.createElement('span')
   badge.className = 'threattrack-result-badge'
-  badge.textContent = isDangerous ? 'Danger risk' : isSafe ? 'Safe' : 'Caution'
+  badge.textContent = `${style.label} ${scan.score}/100`
   badge.style.cssText = [
     'all:initial',
     'box-sizing:border-box',
@@ -102,16 +175,28 @@ function addBadge(anchor, scan) {
     'min-height:20px',
     'max-height:20px',
     'margin-left:8px',
-    `border:1px solid ${isDangerous ? 'rgba(225,29,72,.35)' : isSafe ? 'rgba(16,185,129,.38)' : 'rgba(245,158,11,.42)'}`,
+    `border:1px solid ${style.border}`,
     'border-radius:999px',
-    `background:${isDangerous ? '#ffe4e6' : isSafe ? '#ccfbf1' : '#fef3c7'}`,
-    `color:${isDangerous ? '#9f1239' : isSafe ? '#115e59' : '#92400e'}`,
+    `background:${style.background}`,
+    `color:${style.color}`,
     'font:700 11px/20px Arial,sans-serif',
     'padding:0 8px',
     'white-space:nowrap',
     'text-decoration:none',
     'vertical-align:middle',
+    'cursor:pointer',
   ].join(';')
+  badge.onclick = (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const normalized = normalizeCandidate(anchor.getAttribute('href'))
+    if (!normalized) return
+    chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+      const appUrl =
+        chrome.runtime.lastError || !response?.ok || !response.appUrl ? APP_URL : response.appUrl
+      window.open(getDetailsUrl(normalized, appUrl), '_blank', 'noopener,noreferrer')
+    })
+  }
 
   const title = anchor.querySelector('h3')
   if (title) {
@@ -123,7 +208,16 @@ function addBadge(anchor, scan) {
   return true
 }
 
-function markGoogleLinks(url, scan) {
+function highlightResultContainer(anchor, scan) {
+  const style = getResultStyle(scan)
+  const container =
+    RESULT_CONTAINER_SELECTORS.map((selector) => anchor.closest(selector)).find(Boolean) ?? anchor
+  container.style.boxShadow = `inset 4px 0 0 ${style.color}`
+  container.style.backgroundColor = style.rowBackground
+  container.style.borderRadius = '8px'
+}
+
+function markSearchLinks(url, scan) {
   const anchors = Array.from(document.querySelectorAll('a[href]')).filter(
     (anchor) => normalizeCandidate(anchor.getAttribute('href')) === url,
   )
@@ -136,13 +230,73 @@ function markGoogleLinks(url, scan) {
   )
 
   if (titleAnchors.length > 0) {
-    titleAnchors.forEach((anchor) => addBadge(anchor, scan))
+    titleAnchors.forEach((anchor) => {
+      addBadge(anchor, scan)
+      highlightResultContainer(anchor, scan)
+    })
     return
   }
 
   if (textAnchors.length > 0) {
-    textAnchors.forEach((anchor) => addBadge(anchor, scan))
+    textAnchors.forEach((anchor) => {
+      addBadge(anchor, scan)
+      highlightResultContainer(anchor, scan)
+    })
   }
+}
+
+function showSearchStatus() {
+  const existing = document.getElementById('threattrack-search-status')
+  const banner = existing ?? document.createElement('aside')
+  const riskyCount = scanStats.caution + scanStats.dangerous
+  const hasRisk = riskyCount > 0
+  const accentColor = scanStats.dangerous > 0 ? '#fecdd3' : hasRisk ? '#fde68a' : '#6ee7b7'
+  const borderColor =
+    scanStats.dangerous > 0
+      ? 'rgba(225,29,72,.45)'
+      : hasRisk
+        ? 'rgba(245,158,11,.45)'
+        : 'rgba(16,185,129,.45)'
+  const statusText =
+    scanStats.checked === 0
+      ? 'Scanning visible search results...'
+      : hasRisk
+        ? `${riskyCount} risky search result${riskyCount === 1 ? '' : 's'} found`
+        : 'No risky result found in visible search results'
+
+  banner.id = 'threattrack-search-status'
+  banner.style.cssText = [
+    'position:fixed',
+    'right:20px',
+    'top:92px',
+    'z-index:2147483646',
+    'box-sizing:border-box',
+    'width:min(350px,calc(100vw - 32px))',
+    `border:1px solid ${borderColor}`,
+    'border-radius:8px',
+    'background:#111827',
+    'color:#f8fafc',
+    'box-shadow:0 18px 50px rgba(0,0,0,.32)',
+    'font:13px/1.45 Arial,sans-serif',
+    'padding:12px',
+  ].join(';')
+
+  banner.innerHTML = ''
+
+  const title = document.createElement('strong')
+  title.textContent = 'Tracking Threats Search Monitor'
+  title.style.cssText = `display:block;font-size:14px;color:${accentColor}`
+
+  const body = document.createElement('p')
+  body.textContent = statusText
+  body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
+
+  const counts = document.createElement('p')
+  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe} safe - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
+  counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
+
+  banner.append(title, body, counts)
+  if (!existing) document.body.appendChild(banner)
 }
 
 function showResultPopup(url, scan) {
@@ -266,6 +420,7 @@ function showResultPopup(url, scan) {
 }
 
 function scanGoogleResults() {
+  showSearchStatus()
   collectResultLinks().forEach((url) => {
     if (scannedResults.has(url)) return
     scannedResults.set(url, null)
@@ -278,8 +433,12 @@ function scanGoogleResults() {
       scannedResults.set(url, response.scan)
       if (!response?.ok || !response.scan) return
       latestResults.set(url, response.scan)
+      const level = getScanLevel(response.scan)
+      scanStats.checked += 1
+      scanStats[level] += 1
       if (isRiskyScan(response.scan)) riskyResults.set(url, response.scan)
-      markGoogleLinks(url, response.scan)
+      markSearchLinks(url, response.scan)
+      showSearchStatus()
       showResultPopup(url, response.scan)
     })
   })
