@@ -21,6 +21,17 @@ const PASS_THROUGH_HOSTS = new Set([
   'duckduckgo.com',
   'github.com',
   'google.com',
+  'icloud.com',
+  'mail.aol.com',
+  'mail.com',
+  'mail.google.com',
+  'mail.proton.me',
+  'mail.yahoo.com',
+  'mail.zoho.com',
+  'outlook.live.com',
+  'outlook.office.com',
+  'outlook.office365.com',
+  'proton.me',
   'search.yahoo.com',
   'tracking-threats-production.up.railway.app',
 ])
@@ -108,7 +119,11 @@ function getHost(rawUrl) {
 }
 
 function isPassThroughHost(host) {
-  return PASS_THROUGH_HOSTS.has(normalizeHost(host))
+  const normalizedHost = normalizeHost(host)
+  return Array.from(PASS_THROUGH_HOSTS).some(
+    (passThroughHost) =>
+      normalizedHost === passThroughHost || normalizedHost.endsWith(`.${passThroughHost}`),
+  )
 }
 
 function isMarkedSafeHost(host) {

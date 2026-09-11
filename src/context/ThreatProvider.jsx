@@ -20,6 +20,7 @@ const defaultNotificationSettings = {
 const publicScansStorageKey = 'threattrack:public-scans'
 const publicClientStorageKey = 'threattrack:public-client-id'
 const publicHiddenScansStorageKey = 'threattrack:public-hidden-scan-ids'
+const publicHistoryClearedBeforeStorageKey = 'threattrack:public-history-cleared-before'
 
 const normalizeClientId = (clientId) => {
   const normalized = String(clientId ?? '').trim()
@@ -75,9 +76,26 @@ const writePublicHiddenScanIds = (scanIds) => {
   )
 }
 
+const readPublicHistoryClearedBefore = () => {
+  try {
+    return Number(localStorage.getItem(publicHistoryClearedBeforeStorageKey) ?? 0)
+  } catch {
+    return 0
+  }
+}
+
+const writePublicHistoryClearedBefore = (timestamp) => {
+  localStorage.setItem(publicHistoryClearedBeforeStorageKey, String(timestamp))
+}
+
 const filterVisiblePublicScans = (scans) => {
   const hiddenScanIds = readPublicHiddenScanIds()
-  return scans.filter((scan) => !hiddenScanIds.has(scan.id))
+  const clearedBefore = readPublicHistoryClearedBefore()
+  return scans.filter((scan) => {
+    if (hiddenScanIds.has(scan.id)) return false
+    if (!clearedBefore) return true
+    return new Date(scan.date).getTime() > clearedBefore
+  })
 }
 
 const mergePublicScans = (...scanGroups) => {
@@ -178,7 +196,7 @@ const readNotificationSettings = () => {
 
 export function ThreatProvider({ children }) {
   const [publicClientId] = useState(() => (isPublicDeployment ? readPublicClientId() : ''))
-  const initialPublicScans = isPublicDeployment ? readPublicScans() : []
+  const initialPublicScans = isPublicDeployment ? filterVisiblePublicScans(readPublicScans()) : []
   const [scanHistory, setScanHistory] = useState(initialPublicScans)
   const [alerts, setAlerts] = useState(
     isPublicDeployment
@@ -385,6 +403,7 @@ export function ThreatProvider({ children }) {
 
   const clearHistory = useCallback(async () => {
     if (isPublicDeployment) {
+      writePublicHistoryClearedBefore(Date.now() + 3000)
       writePublicHiddenScanIds(
         new Set([
           ...readPublicHiddenScanIds(),
