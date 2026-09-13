@@ -15,4 +15,4 @@ Before loading or packaging the extension for a hosted deployment:
    - Keep public deployment privacy settings enabled:
      `PUBLIC_DEPLOYMENT=true`, `STORE_SCAN_CONTENT=false`, and `SMTP_ENABLED=false`.
 
-The extension scans visited HTTP/HTTPS pages, supported search results, and supported webmail pages. It also includes a lightweight static ad and malvertising ruleset in `rules/adblock-rules.json` to block common ad delivery, popup, and tracking domains before they load. Do not publish it without clear user consent and privacy wording.
+The extension scans visited HTTP/HTTPS pages, supported search results, supported webmail pages, and new browser downloads. Dangerous downloads are canceled when the source URL or file indicators are marked high risk. It also includes a lightweight static ad and malvertising ruleset in `rules/adblock-rules.json` to block common ad delivery, popup, and tracking domains before they load. Do not publish it without clear user consent and privacy wording.

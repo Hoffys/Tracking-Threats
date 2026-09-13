@@ -3,6 +3,7 @@ importScripts('config.js')
 const API_BASE_URL = TRACKING_THREATS_CONFIG.API_BASE_URL.replace(/\/$/, '')
 const API_URL = `${API_BASE_URL}/api/scan/url`
 const EMAIL_API_URL = `${API_BASE_URL}/api/scan/email`
+const FILE_API_URL = `${API_BASE_URL}/api/scan/file`
 const SAFE_HOSTS_URL = `${API_BASE_URL}/api/safe-hosts`
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const APP_ORIGIN = new URL(APP_URL).origin
@@ -338,6 +339,19 @@ function getRecentScan(url) {
 
 function isBlockedScan(scan) {
   return scan?.status === 'Dangerous' || scan?.blocked || scan?.responseStatus === 'Blocked'
+}
+
+function getDownloadFileName(downloadItem = {}) {
+  const rawName = downloadItem.filename || downloadItem.finalUrl || downloadItem.url || ''
+  const fromPath = rawName.split(/[\\/]/).pop()
+  if (fromPath && fromPath !== rawName) return fromPath
+
+  try {
+    const pathName = new URL(rawName).pathname.split('/').filter(Boolean).pop()
+    return pathName || 'Downloaded file'
+  } catch {
+    return rawName || 'Downloaded file'
+  }
 }
 
 function hasBypass(host) {
@@ -717,9 +731,110 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
   }
 }
 
+async function scanDownloadFile(downloadItem, clientId) {
+  const response = await fetch(FILE_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: getDownloadFileName(downloadItem),
+      mimeType: downloadItem.mime || '',
+      size: Number(downloadItem.totalBytes || downloadItem.fileSize || 0),
+      content: '',
+      source: 'browser-download-monitor',
+      clientId,
+    }),
+  })
+
+  if (!response.ok) throw new Error(await getScannerError(response, 'File scanner'))
+  return response.json()
+}
+
+async function scanDownloadUrl(downloadItem, clientId) {
+  if (!isTrackableUrl(downloadItem.url)) return null
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: downloadItem.url,
+      source: 'browser-download-url',
+      reason: 'download-url-check',
+      clientId,
+    }),
+  })
+
+  if (!response.ok) throw new Error(await getScannerError(response))
+  const scan = await response.json()
+  if (isBlockedScan(scan)) await rememberBlockedSite(downloadItem.url, scan)
+  return scan
+}
+
+async function cancelDangerousDownload(downloadItem, scan) {
+  try {
+    await chrome.downloads.cancel(downloadItem.id)
+  } catch {
+    // The download may already be complete or unavailable.
+  }
+
+  try {
+    await chrome.downloads.erase({ id: downloadItem.id })
+  } catch {
+    // Some browsers do not allow erasing immediately after cancel.
+  }
+
+  await saveStatus({
+    ok: true,
+    lastUrl: getDownloadFileName(downloadItem),
+    lastStatus: 'Blocked',
+    lastScore: scan?.score ?? 0,
+  })
+  await notifyScanResult(downloadItem.url || getDownloadFileName(downloadItem), {
+    ...scan,
+    status: 'Dangerous',
+    blocked: true,
+  })
+}
+
+async function scanDownload(downloadItem) {
+  if (!downloadItem?.id) return null
+
+  try {
+    const clientId = await getClientId()
+    const urlScan = await scanDownloadUrl(downloadItem, clientId)
+    const fileScan = await scanDownloadFile(downloadItem, clientId)
+    const blockingScan = [urlScan, fileScan].find(isBlockedScan)
+
+    if (blockingScan) {
+      await cancelDangerousDownload(downloadItem, blockingScan)
+      return blockingScan
+    }
+
+    await saveStatus({
+      ok: true,
+      lastUrl: getDownloadFileName(downloadItem),
+      lastStatus: fileScan.status,
+      lastScore: fileScan.score,
+    })
+    return fileScan
+  } catch (error) {
+    await saveStatus({
+      ok: false,
+      lastUrl: getDownloadFileName(downloadItem),
+      error: error.message,
+    })
+    return { ok: false, error: error.message }
+  }
+}
+
 async function handleTabUrl(tabId, url, reason) {
   if (await linkAppTab(tabId, url)) return
   scanUrl(url, reason, tabId)
+}
+
+if (chrome.downloads?.onCreated) {
+  chrome.downloads.onCreated.addListener((downloadItem) => {
+    scanDownload(downloadItem)
+  })
 }
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
