@@ -96,14 +96,12 @@ async function saveBypassHosts() {
 }
 
 async function loadAllowedHosts() {
-  const stored = await chrome.storage.local.get(ALLOWED_HOSTS_KEY)
-  allowedHosts = new Set((stored[ALLOWED_HOSTS_KEY] ?? []).map(normalizeHost).filter(Boolean))
+  allowedHosts = new Set()
+  await chrome.storage.local.remove(ALLOWED_HOSTS_KEY)
 }
 
 async function saveAllowedHosts() {
-  await chrome.storage.local.set({
-    [ALLOWED_HOSTS_KEY]: Array.from(allowedHosts),
-  })
+  await chrome.storage.local.remove(ALLOWED_HOSTS_KEY)
 }
 
 function normalizeHost(host) {
@@ -356,8 +354,6 @@ async function unblockSite({ rawUrl, host: fallbackHost }) {
   const host = getHost(rawUrl) || fallbackHost?.replace(/^www\./, '')
   if (!host) return false
 
-  allowedHosts.add(host)
-  await saveAllowedHosts()
   bypassHosts.set(host, Date.now() + UNBLOCK_BYPASS_MS)
   await saveBypassHosts()
   recentScans.delete(rawUrl)
