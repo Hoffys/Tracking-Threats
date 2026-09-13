@@ -14,7 +14,14 @@ const request = async (path, options) => {
   })
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`)
+    let message = `API request failed: ${response.status}`
+    try {
+      const payload = await response.clone().json()
+      if (payload?.error) message = payload.error
+    } catch {
+      // Keep the status-based message when the backend does not return JSON.
+    }
+    throw new Error(message)
   }
 
   return response.json()

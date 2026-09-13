@@ -6,6 +6,7 @@ import {
   FileWarning,
   Globe2,
   Info,
+  KeyRound,
   ListChecks,
   MailPlus,
   MailWarning,
@@ -112,9 +113,13 @@ export function Settings() {
     setNotificationSettings,
   } = useThreats()
   const [draft, setDraft] = useState(notificationSettings)
+  const [adminToken, setAdminToken] = useState(
+    () => localStorage.getItem('threattrack:admin-token') ?? '',
+  )
   const [emailInput, setEmailInput] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [adminSaved, setAdminSaved] = useState(false)
   const [digestSent, setDigestSent] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isSendingDigest, setIsSendingDigest] = useState(false)
@@ -150,6 +155,17 @@ export function Settings() {
     updateDraft({ reportEmails: draft.reportEmails.filter((item) => item !== email) })
   }
 
+  const saveAdminAccess = () => {
+    const token = adminToken.trim()
+    if (token) {
+      localStorage.setItem('threattrack:admin-token', token)
+    } else {
+      localStorage.removeItem('threattrack:admin-token')
+    }
+    setAdminSaved(true)
+    setError('')
+  }
+
   const saveSettings = async (event) => {
     event.preventDefault()
     if (!canSave) {
@@ -163,12 +179,22 @@ export function Settings() {
         ...draft,
         reportEmails: draft.reportEmails.map((email) => email.trim().toLowerCase()),
       }
+      if (adminToken.trim()) {
+        localStorage.setItem('threattrack:admin-token', adminToken.trim())
+      }
       setNotificationSettings(settings)
       await saveNotificationSettings(settings)
       setError('')
       setSaved(true)
-    } catch {
-      setError('Hindi na-save ang email notification settings.')
+    } catch (saveError) {
+      const message = saveError.message || 'Hindi na-save ang email notification settings.'
+      setError(
+        message === 'Admin token is required'
+          ? 'Admin token is required before saving email notification settings.'
+          : message === 'Invalid admin token'
+            ? 'Invalid admin token. Check the value in Railway ADMIN_API_TOKEN.'
+            : message,
+      )
     } finally {
       setIsSaving(false)
     }
@@ -181,8 +207,11 @@ export function Settings() {
     try {
       await sendHistoryDigest()
       setDigestSent(true)
-    } catch {
-      setError('Hindi na-send ang history digest. Check SMTP settings and saved emails.')
+    } catch (digestError) {
+      setError(
+        digestError.message ||
+          'Hindi na-send ang history digest. Check SMTP settings and saved emails.',
+      )
     } finally {
       setIsSendingDigest(false)
     }
@@ -266,6 +295,44 @@ export function Settings() {
 
       <form className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]" onSubmit={saveSettings}>
         <div className="space-y-5">
+          <Panel>
+            <div className="flex items-center gap-2">
+              <KeyRound size={19} className="text-teal-500" />
+              <h2 className="text-lg font-semibold">Admin access</h2>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Required for saving backtrack email recipients and sending history digests.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <input
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                type="password"
+                value={adminToken}
+                onChange={(event) => {
+                  setAdminToken(event.target.value)
+                  setAdminSaved(false)
+                  setError('')
+                }}
+                placeholder="Enter ADMIN_API_TOKEN"
+                autoComplete="off"
+              />
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-teal-200 px-4 py-3 text-sm font-semibold text-teal-700 transition hover:bg-teal-50 dark:border-teal-900/60 dark:text-teal-300 dark:hover:bg-teal-950/40"
+                type="button"
+                onClick={saveAdminAccess}
+              >
+                <Save size={17} />
+                Save Token
+              </button>
+            </div>
+            {adminSaved && (
+              <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                <CheckCircle2 size={17} />
+                Admin token saved in this browser
+              </p>
+            )}
+          </Panel>
+
           <Panel>
             <div className="flex items-center gap-2">
               <MailPlus size={19} className="text-teal-500" />
