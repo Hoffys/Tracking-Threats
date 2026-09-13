@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
+import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
 
@@ -187,6 +188,7 @@ export function ManualScan() {
         <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
           {scanResult.summary}
         </p>
+        <ScanExplanation scan={scanResult} />
         <ThreatIntelSummary providers={scanResult.threatIntel} />
 
         {scanResult.fileDetails?.sha256 && (

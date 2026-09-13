@@ -21,7 +21,7 @@ const pages = {
   settings: Settings,
 }
 
-const publicPages = new Set(['dashboard', 'learn', 'monitor', 'manual', 'history'])
+const publicPages = new Set(['dashboard', 'learn', 'monitor', 'manual', 'history', 'settings'])
 
 const getInitialPage = () => {
   const page = new URLSearchParams(window.location.search).get('page')

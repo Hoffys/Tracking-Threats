@@ -27,7 +27,7 @@ const allNavItems = [
 ]
 
 const publicNavItems = allNavItems.filter((item) =>
-  ['dashboard', 'learn', 'monitor', 'manual', 'history'].includes(item.id),
+  ['dashboard', 'learn', 'monitor', 'manual', 'history', 'settings'].includes(item.id),
 )
 const navItems = isPublicDeployment ? publicNavItems : allNavItems
 

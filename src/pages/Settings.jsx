@@ -1,11 +1,18 @@
 import { useMemo, useState } from 'react'
 import {
+  AlertTriangle,
   BellRing,
   CheckCircle2,
+  FileWarning,
+  Globe2,
   Info,
+  ListChecks,
   MailPlus,
+  MailWarning,
   Plus,
   Save,
+  SearchCheck,
+  ShieldCheck,
   Users,
   Trash2,
 } from 'lucide-react'
@@ -13,6 +20,70 @@ import { Panel } from '../components/Panel'
 import { useThreats } from '../hooks/useThreats'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const detectionRules = [
+  {
+    title: 'Suspicious domains and TLDs',
+    icon: Globe2,
+    status: 'Active',
+    description:
+      'Flags suspicious domain endings, risky domain names, piracy, gambling, and reward wording.',
+    examples: ['.site, .zip, .top', 'torrent, crack, repack', 'bonus, billing, verify'],
+  },
+  {
+    title: 'URL structure checks',
+    icon: SearchCheck,
+    status: 'Active',
+    description:
+      'Checks HTTPS, URL shorteners, punycode, brand lookalikes, mixed letters and numbers, and login paths.',
+    examples: ['shorteners', 'fake brand domains', 'login or password paths'],
+  },
+  {
+    title: 'Email and message analysis',
+    icon: MailWarning,
+    status: 'Active',
+    description:
+      'Scores sender, subject, body text, urgency language, credential requests, and links inside messages.',
+    examples: ['urgent language', 'password request', 'embedded risky links'],
+  },
+  {
+    title: 'File indicators',
+    icon: FileWarning,
+    status: 'Active',
+    description:
+      'Checks file names, extensions, scripts, suspicious text content, SHA-256 hash, and optional reputation lookups.',
+    examples: ['invoice.pdf.exe', 'macro warning', 'VirusTotal hash lookup'],
+  },
+  {
+    title: 'Threat intelligence',
+    icon: ShieldCheck,
+    status: 'When configured',
+    description:
+      'Uses external reputation providers when API keys are configured, while local rules keep working without them.',
+    examples: ['URLhaus', 'PhishTank', 'VirusTotal, AbuseIPDB'],
+  },
+]
+
+const scorePolicies = [
+  {
+    label: 'Safe',
+    range: '80-100',
+    action: 'Allowed',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300',
+  },
+  {
+    label: 'Caution',
+    range: '51-79',
+    action: 'Review',
+    className: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300',
+  },
+  {
+    label: 'Dangerous',
+    range: '0-50',
+    action: 'Blocked',
+    className: 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300',
+  },
+]
 
 function ToggleRow({ checked, description, label, onChange }) {
   return (
@@ -121,8 +192,77 @@ export function Settings() {
     <div className="space-y-5">
       <div>
         <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Settings</p>
-        <h1 className="text-2xl font-semibold">Contact and notification setup</h1>
+        <h1 className="text-2xl font-semibold">Detection rules and notifications</h1>
       </div>
+
+      <Panel>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <ListChecks size={19} className="text-teal-500" />
+              <h2 className="text-lg font-semibold">Active detection policy</h2>
+            </div>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              These are the rule groups currently used by the scanner to score URLs, emails,
+              messages, files, search results, and browser visits.
+            </p>
+          </div>
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold uppercase text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <CheckCircle2 size={15} />
+            Policy active
+          </span>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {detectionRules.map((rule) => {
+            const Icon = rule.icon
+            return (
+              <article
+                key={rule.title}
+                className="flex min-h-64 flex-col rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
+                    <Icon size={19} />
+                  </span>
+                  <span className="rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                    {rule.status}
+                  </span>
+                </div>
+                <h3 className="mt-3 text-sm font-semibold text-slate-950 dark:text-white">
+                  {rule.title}
+                </h3>
+                <p className="mt-2 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {rule.description}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {rule.examples.map((example) => (
+                    <span
+                      key={example}
+                      className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300"
+                    >
+                      {example}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            )
+          })}
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          {scorePolicies.map((policy) => (
+            <div key={policy.label} className={`rounded-lg border p-4 ${policy.className}`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">{policy.label}</p>
+                <AlertTriangle size={17} className={policy.label === 'Dangerous' ? '' : 'hidden'} />
+              </div>
+              <p className="mt-2 text-2xl font-semibold">{policy.range}</p>
+              <p className="mt-1 text-sm">System response: {policy.action}</p>
+            </div>
+          ))}
+        </div>
+      </Panel>
 
       <form className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]" onSubmit={saveSettings}>
         <div className="space-y-5">
