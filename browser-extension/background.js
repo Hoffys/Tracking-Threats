@@ -5,6 +5,7 @@ const API_URL = `${API_BASE_URL}/api/scan/url`
 const EMAIL_API_URL = `${API_BASE_URL}/api/scan/email`
 const SAFE_HOSTS_URL = `${API_BASE_URL}/api/safe-hosts`
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
+const APP_ORIGIN = new URL(APP_URL).origin
 const COOLDOWN_MS = 15000
 const SAFE_HOST_SYNC_MS = 5000
 const MAX_TRACKED = 200
@@ -52,8 +53,9 @@ async function getClientId() {
   return clientId
 }
 
-function getLinkedAppUrl(clientId) {
-  const url = new URL(APP_URL)
+function getLinkedAppUrl(clientId, currentUrl = APP_URL) {
+  const url = new URL(currentUrl)
+  if (url.origin !== APP_ORIGIN) return getLinkedAppUrl(clientId)
   url.searchParams.set('client', clientId)
   return url.toString()
 }
@@ -113,6 +115,32 @@ function getHost(rawUrl) {
     return normalizeHost(new URL(rawUrl).hostname)
   } catch {
     return ''
+  }
+}
+
+function isAppUrl(rawUrl) {
+  try {
+    return new URL(rawUrl).origin === APP_ORIGIN
+  } catch {
+    return false
+  }
+}
+
+async function linkAppTab(tabId, rawUrl) {
+  if (!tabId || tabId < 0 || !isAppUrl(rawUrl)) return false
+
+  const url = new URL(rawUrl)
+  if (url.searchParams.get('client')) return false
+
+  const clientId = await getClientId()
+  url.searchParams.set('client', clientId)
+
+  try {
+    const updateResult = chrome.tabs.update(tabId, { url: url.toString() })
+    if (updateResult?.catch) updateResult.catch(() => {})
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -689,16 +717,21 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
   }
 }
 
+async function handleTabUrl(tabId, url, reason) {
+  if (await linkAppTab(tabId, url)) return
+  scanUrl(url, reason, tabId)
+}
+
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    scanUrl(tab.url, 'tab-complete', tab.id)
+    handleTabUrl(tab.id, tab.url, 'tab-complete')
   }
 })
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     const tab = await chrome.tabs.get(tabId)
-    if (tab.url) scanUrl(tab.url, 'tab-activated', tab.id)
+    if (tab.url) handleTabUrl(tab.id, tab.url, 'tab-activated')
   } catch {
     // Tab may disappear before Chrome returns it.
   }
@@ -706,7 +739,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 
 chrome.webNavigation.onCommitted.addListener((details) => {
   if (details.frameId === 0) {
-    scanUrl(details.url, details.transitionType ?? 'navigation', details.tabId)
+    handleTabUrl(details.tabId, details.url, details.transitionType ?? 'navigation')
   }
 })
 
