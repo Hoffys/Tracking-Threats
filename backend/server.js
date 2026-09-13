@@ -69,18 +69,26 @@ app.use(
   '/api',
   rateLimit({
     windowMs: parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
-    limit: parseInteger(process.env.API_RATE_LIMIT_MAX, 300),
+    limit: parseInteger(process.env.API_RATE_LIMIT_MAX, 1500),
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    message: {
+      error: 'Too many API requests. Please wait a moment and try again.',
+      code: 'RATE_LIMITED',
+    },
   }),
 )
 app.use(
   '/api/scan',
   rateLimit({
     windowMs: parseInteger(process.env.SCAN_RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
-    limit: parseInteger(process.env.SCAN_RATE_LIMIT_MAX, 60),
+    limit: parseInteger(process.env.SCAN_RATE_LIMIT_MAX, 900),
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    message: {
+      error: 'Too many scan requests. Please wait a moment and try again.',
+      code: 'SCAN_RATE_LIMITED',
+    },
   }),
 )
 

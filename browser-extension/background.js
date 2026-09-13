@@ -399,6 +399,21 @@ async function saveStatus(status) {
   })
 }
 
+async function getScannerError(response, label = 'Scanner') {
+  if (response.status === 429) {
+    return `${label} busy: too many scan requests. Please wait a moment.`
+  }
+
+  try {
+    const payload = await response.clone().json()
+    if (payload?.error) return `${label}: ${payload.error}`
+  } catch {
+    // Non-JSON responses still get a useful status message below.
+  }
+
+  return `${label} returned ${response.status}`
+}
+
 function getScanNotification(scan, rawUrl) {
   const score = Number(scan?.score ?? 0)
   const status = scan?.status === 'Dangerous' || scan?.blocked ? 'Blocked' : scan?.status
@@ -524,7 +539,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       }),
     })
 
-    if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
+    if (!response.ok) throw new Error(await getScannerError(response))
     const scan = await response.json()
     if (!previewOnly) remember(rawUrl, scan)
     await saveStatus({
@@ -581,7 +596,7 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
     }),
   })
 
-  if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
+  if (!response.ok) throw new Error(await getScannerError(response))
   return response.json()
 }
 
@@ -616,7 +631,7 @@ async function recordBlockedVisit(rawUrl) {
       }),
     })
 
-    if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
+    if (!response.ok) throw new Error(await getScannerError(response))
     const scan = await response.json()
     remember(rawUrl, scan)
     if (!hasBypass(host)) {
@@ -655,7 +670,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
       }),
     })
 
-    if (!response.ok) throw new Error(`Email scanner returned ${response.status}`)
+    if (!response.ok) throw new Error(await getScannerError(response, 'Email scanner'))
     const scan = await response.json()
     await saveStatus({
       ok: true,
