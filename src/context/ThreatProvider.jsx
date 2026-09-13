@@ -17,10 +17,18 @@ const defaultNotificationSettings = {
   mailConfigured: false,
 }
 
-const publicScansStorageKey = 'threattrack:public-scans'
+const publicScansStorageKeyPrefix = 'threattrack:public-scans'
 const publicClientStorageKey = 'threattrack:public-client-id'
-const publicHiddenScansStorageKey = 'threattrack:public-hidden-scan-ids'
-const publicHistoryClearedBeforeStorageKey = 'threattrack:public-history-cleared-before'
+const publicHiddenScansStorageKeyPrefix = 'threattrack:public-hidden-scan-ids'
+const publicHistoryClearedBeforeStorageKeyPrefix = 'threattrack:public-history-cleared-before'
+
+const getPublicSessionKey = (clientId) => normalizeClientId(clientId) || 'local'
+const getPublicScansStorageKey = (clientId) =>
+  `${publicScansStorageKeyPrefix}:${getPublicSessionKey(clientId)}`
+const getPublicHiddenScansStorageKey = (clientId) =>
+  `${publicHiddenScansStorageKeyPrefix}:${getPublicSessionKey(clientId)}`
+const getPublicHistoryClearedBeforeStorageKey = (clientId) =>
+  `${publicHistoryClearedBeforeStorageKeyPrefix}:${getPublicSessionKey(clientId)}`
 
 const normalizeClientId = (clientId) => {
   const normalized = String(clientId ?? '').trim()
@@ -36,61 +44,58 @@ const readPublicClientId = () => {
   }
 
   try {
-    const stored = normalizeClientId(localStorage.getItem(publicClientStorageKey))
-    if (stored) return stored
+    localStorage.removeItem(publicClientStorageKey)
   } catch {
-    // Fall through to creating a browser-local public session id.
+    // A plain hosted app URL should not inherit extension-linked scan history.
   }
 
-  const nextClientId = crypto.randomUUID()
-  localStorage.setItem(publicClientStorageKey, nextClientId)
-  return nextClientId
+  return ''
 }
 
-const readPublicScans = () => {
+const readPublicScans = (clientId = '') => {
   try {
-    const stored = localStorage.getItem(publicScansStorageKey)
+    const stored = localStorage.getItem(getPublicScansStorageKey(clientId))
     return stored ? JSON.parse(stored) : []
   } catch {
     return []
   }
 }
 
-const writePublicScans = (scans) => {
-  localStorage.setItem(publicScansStorageKey, JSON.stringify(scans.slice(0, 50)))
+const writePublicScans = (scans, clientId = '') => {
+  localStorage.setItem(getPublicScansStorageKey(clientId), JSON.stringify(scans.slice(0, 50)))
 }
 
-const readPublicHiddenScanIds = () => {
+const readPublicHiddenScanIds = (clientId = '') => {
   try {
-    const stored = localStorage.getItem(publicHiddenScansStorageKey)
+    const stored = localStorage.getItem(getPublicHiddenScansStorageKey(clientId))
     return new Set(stored ? JSON.parse(stored) : [])
   } catch {
     return new Set()
   }
 }
 
-const writePublicHiddenScanIds = (scanIds) => {
+const writePublicHiddenScanIds = (scanIds, clientId = '') => {
   localStorage.setItem(
-    publicHiddenScansStorageKey,
+    getPublicHiddenScansStorageKey(clientId),
     JSON.stringify(Array.from(scanIds).filter(Boolean).slice(-300)),
   )
 }
 
-const readPublicHistoryClearedBefore = () => {
+const readPublicHistoryClearedBefore = (clientId = '') => {
   try {
-    return Number(localStorage.getItem(publicHistoryClearedBeforeStorageKey) ?? 0)
+    return Number(localStorage.getItem(getPublicHistoryClearedBeforeStorageKey(clientId)) ?? 0)
   } catch {
     return 0
   }
 }
 
-const writePublicHistoryClearedBefore = (timestamp) => {
-  localStorage.setItem(publicHistoryClearedBeforeStorageKey, String(timestamp))
+const writePublicHistoryClearedBefore = (timestamp, clientId = '') => {
+  localStorage.setItem(getPublicHistoryClearedBeforeStorageKey(clientId), String(timestamp))
 }
 
-const filterVisiblePublicScans = (scans) => {
-  const hiddenScanIds = readPublicHiddenScanIds()
-  const clearedBefore = readPublicHistoryClearedBefore()
+const filterVisiblePublicScans = (scans, clientId = '') => {
+  const hiddenScanIds = readPublicHiddenScanIds(clientId)
+  const clearedBefore = readPublicHistoryClearedBefore(clientId)
   return scans.filter((scan) => {
     if (hiddenScanIds.has(scan.id)) return false
     if (!clearedBefore) return true
@@ -196,7 +201,9 @@ const readNotificationSettings = () => {
 
 export function ThreatProvider({ children }) {
   const [publicClientId] = useState(() => (isPublicDeployment ? readPublicClientId() : ''))
-  const initialPublicScans = isPublicDeployment ? filterVisiblePublicScans(readPublicScans()) : []
+  const initialPublicScans = isPublicDeployment
+    ? filterVisiblePublicScans(readPublicScans(publicClientId), publicClientId)
+    : []
   const [scanHistory, setScanHistory] = useState(initialPublicScans)
   const [alerts, setAlerts] = useState(
     isPublicDeployment
@@ -255,9 +262,12 @@ export function ThreatProvider({ children }) {
           : Promise.resolve(null),
       ])
       const nextScans = activity?.scans
-        ? filterVisiblePublicScans(mergePublicScans(activity.scans, readPublicScans()))
-        : filterVisiblePublicScans(readPublicScans())
-      writePublicScans(nextScans)
+        ? filterVisiblePublicScans(
+            mergePublicScans(activity.scans, readPublicScans(publicClientId)),
+            publicClientId,
+          )
+        : filterVisiblePublicScans(readPublicScans(publicClientId), publicClientId)
+      writePublicScans(nextScans, publicClientId)
       applyPublicScans(nextScans, health)
       return
     }
@@ -379,9 +389,11 @@ export function ThreatProvider({ children }) {
         const publicScan = toPublicScanRecord(scan)
         const nextScans = [
           publicScan,
-          ...readPublicScans().filter((storedScan) => storedScan.id !== publicScan.id),
+          ...readPublicScans(publicClientId).filter(
+            (storedScan) => storedScan.id !== publicScan.id,
+          ),
         ].slice(0, 50)
-        writePublicScans(nextScans)
+        writePublicScans(nextScans, publicClientId)
         applyPublicScans(nextScans, { systemActive: true })
       } else {
         refreshData().catch(console.error)
@@ -403,15 +415,16 @@ export function ThreatProvider({ children }) {
 
   const clearHistory = useCallback(async () => {
     if (isPublicDeployment) {
-      writePublicHistoryClearedBefore(Date.now() + 3000)
+      writePublicHistoryClearedBefore(Date.now() + 3000, publicClientId)
       writePublicHiddenScanIds(
         new Set([
-          ...readPublicHiddenScanIds(),
+          ...readPublicHiddenScanIds(publicClientId),
           ...scanHistory.map((scan) => scan.id),
-          ...readPublicScans().map((scan) => scan.id),
+          ...readPublicScans(publicClientId).map((scan) => scan.id),
         ]),
+        publicClientId,
       )
-      writePublicScans([])
+      writePublicScans([], publicClientId)
       applyPublicScans([], { systemActive: true })
       return
     }
@@ -419,7 +432,7 @@ export function ThreatProvider({ children }) {
     await apiService.clearHistory()
     await apiService.clearThreatAuditLogs()
     await refreshData()
-  }, [applyPublicScans, refreshData, scanHistory])
+  }, [applyPublicScans, publicClientId, refreshData, scanHistory])
 
   const acknowledgeAlert = useCallback(
     async (id) => {
