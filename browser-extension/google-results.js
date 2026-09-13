@@ -550,9 +550,9 @@ function scanGoogleResults() {
     scannedResults.set(url, null)
 
     chrome.runtime.sendMessage({
-      type: 'scan-candidate-url',
+      type: 'preview-candidate-url',
       url,
-      reason: 'google-search-result',
+      reason: 'search-result-preview',
     }, (response) => {
       scannedResults.set(url, response.scan)
       if (!response?.ok || !response.scan) return

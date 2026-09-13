@@ -557,6 +557,38 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   }
 }
 
+async function previewUrl(rawUrl, reason = 'search-result-preview') {
+  if (!isTrackableUrl(rawUrl)) return null
+  await syncSafeHosts()
+  const host = getHost(rawUrl)
+  if (isAllowedHost(host) || isMarkedSafeHost(host)) {
+    return {
+      type: 'URL',
+      target: rawUrl,
+      score: 100,
+      status: 'Safe',
+      action: 'Allowed',
+      blocked: false,
+      warningSigns: [],
+      recommendations: ['This site is currently allowed in Tracking Threats.'],
+    }
+  }
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: rawUrl,
+      source: 'browser-search-preview',
+      reason,
+      preview: true,
+    }),
+  })
+
+  if (!response.ok) throw new Error(`Scanner returned ${response.status}`)
+  return response.json()
+}
+
 async function recordBlockedVisit(rawUrl) {
   if (!isTrackableUrl(rawUrl)) return null
   await syncSafeHosts()
@@ -670,6 +702,13 @@ chrome.webNavigation.onCommitted.addListener((details) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'scan-candidate-url' && message.url) {
     scanUrl(message.url, message.reason ?? 'content-script')
+      .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'preview-candidate-url' && message.url) {
+    previewUrl(message.url, message.reason ?? 'search-result-preview')
       .then((scan) => sendResponse({ ok: true, scan }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
