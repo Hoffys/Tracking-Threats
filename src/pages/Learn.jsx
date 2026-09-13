@@ -192,6 +192,54 @@ const checklist = [
   'Report suspicious activity quickly so it can be blocked.',
 ]
 
+const detectionLayers = [
+  {
+    title: 'Suspicious keywords, domains, and TLDs',
+    icon: Globe2,
+    detail:
+      'Checks domains and text for risky terms, suspicious top-level domains, piracy, gambling, rewards, account, login, and verification wording.',
+    examples: ['.site, .zip, .top', 'fitgirl, torrent, crack', 'verify, reward, billing'],
+    coverage: 'URL, email, SMS, search results',
+    accent: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300',
+  },
+  {
+    title: 'URL patterns',
+    icon: Search,
+    detail:
+      'Reviews the shape of a link before trusting it, including HTTPS, shorteners, punycode, mixed letters and numbers, login paths, and brand lookalikes.',
+    examples: ['short links', 'fake login paths', 'paypal-looking domains'],
+    coverage: 'Browser extension and manual URL scans',
+    accent: 'text-cyan-700 bg-cyan-50 dark:bg-cyan-950/40 dark:text-cyan-300',
+  },
+  {
+    title: 'Email content and link analysis',
+    icon: MailWarning,
+    detail:
+      'Scores the sender, subject, body, and links together so Gmail rows can show safe, caution, or risk labels inside the inbox view.',
+    examples: ['urgent wording', 'password requests', 'dangerous embedded links'],
+    coverage: 'Gmail and manual email scans',
+    accent: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300',
+  },
+  {
+    title: 'Threat intelligence providers',
+    icon: ShieldCheck,
+    detail:
+      'Adds external reputation checks when configured, then shows the provider result in scan details. Local scoring continues even if a provider is unavailable.',
+    examples: ['URLhaus URL', 'URLhaus Host', 'PhishTank, DNS reputation'],
+    coverage: 'Hosted backend scans',
+    accent: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
+  },
+  {
+    title: 'Local rules and response policy',
+    icon: ListChecks,
+    detail:
+      'Combines warning weights into a 0-100 safety score, marks Safe, Suspicious, or Dangerous, then saves alerts and blocks dangerous browser visits.',
+    examples: ['score weights', 'block threshold', 'allowlist review'],
+    coverage: 'Dashboard, monitor, history, blocked page',
+    accent: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
+  },
+]
+
 const scenarios = [
   {
     prompt: 'An email says your account will close in 10 minutes unless you sign in.',
@@ -379,6 +427,65 @@ export function Learn({ onNavigate }) {
               {level}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-teal-700 dark:text-teal-300">
+              Detection layers
+            </p>
+            <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
+              What the system checks
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('monitor')}
+            className="inline-flex w-fit items-center justify-center gap-2 rounded-lg border border-emerald-200 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-slate-700 dark:text-emerald-300 dark:hover:bg-slate-900"
+          >
+            Watch Live Monitor
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {detectionLayers.map((layer) => {
+            const Icon = layer.icon
+            return (
+              <article
+                key={layer.title}
+                className="flex min-h-72 flex-col rounded-lg border border-slate-200 bg-white/80 p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70"
+              >
+                <div className="flex items-start gap-3">
+                  <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg ${layer.accent}`}>
+                    <Icon size={21} />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold leading-5 text-slate-950 dark:text-white">
+                      {layer.title}
+                    </h3>
+                    <p className="mt-1 text-xs font-semibold uppercase text-slate-400">
+                      {layer.coverage}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-3 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {layer.detail}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {layer.examples.map((example) => (
+                    <span
+                      key={example}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300"
+                    >
+                      {example}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            )
+          })}
         </div>
       </section>
 
