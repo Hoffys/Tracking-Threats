@@ -376,8 +376,9 @@ export async function getStats(_req, res, next) {
 
 export async function getNotificationSettings(_req, res, next) {
   try {
+    const clientId = normalizeClientId(_req.query.clientId)
     res.json({
-      ...(await readNotificationSettings()),
+      ...(await readNotificationSettings(clientId)),
       mailConfigured: isMailConfigured(),
     })
   } catch (error) {
@@ -387,8 +388,9 @@ export async function getNotificationSettings(_req, res, next) {
 
 export async function saveNotificationSettings(req, res, next) {
   try {
+    const clientId = normalizeClientId(req.body.clientId ?? req.query.clientId)
     res.json({
-      ...(await writeNotificationSettings(req.body)),
+      ...(await writeNotificationSettings(req.body, clientId)),
       mailConfigured: isMailConfigured(),
     })
   } catch (error) {
@@ -401,11 +403,12 @@ export async function saveNotificationSettings(req, res, next) {
 
 export async function emailHistoryDigest(_req, res, next) {
   try {
+    const clientId = normalizeClientId(_req.body?.clientId ?? _req.query.clientId)
     if (!isMailConfigured()) {
       return res.status(409).json({ error: 'SMTP is not configured' })
     }
 
-    const result = await sendHistoryDigest()
+    const result = await sendHistoryDigest(clientId)
     if (result.skipped) {
       return res.status(409).json({ error: 'Enable history digest and save a report email first' })
     }

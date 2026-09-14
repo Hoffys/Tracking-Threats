@@ -27,6 +27,8 @@ const request = async (path, options) => {
   return response.json()
 }
 
+const clientQuery = (clientId) => (clientId ? `?clientId=${encodeURIComponent(clientId)}` : '')
+
 export const apiService = {
   getHealth: () => request('/health'),
   getPublicActivity: (clientId) =>
@@ -37,7 +39,8 @@ export const apiService = {
   getThreatAuditLogs: () => request('/threat-audit-logs'),
   getHistory: () => request('/history'),
   getLiveFeed: () => request('/live-feed'),
-  getNotificationSettings: () => request('/notification-settings'),
+  getNotificationSettings: (clientId = '') =>
+    request(`/notification-settings${clientQuery(clientId)}`),
   getStats: () => request('/stats'),
   getSystemLogs: () => request('/system-logs'),
   clearAlerts: () => request('/alerts', { method: 'DELETE' }),
@@ -51,14 +54,15 @@ export const apiService = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
-  saveNotificationSettings: (settings) =>
-    request('/notification-settings', {
+  saveNotificationSettings: (settings, clientId = '') =>
+    request(`/notification-settings${clientQuery(clientId)}`, {
       method: 'PUT',
-      body: JSON.stringify(settings),
+      body: JSON.stringify({ ...settings, clientId }),
     }),
-  sendHistoryDigest: () =>
-    request('/notification-settings/history-digest', {
+  sendHistoryDigest: (clientId = '') =>
+    request(`/notification-settings/history-digest${clientQuery(clientId)}`, {
       method: 'POST',
+      body: JSON.stringify({ clientId }),
     }),
   scanUrl: (url, metadata = {}) =>
     request('/scan/url', {

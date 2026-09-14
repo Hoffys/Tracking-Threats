@@ -19,6 +19,7 @@ const defaultNotificationSettings = {
 
 const publicScansStorageKeyPrefix = 'threattrack:public-scans'
 const publicClientStorageKey = 'threattrack:public-client-id'
+const publicWebClientStorageKey = 'threattrack:public-web-client-id'
 const publicHiddenScansStorageKeyPrefix = 'threattrack:public-hidden-scan-ids'
 const publicHistoryClearedBeforeStorageKeyPrefix = 'threattrack:public-history-cleared-before'
 
@@ -35,6 +36,14 @@ const normalizeClientId = (clientId) => {
   return /^[a-zA-Z0-9_-]{12,80}$/.test(normalized) ? normalized : ''
 }
 
+const createPublicWebClientId = () => {
+  try {
+    return `web_${crypto.randomUUID().replace(/-/g, '')}`
+  } catch {
+    return `web_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`
+  }
+}
+
 const readPublicClientId = () => {
   const params = new URLSearchParams(window.location.search)
   const linkedClientId = normalizeClientId(params.get('client'))
@@ -49,7 +58,12 @@ const readPublicClientId = () => {
     // A plain hosted app URL should not inherit extension-linked scan history.
   }
 
-  return ''
+  const storedWebClientId = normalizeClientId(localStorage.getItem(publicWebClientStorageKey))
+  if (storedWebClientId) return storedWebClientId
+
+  const nextWebClientId = createPublicWebClientId()
+  localStorage.setItem(publicWebClientStorageKey, nextWebClientId)
+  return nextWebClientId
 }
 
 const readPublicScans = (clientId = '') => {
@@ -312,13 +326,11 @@ export function ThreatProvider({ children }) {
   }, [darkMode])
 
   useEffect(() => {
-    if (isPublicDeployment) return
-
     apiService
-      .getNotificationSettings()
+      .getNotificationSettings(isPublicDeployment ? publicClientId : '')
       .then((settings) => setNotificationSettings((current) => ({ ...current, ...settings })))
       .catch(console.error)
-  }, [])
+  }, [publicClientId])
 
   useEffect(() => {
     localStorage.setItem(
@@ -479,13 +491,22 @@ export function ThreatProvider({ children }) {
     await refreshData()
   }, [refreshData])
 
-  const saveNotificationSettings = useCallback(async (settings) => {
-    const savedSettings = await apiService.saveNotificationSettings(settings)
-    setNotificationSettings(savedSettings)
-    return savedSettings
-  }, [])
+  const saveNotificationSettings = useCallback(
+    async (settings) => {
+      const savedSettings = await apiService.saveNotificationSettings(
+        settings,
+        isPublicDeployment ? publicClientId : '',
+      )
+      setNotificationSettings(savedSettings)
+      return savedSettings
+    },
+    [publicClientId],
+  )
 
-  const sendHistoryDigest = useCallback(() => apiService.sendHistoryDigest(), [])
+  const sendHistoryDigest = useCallback(
+    () => apiService.sendHistoryDigest(isPublicDeployment ? publicClientId : ''),
+    [publicClientId],
+  )
 
   const dismissNotification = () => setActiveNotification(null)
   const autoBlock = () => null

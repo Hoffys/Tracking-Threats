@@ -79,7 +79,7 @@ const sendTextMail = async ({ recipients, subject, text }) => {
 }
 
 export async function sendScanReport(scan) {
-  const settings = await readNotificationSettings()
+  const settings = await readNotificationSettings(scan.clientId)
   if (!settings.emailScanReports || settings.reportEmails.length === 0) {
     return { sent: false, skipped: true }
   }
@@ -108,22 +108,29 @@ export async function sendScanReport(scan) {
   })
 }
 
-export async function sendHistoryDigest() {
-  const settings = await readNotificationSettings()
+export async function sendHistoryDigest(clientId = '') {
+  const settings = await readNotificationSettings(clientId)
   if (!settings.emailHistoryDigest || settings.reportEmails.length === 0) {
     return { sent: false, skipped: true }
   }
 
   const db = await dbPromise
+  const scanClientFilter = clientId ? 'AND client_id = ?' : ''
+  const scanClientParams = clientId ? [clientId] : []
   const [scans, reviewedThreats] = await Promise.all([
-    db.all(`
+    db.all(
+      `
       SELECT type, target, score, status, action, created_at
       FROM scans
       WHERE history_visible = 1
+        ${scanClientFilter}
       ORDER BY created_at DESC
       LIMIT 25
-    `),
-    db.all(`
+    `,
+      ...scanClientParams,
+    ),
+    db.all(
+      `
       SELECT
         blocked_threats.type,
         blocked_threats.target,
@@ -135,9 +142,12 @@ export async function sendHistoryDigest() {
       LEFT JOIN scans ON scans.id = blocked_threats.scan_id
       WHERE blocked_threats.review_status != 'active'
         AND blocked_threats.audit_visible = 1
+        ${clientId ? 'AND blocked_threats.client_id = ?' : ''}
       ORDER BY COALESCE(blocked_threats.reviewed_at, blocked_threats.created_at) DESC
       LIMIT 25
-    `),
+    `,
+      ...(clientId ? [clientId] : []),
+    ),
   ])
 
   const scanLines =
