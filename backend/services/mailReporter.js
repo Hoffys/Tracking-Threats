@@ -96,17 +96,47 @@ const formatRecommendations = (recommendations = []) =>
     ? recommendations.map((recommendation) => `- ${recommendation}`).join('\n')
     : '- Review the scan inside Tracking Threats.'
 
+const getDeliveryErrorMessage = (error) => {
+  const responseCode = Number(error?.responseCode ?? 0)
+  const code = error?.code ?? ''
+  const command = error?.command ? ` (${error.command})` : ''
+
+  if (responseCode === 535) {
+    return 'Gmail rejected the SMTP login. Use a Google App Password for SMTP_PASS, not your normal Gmail password.'
+  }
+  if (responseCode === 534) {
+    return 'Gmail blocked this SMTP login. Enable 2-Step Verification and create a Google App Password.'
+  }
+  if (responseCode === 550 || responseCode === 553) {
+    return 'Gmail rejected the sender address. Make SMTP_FROM match SMTP_USER or use a verified sender.'
+  }
+  if (['EAUTH', 'EENVELOPE'].includes(code)) {
+    return `Email delivery failed: ${error.message}${command}`
+  }
+  if (['ECONNECTION', 'ESOCKET', 'ETIMEDOUT', 'ENOTFOUND'].includes(code)) {
+    return `Email delivery failed: cannot connect to SMTP server (${code}). Check SMTP_HOST, SMTP_PORT, and SMTP_SECURE.`
+  }
+
+  return `Email delivery failed: ${error?.message || 'SMTP server rejected the message.'}${command}`
+}
+
 const sendTextMail = async ({ recipients, subject, text }) => {
   const smtp = await getTransporter()
   if (!smtp || recipients.length === 0) return { sent: false, skipped: true }
 
-  const result = await smtp.sendMail({
-    from: cleanEnv(process.env.SMTP_FROM) || cleanEnv(process.env.SMTP_USER),
-    to: recipients,
-    subject,
-    text,
-  })
-  return { sent: true, messageId: result.messageId }
+  try {
+    const result = await smtp.sendMail({
+      from: cleanEnv(process.env.SMTP_FROM) || cleanEnv(process.env.SMTP_USER),
+      to: recipients,
+      subject,
+      text,
+    })
+    return { sent: true, messageId: result.messageId }
+  } catch (error) {
+    const deliveryError = new Error(getDeliveryErrorMessage(error))
+    deliveryError.isMailDeliveryError = true
+    throw deliveryError
+  }
 }
 
 export async function sendScanReport(scan) {
