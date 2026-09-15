@@ -123,6 +123,14 @@ export function Settings() {
     () => draft.reportEmails.length > 0,
     [draft.reportEmails.length],
   )
+  const digestDisabledReason = useMemo(() => {
+    if (!notificationSettings.mailConfigured) {
+      return 'Email sender is not configured. Add SMTP variables in Railway first.'
+    }
+    if (!canSave) return 'Save at least one backtrack email first.'
+    if (!draft.emailHistoryDigest) return 'Email history digest is turned off.'
+    return ''
+  }, [canSave, draft.emailHistoryDigest, notificationSettings.mailConfigured])
 
   const updateDraft = (changes) => {
     setDraft((current) => ({ ...current, ...changes }))
@@ -392,6 +400,11 @@ export function Settings() {
               <BellRing size={17} />
               {isSendingDigest ? 'Sending digest...' : 'Send History Digest'}
             </button>
+            {digestDisabledReason && (
+              <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm font-medium text-amber-700 dark:text-amber-300">
+                {digestDisabledReason}
+              </p>
+            )}
           </Panel>
         </div>
       </form>
@@ -404,7 +417,7 @@ export function Settings() {
               <h2 className="text-lg font-semibold">About Tracking Threats</h2>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              Tracking Threats is a local phishing detection system that helps users scan
+              Tracking Threats is a hosted phishing detection and browser monitoring system that helps users scan
               suspicious URLs, emails, and messages. It records scan history, flags dangerous
               content, shows alerts, and gives recommendations so users can review threats before
               trusting unknown links or messages.
