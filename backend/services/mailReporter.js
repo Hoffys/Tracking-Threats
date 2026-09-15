@@ -21,20 +21,40 @@ const cleanEnv = (value = '') => {
 const isSmtpEnabled = () => cleanEnv(process.env.SMTP_ENABLED).toLowerCase() !== 'false'
 
 export const getMailConfigStatus = () => {
-  const enabled = isSmtpEnabled()
-  const required = {
+  const smtpEnabled = isSmtpEnabled()
+  const smtpRequired = {
     SMTP_HOST: Boolean(cleanEnv(process.env.SMTP_HOST)),
     SMTP_USER: Boolean(cleanEnv(process.env.SMTP_USER)),
     SMTP_PASS: Boolean(cleanEnv(process.env.SMTP_PASS)),
   }
-  const missing = Object.entries(required)
+  const smtpMissing = Object.entries(smtpRequired)
     .filter(([, isSet]) => !isSet)
     .map(([name]) => name)
+  const resendFrom = cleanEnv(process.env.RESEND_FROM) || cleanEnv(process.env.SMTP_FROM)
+  const resendRequired = {
+    RESEND_API_KEY: Boolean(cleanEnv(process.env.RESEND_API_KEY)),
+    RESEND_FROM: Boolean(resendFrom),
+  }
+  const resendMissing = Object.entries(resendRequired)
+    .filter(([, isSet]) => !isSet)
+    .map(([name]) => name)
+  const smtpConfigured = smtpEnabled && smtpMissing.length === 0
+  const resendConfigured = resendMissing.length === 0
 
   return {
-    configured: enabled && missing.length === 0,
-    enabled,
-    missing,
+    configured: smtpConfigured || resendConfigured,
+    enabled: smtpEnabled || resendConfigured,
+    provider: resendConfigured ? 'resend' : smtpConfigured ? 'smtp' : null,
+    missing: smtpEnabled ? smtpMissing : resendMissing,
+    smtp: {
+      configured: smtpConfigured,
+      enabled: smtpEnabled,
+      missing: smtpMissing,
+    },
+    resend: {
+      configured: resendConfigured,
+      missing: resendMissing,
+    },
   }
 }
 
@@ -86,7 +106,11 @@ const getTransporter = async () => {
   return transporter
 }
 
-export const isMailConfigured = () => Boolean(getSmtpConfig())
+export const isResendConfigured = () =>
+  Boolean(cleanEnv(process.env.RESEND_API_KEY)) &&
+  Boolean(cleanEnv(process.env.RESEND_FROM) || cleanEnv(process.env.SMTP_FROM))
+
+export const isMailConfigured = () => Boolean(getSmtpConfig()) || isResendConfigured()
 
 const formatWarnings = (warnings = []) =>
   warnings.length > 0 ? warnings.map((warning) => `- ${warning}`).join('\n') : '- None'
@@ -122,6 +146,10 @@ const getDeliveryErrorMessage = (error) => {
 
 const sendTextMail = async ({ recipients, subject, text }) => {
   try {
+    if (isResendConfigured()) {
+      return sendResendMail({ recipients, subject, text })
+    }
+
     const smtp = await getTransporter()
     if (!smtp || recipients.length === 0) return { sent: false, skipped: true }
 
@@ -137,6 +165,37 @@ const sendTextMail = async ({ recipients, subject, text }) => {
     deliveryError.isMailDeliveryError = true
     throw deliveryError
   }
+}
+
+const sendResendMail = async ({ recipients, subject, text }) => {
+  if (recipients.length === 0) return { sent: false, skipped: true }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${cleanEnv(process.env.RESEND_API_KEY)}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: cleanEnv(process.env.RESEND_FROM) || cleanEnv(process.env.SMTP_FROM),
+      to: recipients,
+      subject,
+      text,
+    }),
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const deliveryError = new Error(
+      `Email delivery failed through Resend: ${
+        payload?.message || payload?.error || `HTTP ${response.status}`
+      }`,
+    )
+    deliveryError.isMailDeliveryError = true
+    throw deliveryError
+  }
+
+  return { sent: true, messageId: payload.id }
 }
 
 export async function sendScanReport(scan) {
