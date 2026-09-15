@@ -22,7 +22,8 @@ const getHost = (value) => {
   }
 }
 
-const matchesBlockedTarget = (scan, blockedTarget) => {
+const matchesBlockedTarget = (scan, blockedTarget, focusedScanId = '') => {
+  if (focusedScanId) return scan.id === focusedScanId
   if (!blockedTarget) return false
   const scanTarget = scan.target.toLowerCase()
   const blocked = blockedTarget.toLowerCase()
@@ -34,8 +35,10 @@ const matchesBlockedTarget = (scan, blockedTarget) => {
 const isDangerousScan = (scan) =>
   scan?.status === 'Dangerous' || scan?.responseStatus === 'Blocked' || scan?.blocked
 
-const getFocusedScanClassName = (scan, blockedTarget) => {
-  if (!matchesBlockedTarget(scan, blockedTarget)) return 'border-slate-200 dark:border-slate-800'
+const getFocusedScanClassName = (scan, blockedTarget, focusedScanId) => {
+  if (!matchesBlockedTarget(scan, blockedTarget, focusedScanId)) {
+    return 'border-slate-200 dark:border-slate-800'
+  }
   if (isDangerousScan(scan)) {
     return 'border-rose-500 bg-rose-500/10 shadow-sm shadow-rose-500/10'
   }
@@ -80,9 +83,16 @@ export function ScanHistory() {
     () => new URLSearchParams(window.location.search).get('blocked') ?? '',
     [],
   )
+  const focusedScanId = useMemo(
+    () => new URLSearchParams(window.location.search).get('scan') ?? '',
+    [],
+  )
   const focusedScan = useMemo(
-    () => scanHistory.find((scan) => matchesBlockedTarget(scan, blockedTarget)),
-    [blockedTarget, scanHistory],
+    () =>
+      scanHistory.find((scan) => focusedScanId && scan.id === focusedScanId) ??
+      scanHistory.find((scan) => matchesBlockedTarget(scan, blockedTarget) && isDangerousScan(scan)) ??
+      scanHistory.find((scan) => matchesBlockedTarget(scan, blockedTarget)),
+    [blockedTarget, focusedScanId, scanHistory],
   )
   const focusedScanIsDangerous = isDangerousScan(focusedScan)
   const sourceOptions = useMemo(
@@ -234,6 +244,7 @@ export function ScanHistory() {
                 className={`rounded-lg border p-4 ${getFocusedScanClassName(
                   scan,
                   blockedTarget,
+                  focusedScanId,
                 )}`}
               >
                 <div className="flex items-start justify-between gap-3">

@@ -221,6 +221,7 @@ async function saveBlockedContext(host, rawUrl, scan) {
     [getBlockContextKey(host)]: {
       host,
       url: rawUrl,
+      scanId: scan?.id ?? '',
       status: scan?.status ?? 'Blocked',
       score: scan?.score ?? 0,
       threatType: getDetectedThreat(scan),
@@ -507,7 +508,9 @@ async function notifyScanResult(rawUrl, scan) {
     const clientId = await getClientId()
     const notificationId = `${NOTIFICATION_PREFIX}${scan.id ?? Date.now()}`
     const notification = getScanNotification(scan, rawUrl)
-    notificationTargets.set(notificationId, getHistoryUrl(clientId, rawUrl))
+    const historyUrl = new URL(getHistoryUrl(clientId, rawUrl))
+    if (scan.id) historyUrl.searchParams.set('scan', scan.id)
+    notificationTargets.set(notificationId, historyUrl.toString())
 
     await chrome.notifications.create(notificationId, {
       type: 'basic',
@@ -529,7 +532,9 @@ function openBlockedPage(tabId, rawUrl, scan) {
       scan.score,
     )}&status=${encodeURIComponent(scan.status)}&threat=${encodeURIComponent(
       getDetectedThreat(scan),
-    )}&warning=${encodeURIComponent(getPrimaryWarning(scan))}`,
+    )}&warning=${encodeURIComponent(getPrimaryWarning(scan))}&scan=${encodeURIComponent(
+      scan.id ?? '',
+    )}`,
   )
 
   try {
