@@ -430,6 +430,9 @@ export async function emailHistoryDigest(_req, res, next) {
     if (error.message.includes('reportEmails')) {
       return res.status(400).json({ error: error.message })
     }
+    if (error.isMailDeliveryError) {
+      return res.status(502).json({ error: error.message })
+    }
     next(error)
   }
 }

@@ -121,10 +121,10 @@ const getDeliveryErrorMessage = (error) => {
 }
 
 const sendTextMail = async ({ recipients, subject, text }) => {
-  const smtp = await getTransporter()
-  if (!smtp || recipients.length === 0) return { sent: false, skipped: true }
-
   try {
+    const smtp = await getTransporter()
+    if (!smtp || recipients.length === 0) return { sent: false, skipped: true }
+
     const result = await smtp.sendMail({
       from: cleanEnv(process.env.SMTP_FROM) || cleanEnv(process.env.SMTP_USER),
       to: recipients,
