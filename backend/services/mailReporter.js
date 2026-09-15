@@ -8,7 +8,9 @@ let transporter
 let transporterKey
 
 const cleanEnv = (value = '') => {
-  const trimmed = String(value ?? '').trim()
+  const trimmed = String(value ?? '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim()
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
@@ -18,12 +20,19 @@ const cleanEnv = (value = '') => {
   return trimmed
 }
 
+const cleanHost = (value = '') => {
+  let host = cleanEnv(value)
+  if (host.includes('=')) host = host.split('=').pop().trim()
+  host = host.replace(/^https?:\/\//i, '').split('/')[0].trim()
+  return host
+}
+
 const isSmtpEnabled = () => cleanEnv(process.env.SMTP_ENABLED).toLowerCase() !== 'false'
 
 export const getMailConfigStatus = () => {
   const smtpEnabled = isSmtpEnabled()
   const smtpRequired = {
-    SMTP_HOST: Boolean(cleanEnv(process.env.SMTP_HOST)),
+    SMTP_HOST: Boolean(cleanHost(process.env.SMTP_HOST)),
     SMTP_USER: Boolean(cleanEnv(process.env.SMTP_USER)),
     SMTP_PASS: Boolean(cleanEnv(process.env.SMTP_PASS)),
   }
@@ -49,6 +58,7 @@ export const getMailConfigStatus = () => {
     smtp: {
       configured: smtpConfigured,
       enabled: smtpEnabled,
+      host: cleanHost(process.env.SMTP_HOST) || null,
       missing: smtpMissing,
     },
     resend: {
@@ -61,7 +71,7 @@ export const getMailConfigStatus = () => {
 const getSmtpConfig = () => {
   if (!isSmtpEnabled()) return null
 
-  const host = cleanEnv(process.env.SMTP_HOST)
+  const host = cleanHost(process.env.SMTP_HOST)
   const user = cleanEnv(process.env.SMTP_USER)
   const pass = cleanEnv(process.env.SMTP_PASS)
   if (!host || !user || !pass) return null
@@ -138,7 +148,9 @@ const getDeliveryErrorMessage = (error) => {
     return `Email delivery failed: ${error.message}${command}`
   }
   if (['ECONNECTION', 'ESOCKET', 'ETIMEDOUT', 'ENOTFOUND'].includes(code)) {
-    return `Email delivery failed: cannot connect to SMTP server (${code}). Try SMTP_PORT=587 with SMTP_SECURE=false, then redeploy.`
+    return `Email delivery failed: cannot connect to SMTP server ${cleanHost(
+      process.env.SMTP_HOST,
+    ) || '(missing host)'} (${code}). Try SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, and SMTP_SECURE=false, then redeploy.`
   }
 
   return `Email delivery failed: ${error?.message || 'SMTP server rejected the message.'}${command}`
