@@ -114,7 +114,7 @@ const getDeliveryErrorMessage = (error) => {
     return `Email delivery failed: ${error.message}${command}`
   }
   if (['ECONNECTION', 'ESOCKET', 'ETIMEDOUT', 'ENOTFOUND'].includes(code)) {
-    return `Email delivery failed: cannot connect to SMTP server (${code}). Check SMTP_HOST, SMTP_PORT, and SMTP_SECURE.`
+    return `Email delivery failed: cannot connect to SMTP server (${code}). Try SMTP_PORT=587 with SMTP_SECURE=false, then redeploy.`
   }
 
   return `Email delivery failed: ${error?.message || 'SMTP server rejected the message.'}${command}`
