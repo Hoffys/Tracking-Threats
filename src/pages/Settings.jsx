@@ -123,14 +123,22 @@ export function Settings() {
     () => draft.reportEmails.length > 0,
     [draft.reportEmails.length],
   )
+  const mailStatus = notificationSettings.mailStatus
   const digestDisabledReason = useMemo(() => {
     if (!notificationSettings.mailConfigured) {
+      if (mailStatus?.enabled === false) {
+        return 'Email sender is disabled. Set SMTP_ENABLED=true or remove SMTP_ENABLED=false in Railway.'
+      }
+      const missing = mailStatus?.missing ?? []
+      if (missing.length > 0) {
+        return `Email sender is not configured. Missing Railway variables: ${missing.join(', ')}.`
+      }
       return 'Email sender is not configured. Add SMTP variables in Railway first.'
     }
     if (!canSave) return 'Save at least one backtrack email first.'
     if (!draft.emailHistoryDigest) return 'Email history digest is turned off.'
     return ''
-  }, [canSave, draft.emailHistoryDigest, notificationSettings.mailConfigured])
+  }, [canSave, draft.emailHistoryDigest, mailStatus, notificationSettings.mailConfigured])
 
   const updateDraft = (changes) => {
     setDraft((current) => ({ ...current, ...changes }))

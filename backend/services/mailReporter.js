@@ -7,21 +7,52 @@ import { readNotificationSettings } from './notificationSettings.js'
 let transporter
 let transporterKey
 
-const isSmtpEnabled = () => process.env.SMTP_ENABLED !== 'false'
+const cleanEnv = (value = '') => {
+  const trimmed = String(value ?? '').trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim()
+  }
+  return trimmed
+}
+
+const isSmtpEnabled = () => cleanEnv(process.env.SMTP_ENABLED).toLowerCase() !== 'false'
+
+export const getMailConfigStatus = () => {
+  const enabled = isSmtpEnabled()
+  const required = {
+    SMTP_HOST: Boolean(cleanEnv(process.env.SMTP_HOST)),
+    SMTP_USER: Boolean(cleanEnv(process.env.SMTP_USER)),
+    SMTP_PASS: Boolean(cleanEnv(process.env.SMTP_PASS)),
+  }
+  const missing = Object.entries(required)
+    .filter(([, isSet]) => !isSet)
+    .map(([name]) => name)
+
+  return {
+    configured: enabled && missing.length === 0,
+    enabled,
+    missing,
+  }
+}
 
 const getSmtpConfig = () => {
   if (!isSmtpEnabled()) return null
 
-  const host = process.env.SMTP_HOST
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASS
+  const host = cleanEnv(process.env.SMTP_HOST)
+  const user = cleanEnv(process.env.SMTP_USER)
+  const pass = cleanEnv(process.env.SMTP_PASS)
   if (!host || !user || !pass) return null
 
-  const port = Number(process.env.SMTP_PORT ?? 465)
+  const port = Number(cleanEnv(process.env.SMTP_PORT) || 465)
   return {
     host,
     port,
-    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
+    secure: cleanEnv(process.env.SMTP_SECURE)
+      ? cleanEnv(process.env.SMTP_SECURE).toLowerCase() === 'true'
+      : port === 465,
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
@@ -37,7 +68,8 @@ const resolveSmtpConfig = async (config) => {
     ...config,
     host: address,
     tls: {
-      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
+      rejectUnauthorized:
+        cleanEnv(process.env.SMTP_TLS_REJECT_UNAUTHORIZED).toLowerCase() !== 'false',
       servername: config.host,
     },
   }
@@ -69,7 +101,7 @@ const sendTextMail = async ({ recipients, subject, text }) => {
   if (!smtp || recipients.length === 0) return { sent: false, skipped: true }
 
   const result = await smtp.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    from: cleanEnv(process.env.SMTP_FROM) || cleanEnv(process.env.SMTP_USER),
     to: recipients,
     subject,
     text,

@@ -1,6 +1,10 @@
 import { dbPromise, fromJson } from '../db/database.js'
 import { mapAlert, mapBlockedThreat, mapScan } from './scanController.js'
-import { isMailConfigured, sendHistoryDigest } from '../services/mailReporter.js'
+import {
+  getMailConfigStatus,
+  isMailConfigured,
+  sendHistoryDigest,
+} from '../services/mailReporter.js'
 import {
   readNotificationSettings,
   writeNotificationSettings,
@@ -380,6 +384,7 @@ export async function getNotificationSettings(_req, res, next) {
     res.json({
       ...(await readNotificationSettings(clientId)),
       mailConfigured: isMailConfigured(),
+      mailStatus: getMailConfigStatus(),
     })
   } catch (error) {
     next(error)
@@ -392,6 +397,7 @@ export async function saveNotificationSettings(req, res, next) {
     res.json({
       ...(await writeNotificationSettings(req.body, clientId)),
       mailConfigured: isMailConfigured(),
+      mailStatus: getMailConfigStatus(),
     })
   } catch (error) {
     if (error.message.includes('reportEmails')) {

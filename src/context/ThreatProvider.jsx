@@ -15,6 +15,11 @@ const defaultNotificationSettings = {
   emailScanReports: true,
   emailHistoryDigest: true,
   mailConfigured: false,
+  mailStatus: {
+    configured: false,
+    enabled: true,
+    missing: [],
+  },
 }
 
 const publicScansStorageKeyPrefix = 'threattrack:public-scans'
