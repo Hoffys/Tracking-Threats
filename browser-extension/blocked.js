@@ -107,6 +107,7 @@ async function loadBlockedContext() {
 
   const fallbackUrl = `https://${blockedHost}/`
   renderBlockedPage({
+    url: fallbackUrl,
     host: blockedHost,
     status: params.get('status') || 'Blocked',
     score: params.get('score') || '0',
@@ -119,14 +120,20 @@ async function loadBlockedContext() {
 document.getElementById('continue-button').addEventListener('click', () => {
   if (!blockedUrl && !blockedHost) return
 
+  const continueButton = document.getElementById('continue-button')
+  continueButton.disabled = true
+  continueButton.textContent = 'Unblocking...'
+
   chrome.runtime.sendMessage(
     { type: 'unblock-site', url: blockedUrl, host: blockedHost },
-    () => {
-      if (blockedUrl) {
-        window.location.href = blockedUrl
-      } else if (blockedHost) {
-        window.location.href = `https://${blockedHost}/`
+    (response) => {
+      if (chrome.runtime.lastError || response?.ok === false) {
+        continueButton.disabled = false
+        continueButton.textContent = 'Unblock and Continue'
+        return
       }
+
+      window.location.href = response?.url || blockedUrl || `https://${blockedHost}/`
     },
   )
 })

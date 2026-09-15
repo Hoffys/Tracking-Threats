@@ -21,6 +21,8 @@ const NOTIFICATION_PREFIX = 'threattrack-scan:'
 const PASS_THROUGH_HOSTS = new Set([
   'bing.com',
   'duckduckgo.com',
+  'fbcdn.net',
+  'fbsbx.com',
   'github.com',
   'google.com',
   'icloud.com',
@@ -397,28 +399,42 @@ async function unblockSite({ rawUrl, host: fallbackHost }) {
   if (!host) return false
 
   bypassHosts.set(host, Date.now() + UNBLOCK_BYPASS_MS)
+  const matchingBlockedHosts = Array.from(blockedHosts.keys()).filter(
+    (blockedHost) =>
+      blockedHost === host ||
+      host.endsWith(`.${blockedHost}`) ||
+      blockedHost.endsWith(`.${host}`),
+  )
+  matchingBlockedHosts.forEach((blockedHost) =>
+    bypassHosts.set(blockedHost, Date.now() + UNBLOCK_BYPASS_MS),
+  )
   await saveBypassHosts()
   recentScans.delete(rawUrl)
   recentScans.delete(`blocked-visit:${rawUrl}`)
   await chrome.storage.local.remove(getBlockContextKey(host))
+  await Promise.all(matchingBlockedHosts.map((blockedHost) =>
+    chrome.storage.local.remove(getBlockContextKey(blockedHost)),
+  ))
 
-  const escapedHost = escapeRegex(host)
+  const hostParts = host.split('.')
+  const hostCandidates = hostParts
+    .map((_, index) => hostParts.slice(index).join('.'))
+    .filter((candidate) => candidate.includes('.'))
+  const escapedHosts = hostCandidates.map(escapeRegex)
   const ruleIds = new Set()
-  const ruleId = blockedHosts.get(host)
-  if (ruleId) ruleIds.add(ruleId)
+  matchingBlockedHosts.forEach((blockedHost) => {
+    const ruleId = blockedHosts.get(blockedHost)
+    if (ruleId) ruleIds.add(ruleId)
+  })
 
   const existingRules = await chrome.declarativeNetRequest.getDynamicRules()
   existingRules.forEach((rule) => {
-    if (rule.condition?.regexFilter?.includes(escapedHost)) {
+    if (escapedHosts.some((escapedHost) => rule.condition?.regexFilter?.includes(escapedHost))) {
       ruleIds.add(rule.id)
     }
   })
 
-  Array.from(blockedHosts.keys()).forEach((blockedHost) => {
-    if (blockedHost === host || blockedHost.endsWith(`.${host}`)) {
-      blockedHosts.delete(blockedHost)
-    }
-  })
+  matchingBlockedHosts.forEach((blockedHost) => blockedHosts.delete(blockedHost))
 
   if (ruleIds.size > 0) {
     await chrome.declarativeNetRequest.updateDynamicRules({
@@ -426,7 +442,10 @@ async function unblockSite({ rawUrl, host: fallbackHost }) {
     })
   }
   await saveBlockedHosts()
-  return true
+  return {
+    ok: true,
+    url: rawUrl || `https://${host}/`,
+  }
 }
 
 async function saveStatus(status) {
@@ -882,7 +901,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type === 'unblock-site' && (message.url || message.host)) {
     unblockSite({ rawUrl: message.url, host: message.host })
-      .then((ok) => sendResponse({ ok }))
+      .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }
