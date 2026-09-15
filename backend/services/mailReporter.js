@@ -1,5 +1,3 @@
-import dns from 'node:dns/promises'
-import net from 'node:net'
 import nodemailer from 'nodemailer'
 import { dbPromise, fromJson } from '../db/database.js'
 import { readNotificationSettings } from './notificationSettings.js'
@@ -90,27 +88,19 @@ const getSmtpConfig = () => {
   }
 }
 
-const resolveSmtpConfig = async (config) => {
-  if (net.isIP(config.host)) return config
-
-  const { address } = await dns.lookup(config.host, { family: 4 })
-  return {
-    ...config,
-    host: address,
-    tls: {
-      rejectUnauthorized:
-        cleanEnv(process.env.SMTP_TLS_REJECT_UNAUTHORIZED).toLowerCase() !== 'false',
-      servername: config.host,
-    },
-  }
-}
-
 const getTransporter = async () => {
   const config = getSmtpConfig()
   if (!config) return null
   const key = `${config.host}:${config.port}:${config.auth.user}:${config.secure}`
   if (!transporter || transporterKey !== key) {
-    transporter = nodemailer.createTransport(await resolveSmtpConfig(config))
+    transporter = nodemailer.createTransport({
+      ...config,
+      tls: {
+        rejectUnauthorized:
+          cleanEnv(process.env.SMTP_TLS_REJECT_UNAUTHORIZED).toLowerCase() !== 'false',
+        servername: config.host,
+      },
+    })
     transporterKey = key
   }
   return transporter
