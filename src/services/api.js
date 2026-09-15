@@ -59,10 +59,10 @@ export const apiService = {
       method: 'PUT',
       body: JSON.stringify({ ...settings, clientId }),
     }),
-  sendHistoryDigest: (clientId = '') =>
+  sendHistoryDigest: (settings = {}, clientId = '') =>
     request(`/notification-settings/history-digest${clientQuery(clientId)}`, {
       method: 'POST',
-      body: JSON.stringify({ clientId }),
+      body: JSON.stringify({ ...settings, clientId }),
     }),
   scanUrl: (url, metadata = {}) =>
     request('/scan/url', {

@@ -414,12 +414,19 @@ export async function emailHistoryDigest(_req, res, next) {
       return res.status(409).json({ error: 'SMTP is not configured' })
     }
 
+    if (Array.isArray(_req.body?.reportEmails)) {
+      await writeNotificationSettings(_req.body, clientId)
+    }
+
     const result = await sendHistoryDigest(clientId)
     if (result.skipped) {
       return res.status(409).json({ error: 'Enable history digest and save a report email first' })
     }
     res.json({ ok: true })
   } catch (error) {
+    if (error.message.includes('reportEmails')) {
+      return res.status(400).json({ error: error.message })
+    }
     next(error)
   }
 }

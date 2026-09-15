@@ -195,8 +195,14 @@ export function Settings() {
     setDigestSent(false)
     setIsSendingDigest(true)
     try {
-      await sendHistoryDigest()
+      const settings = {
+        ...draft,
+        reportEmails: draft.reportEmails.map((email) => email.trim().toLowerCase()),
+      }
+      setNotificationSettings(settings)
+      await sendHistoryDigest(settings)
       setDigestSent(true)
+      setSaved(true)
     } catch (digestError) {
       setError(
         digestError.message ||

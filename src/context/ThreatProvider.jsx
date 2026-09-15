@@ -509,8 +509,9 @@ export function ThreatProvider({ children }) {
   )
 
   const sendHistoryDigest = useCallback(
-    () => apiService.sendHistoryDigest(isPublicDeployment ? publicClientId : ''),
-    [publicClientId],
+    (settings = notificationSettings) =>
+      apiService.sendHistoryDigest(settings, isPublicDeployment ? publicClientId : ''),
+    [notificationSettings, publicClientId],
   )
 
   const dismissNotification = () => setActiveNotification(null)
