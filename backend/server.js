@@ -9,6 +9,7 @@ import { initDatabase } from './db/database.js'
 import { dataRoutes } from './routes/dataRoutes.js'
 import { scanRoutes } from './routes/scanRoutes.js'
 import { startAutoMonitor } from './services/autoMonitor.js'
+import { purgeExpiredData } from './services/scanRepository.js'
 
 try {
   loadEnvFile()
@@ -116,6 +117,13 @@ app.use((error, _req, res, _next) => {
 })
 
 await initDatabase()
+await purgeExpiredData()
+
+const retentionInterval = setInterval(
+  () => purgeExpiredData().catch((error) => console.error('Retention cleanup failed', error)),
+  6 * 60 * 60 * 1000,
+)
+retentionInterval.unref()
 
 if (process.env.AUTO_MONITOR === 'true') {
   startAutoMonitor()

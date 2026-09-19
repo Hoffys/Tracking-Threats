@@ -37,6 +37,11 @@ export async function initDatabase() {
       recommendations TEXT,
       details TEXT,
       client_id TEXT,
+      submission_id TEXT,
+      processing_status TEXT NOT NULL DEFAULT 'completed',
+      methodology_version TEXT NOT NULL DEFAULT '2026.09',
+      content_retained INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT,
       history_visible INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
@@ -140,6 +145,45 @@ export async function initDatabase() {
       email_history_digest INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS scan_evidence (
+      id TEXT PRIMARY KEY,
+      scan_id TEXT NOT NULL,
+      evidence_type TEXT NOT NULL,
+      source TEXT NOT NULL,
+      finding TEXT NOT NULL,
+      matched INTEGER NOT NULL DEFAULT 0,
+      score_impact INTEGER NOT NULL DEFAULT 0,
+      details TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS scan_submissions (
+      id TEXT PRIMARY KEY,
+      scan_id TEXT,
+      client_id TEXT,
+      scan_type TEXT NOT NULL,
+      target_label TEXT NOT NULL,
+      target_hash TEXT NOT NULL,
+      source TEXT NOT NULL,
+      processing_status TEXT NOT NULL DEFAULT 'queued',
+      content_received INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      submitted_at TEXT NOT NULL,
+      started_at TEXT,
+      completed_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS privacy_consents (
+      id TEXT PRIMARY KEY,
+      scan_id TEXT NOT NULL,
+      client_id TEXT,
+      notice_version TEXT NOT NULL,
+      accepted INTEGER NOT NULL DEFAULT 0,
+      processing_basis TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
   `)
 
   await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
@@ -148,12 +192,25 @@ export async function initDatabase() {
   await ensureColumn(db, 'blocked_threats', 'reviewed_at', 'TEXT')
   await ensureColumn(db, 'scans', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'scans', 'client_id', 'TEXT')
+  await ensureColumn(db, 'scans', 'submission_id', 'TEXT')
+  await ensureColumn(db, 'scans', 'processing_status', "TEXT NOT NULL DEFAULT 'completed'")
+  await ensureColumn(db, 'scans', 'methodology_version', "TEXT NOT NULL DEFAULT '2026.09'")
+  await ensureColumn(db, 'scans', 'content_retained', 'INTEGER NOT NULL DEFAULT 0')
+  await ensureColumn(db, 'scans', 'expires_at', 'TEXT')
   await ensureColumn(db, 'alerts', 'client_id', 'TEXT')
   await ensureColumn(db, 'blocked_threats', 'client_id', 'TEXT')
   await ensureColumn(db, 'email_scans', 'client_id', 'TEXT')
   await ensureColumn(db, 'message_scans', 'client_id', 'TEXT')
   await ensureColumn(db, 'live_monitor_activity', 'history_visible', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'live_monitor_activity', 'client_id', 'TEXT')
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_scans_client_id ON scans(client_id);
+    CREATE INDEX IF NOT EXISTS idx_scans_expires_at ON scans(expires_at);
+    CREATE INDEX IF NOT EXISTS idx_scan_evidence_scan_id ON scan_evidence(scan_id);
+    CREATE INDEX IF NOT EXISTS idx_privacy_consents_scan_id ON privacy_consents(scan_id);
+    CREATE INDEX IF NOT EXISTS idx_scan_submissions_client_id ON scan_submissions(client_id);
+    CREATE INDEX IF NOT EXISTS idx_scan_submissions_status ON scan_submissions(processing_status);
+  `)
   await db.run(
     `INSERT OR IGNORE INTO notification_settings
       (id, report_emails, email_scan_reports, email_history_digest, updated_at)

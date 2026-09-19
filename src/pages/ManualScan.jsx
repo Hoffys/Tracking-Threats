@@ -18,7 +18,7 @@ import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
 
-export function ManualScan() {
+export function ManualScan({ onNavigate }) {
   const { createScan } = useThreats()
   const [target, setTarget] = useState('')
   const [scanType, setScanType] = useState('URL')
@@ -30,6 +30,7 @@ export function ManualScan() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [isScanning, setIsScanning] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const scanTypeLabels = {
     URL: 'URL',
     Email: 'Email',
@@ -61,6 +62,10 @@ export function ManualScan() {
 
   const submit = async (event) => {
     event.preventDefault()
+    if (!privacyAccepted) {
+      setError('Review and accept the privacy notice before submitting a scan.')
+      return
+    }
     const scanTarget =
       scanType === 'URL'
         ? target
@@ -90,6 +95,8 @@ export function ManualScan() {
               size: selectedFile.size,
               content,
               sha256,
+              privacyAccepted: true,
+              privacyNoticeVersion: '2026.09',
             })
           }),
         )
@@ -103,14 +110,24 @@ export function ManualScan() {
             subject: emailSubject,
             body: emailBody,
             content: `${emailSubject}\n${emailBody}`.trim(),
+            privacyAccepted: true,
+            privacyNoticeVersion: '2026.09',
           }),
         )
       } else {
-        setResult(await createScan({ type: scanType, target: scanTarget, content: message }))
+        setResult(
+          await createScan({
+            type: scanType,
+            target: scanTarget,
+            content: message,
+            privacyAccepted: true,
+            privacyNoticeVersion: '2026.09',
+          }),
+        )
       }
-    } catch {
+    } catch (scanError) {
       setResult(null)
-      setError('Scan failed. Make sure the backend is running, then try again.')
+      setError(scanError.message || 'Scan failed. Make sure the backend is running, then try again.')
     } finally {
       setIsScanning(false)
     }
@@ -442,10 +459,36 @@ export function ManualScan() {
             </label>
           )}
 
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                className="mt-1 h-4 w-4 accent-teal-600"
+                type="checkbox"
+                checked={privacyAccepted}
+                onChange={(event) => {
+                  setPrivacyAccepted(event.target.checked)
+                  setError('')
+                }}
+              />
+              <span className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                I am authorized to scan this item. I understand that raw content is processed for
+                analysis, public deployments do not retain it, and a clean result does not prove
+                authenticity.
+              </span>
+            </label>
+            <button
+              type="button"
+              className="mt-2 text-sm font-semibold text-teal-700 hover:underline dark:text-teal-300"
+              onClick={() => onNavigate?.('privacy')}
+            >
+              Read the privacy notice
+            </button>
+          </div>
+
           <button
             className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
             type="submit"
-            disabled={isScanning}
+            disabled={isScanning || !privacyAccepted}
           >
             <SearchCheck size={18} />
             {scanButtonText}

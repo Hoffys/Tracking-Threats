@@ -10,6 +10,7 @@ import {
   writeNotificationSettings,
 } from '../services/notificationSettings.js'
 import { getMarkedSafeHosts } from '../services/safeHosts.js'
+import { deleteAllScanData, deleteClientScanData } from '../services/scanRepository.js'
 
 const getDisplayDomain = (target) => {
   try {
@@ -98,9 +99,7 @@ export async function getHistory(_req, res, next) {
 
 export async function clearHistory(_req, res, next) {
   try {
-    const db = await dbPromise
-    await db.run('UPDATE scans SET history_visible = 0')
-    await db.run('UPDATE live_monitor_activity SET history_visible = 0')
+    await deleteAllScanData()
     res.json({ ok: true })
   } catch (error) {
     next(error)
@@ -213,6 +212,31 @@ export async function getPublicActivity(req, res, next) {
         liveScanCount: scans.length,
         systemActive: true,
       },
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deletePublicScanHistory(req, res, next) {
+  try {
+    const clientId = normalizeClientId(req.params.clientId)
+    if (!clientId) return res.status(400).json({ error: 'invalid client id' })
+
+    res.json({ ok: true, ...(await deleteClientScanData(clientId)) })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function deletePublicClientData(req, res, next) {
+  try {
+    const clientId = normalizeClientId(req.params.clientId)
+    if (!clientId) return res.status(400).json({ error: 'invalid client id' })
+
+    res.json({
+      ok: true,
+      ...(await deleteClientScanData(clientId, { includeSettings: true })),
     })
   } catch (error) {
     next(error)

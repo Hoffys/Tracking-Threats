@@ -49,6 +49,8 @@ NODE_ENV=production
 PUBLIC_DEPLOYMENT=true
 VITE_PUBLIC_DEPLOYMENT=true
 STORE_SCAN_CONTENT=false
+SCAN_RETENTION_DAYS=30
+AUDIT_RETENTION_DAYS=90
 SMTP_ENABLED=false
 ADMIN_API_TOKEN=replace-with-a-long-random-secret
 DATABASE_PATH=/data/threattrack.sqlite
@@ -60,6 +62,11 @@ CORS_ALLOW_CHROME_EXTENSIONS=false
 
 If you attach a Railway volume for SQLite, mount it at `/data` so
 `DATABASE_PATH=/data/threattrack.sqlite` persists scan records across restarts.
+
+Production scan submissions are recorded without raw payloads, move through a
+queued/scanning/completed-or-failed lifecycle, and store normalized evidence for
+the final verdict. See `docs/scan-repository-and-privacy.md` for the data map,
+retention policy, privacy controls, and documented scanner limitations.
 
 After Railway gives you the public domain, update `FRONTEND_ORIGIN` and
 `CORS_ORIGINS` to that exact origin, then redeploy. If you use the browser

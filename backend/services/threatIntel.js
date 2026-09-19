@@ -19,6 +19,15 @@ const phishTankPassThroughHosts = new Set([
   'youtube.com',
 ])
 
+export const parseProviderFlag = (value) => {
+  if (value === true || value === 1) return true
+  if (value === false || value === 0 || value == null) return false
+  return ['1', 'true', 'y', 'yes'].includes(String(value).trim().toLowerCase())
+}
+
+export const hasVirusTotalDetections = (stats = {}) =>
+  Number(stats.malicious ?? 0) > 0 || Number(stats.suspicious ?? 0) > 0
+
 const withTimeout = async (url, options) => {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), requestTimeoutMs)
@@ -150,11 +159,12 @@ async function checkVirusTotal(target) {
   const stats = payload?.data?.attributes?.last_analysis_stats ?? {}
   const malicious = Number(stats.malicious ?? 0)
   const suspicious = Number(stats.suspicious ?? 0)
+  const detected = hasVirusTotalDetections(stats)
 
   return {
     provider: 'VirusTotal',
     checked: true,
-    found: true,
+    found: detected,
     stats,
     warning:
       malicious > 0
@@ -294,19 +304,21 @@ async function checkPhishTank(target) {
 
   const payload = await response.json()
   const results = payload.results ?? {}
-  const listed = Boolean(results.in_database)
-  const verified = Boolean(results.verified)
+  const listed = parseProviderFlag(results.in_database)
+  const verified = parseProviderFlag(results.verified)
+  const valid = parseProviderFlag(results.valid)
+  const confirmed = listed && verified && valid
 
   return {
     provider: 'PhishTank',
     checked: true,
-    found: listed,
+    found: confirmed,
+    listed,
     verified,
+    valid,
     phishId: results.phish_id,
-    warning: listed
-      ? `PhishTank ${verified ? 'verified' : 'reported'} this URL as phishing`
-      : null,
-    deduction: verified ? 60 : listed ? 42 : 0,
+    warning: confirmed ? 'PhishTank verified this URL as an active phishing page' : null,
+    deduction: confirmed ? 60 : 0,
   }
 }
 

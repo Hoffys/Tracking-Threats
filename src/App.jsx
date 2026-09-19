@@ -8,6 +8,8 @@ import { ScanHistory } from './pages/ScanHistory'
 import { Alerts } from './pages/Alerts'
 import { Learn } from './pages/Learn'
 import { Settings } from './pages/Settings'
+import { Methodology } from './pages/Methodology'
+import { PrivacyNotice } from './pages/PrivacyNotice'
 import { isPublicDeployment } from './config/deployment'
 import { useState } from 'react'
 
@@ -18,10 +20,21 @@ const pages = {
   history: ScanHistory,
   alerts: Alerts,
   learn: Learn,
+  methodology: Methodology,
+  privacy: PrivacyNotice,
   settings: Settings,
 }
 
-const publicPages = new Set(['dashboard', 'learn', 'monitor', 'manual', 'history', 'settings'])
+const publicPages = new Set([
+  'dashboard',
+  'learn',
+  'methodology',
+  'privacy',
+  'monitor',
+  'manual',
+  'history',
+  'settings',
+])
 
 const getInitialPage = () => {
   const page = new URLSearchParams(window.location.search).get('page')

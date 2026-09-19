@@ -6,6 +6,8 @@ import {
   clearFlaggedThreats,
   clearReviewedThreats,
   clearThreatAuditLogs,
+  deletePublicClientData,
+  deletePublicScanHistory,
   dismissAlert,
   emailHistoryDigest,
   getAlerts,
@@ -27,6 +29,8 @@ export const dataRoutes = Router()
 dataRoutes.get('/safe-hosts', getSafeHosts)
 dataRoutes.get('/stats', getStats)
 dataRoutes.get('/public/activity/:clientId', getPublicActivity)
+dataRoutes.delete('/public/activity/:clientId', deletePublicScanHistory)
+dataRoutes.delete('/public/data/:clientId', deletePublicClientData)
 dataRoutes.get('/notification-settings', getNotificationSettings)
 dataRoutes.put('/notification-settings', saveNotificationSettings)
 dataRoutes.post('/notification-settings/history-digest', emailHistoryDigest)

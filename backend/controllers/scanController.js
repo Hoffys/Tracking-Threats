@@ -6,6 +6,16 @@ import { sendScanReport } from '../services/mailReporter.js'
 import { isMarkedSafeUrlTarget } from '../services/safeHosts.js'
 import { enrichUrlAnalysis } from '../services/threatIntel.js'
 import { scanUrl } from '../services/urlScanner.js'
+import {
+  completeScanSubmission,
+  createScanSubmission,
+  failScanSubmission,
+  getScanExpiry,
+  methodologyVersion,
+  privacyNoticeVersion,
+  recordPrivacyConsent,
+  recordScanEvidence,
+} from '../services/scanRepository.js'
 
 const now = () => new Date().toISOString()
 const uuid = () => crypto.randomUUID()
@@ -16,6 +26,43 @@ const shouldStoreScanContent = () =>
   (!isPublicDeployment() && process.env.STORE_SCAN_CONTENT !== 'false')
 
 const getStoredContent = (content) => (shouldStoreScanContent() ? content : '')
+const redactSensitiveText = (value = '') =>
+  String(value)
+    .replace(/https?:\/\/[^\s<>'"]+/gi, '[redacted URL]')
+    .replace(/\b[a-z0-9._%+-]+@([a-z0-9.-]+\.[a-z]{2,})\b/gi, '***@$1')
+
+const getStoredTarget = (type, target = '') => {
+  if (shouldStoreScanContent()) return target
+  if (type === 'URL') return getDisplayDomain(target) || 'Redacted URL'
+  if (type === 'Email') return getEmailDomain(target) || 'Redacted email scan'
+  if (type === 'File') {
+    const extension = String(target).toLowerCase().match(/\.([a-z0-9]{1,10})$/)?.[1]
+    return extension ? `Redacted .${extension} file` : 'Redacted file'
+  }
+  return 'Redacted message scan'
+}
+
+const sanitizeDetailsForStorage = (value, key = '') => {
+  if (shouldStoreScanContent() || value == null) return value
+  if (['url', 'matches', 'addresses', 'fileName', 'extracted'].includes(key)) return undefined
+  if (typeof value === 'string') return redactSensitiveText(value)
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => sanitizeDetailsForStorage(item))
+      .filter((item) => item !== undefined)
+  }
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .map(([childKey, childValue]) => [
+          childKey,
+          sanitizeDetailsForStorage(childValue, childKey),
+        ])
+        .filter(([, childValue]) => childValue !== undefined),
+    )
+  }
+  return value
+}
 const normalizeClientId = (clientId) => {
   const normalized = String(clientId ?? '').trim()
   return /^[a-zA-Z0-9_-]{12,80}$/.test(normalized) ? normalized : null
@@ -51,6 +98,11 @@ export const mapScan = (row) => {
     recommendation: fromJson(row.recommendations).join(' '),
     source: details.source ?? 'api',
     clientId: row.client_id ?? details.clientId ?? null,
+    submissionId: row.submission_id ?? null,
+    processingStatus: row.processing_status ?? 'completed',
+    methodologyVersion: row.methodology_version ?? methodologyVersion,
+    contentRetained: row.content_retained === 1,
+    expiresAt: row.expires_at ?? null,
     threatIntel: details.threatIntel ?? [],
     emailBreakdown: details.emailBreakdown,
     fileDetails: details.file,
@@ -141,24 +193,41 @@ async function enforceVisibleScanLimit(db) {
   )
 }
 
-async function persistScan({ type, target, content, analysis, source = 'api', clientId = null }) {
+async function persistScan({
+  type,
+  target,
+  content,
+  analysis,
+  source = 'api',
+  clientId = null,
+  privacy = {},
+  submissionId = null,
+}) {
   const db = await dbPromise
   const createdAt = now()
   const storedContent = getStoredContent(content)
+  const storedTarget = getStoredTarget(type, target)
   const storedClientId = normalizeClientId(clientId)
+  const expiresAt = getScanExpiry(createdAt)
+  const storedAnalysis = {
+    ...analysis,
+    warningSigns: (analysis.warningSigns ?? []).map(redactSensitiveText),
+    details: sanitizeDetailsForStorage(analysis.details ?? {}),
+  }
   const scan = {
     id: uuid(),
     type,
-    target,
+    target: storedTarget,
     content: storedContent,
+    clientId: storedClientId,
     createdAt,
-    ...analysis,
+    ...storedAnalysis,
   }
 
   await db.run(
     `INSERT INTO scans
-      (id, type, target, content, score, status, risk, action, summary, warning_signs, recommendations, details, client_id, history_visible, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, type, target, content, score, status, risk, action, summary, warning_signs, recommendations, details, client_id, submission_id, processing_status, methodology_version, content_retained, expires_at, history_visible, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     scan.id,
     scan.type,
     scan.target,
@@ -172,6 +241,11 @@ async function persistScan({ type, target, content, analysis, source = 'api', cl
     toJson(scan.recommendations),
     toJson({ ...(scan.details ?? {}), source, clientId: storedClientId }),
     storedClientId,
+    submissionId,
+    'completed',
+    methodologyVersion,
+    storedContent ? 1 : 0,
+    expiresAt,
     1,
     scan.createdAt,
   )
@@ -273,6 +347,9 @@ async function persistScan({ type, target, content, analysis, source = 'api', cl
     metadata: { scanId: scan.id, source, clientId: storedClientId },
   })
 
+  await recordScanEvidence(db, scan, storedAnalysis)
+  await recordPrivacyConsent(db, scan, privacy)
+
   await enforceVisibleScanLimit(db)
 
   const savedScan = mapScan({
@@ -281,6 +358,11 @@ async function persistScan({ type, target, content, analysis, source = 'api', cl
     recommendations: toJson(scan.recommendations),
     details: toJson({ ...(scan.details ?? {}), source, clientId: storedClientId }),
     client_id: storedClientId,
+    submission_id: submissionId,
+    processing_status: 'completed',
+    methodology_version: methodologyVersion,
+    content_retained: storedContent ? 1 : 0,
+    expires_at: expiresAt,
     created_at: scan.createdAt,
   })
 
@@ -305,31 +387,68 @@ async function persistScan({ type, target, content, analysis, source = 'api', cl
   return savedScan
 }
 
-export async function createUrlScan(target, source = 'api', clientId = null) {
-  if (await isMarkedSafeUrlTarget(target)) {
+async function runWithSubmission(
+  { type, target, content = '', source = 'api', clientId = null },
+  operation,
+) {
+  const storedClientId = normalizeClientId(clientId)
+  const submissionId = await createScanSubmission({
+    type,
+    target,
+    targetLabel: getStoredTarget(type, target),
+    source,
+    clientId: storedClientId,
+    contentReceived: Boolean(content),
+  })
+
+  try {
+    const scan = await operation(submissionId)
+    await completeScanSubmission(submissionId, scan.id)
+    return scan
+  } catch (error) {
+    await failScanSubmission(submissionId, error)
+    throw error
+  }
+}
+
+export async function createUrlScan(target, source = 'api', clientId = null, privacy = {}) {
+  return runWithSubmission({ type: 'URL', target, source, clientId }, async (submissionId) => {
+    if (await isMarkedSafeUrlTarget(target)) {
+      return persistScan({
+        type: 'URL',
+        target,
+        content: '',
+        analysis: {
+          score: 100,
+          status: 'Safe',
+          risk: 'low',
+          action: 'Allowed',
+          summary: 'This URL was previously marked safe during review.',
+          warningSigns: [],
+          recommendations: ['Allow this URL unless new suspicious behavior appears.'],
+          recommendation: 'Allow this URL unless new suspicious behavior appears.',
+          details: { threatIntel: [] },
+        },
+        source,
+        clientId,
+        privacy,
+        submissionId,
+      })
+    }
+
+    const baseAnalysis = scanUrl(target)
+    const analysis = await enrichUrlAnalysis(target, baseAnalysis)
     return persistScan({
       type: 'URL',
       target,
       content: '',
-      analysis: {
-        score: 100,
-        status: 'Safe',
-        risk: 'low',
-        action: 'Allowed',
-        summary: 'This URL was previously marked safe during review.',
-        warningSigns: [],
-        recommendations: ['Allow this URL unless new suspicious behavior appears.'],
-        recommendation: 'Allow this URL unless new suspicious behavior appears.',
-        details: { threatIntel: [] },
-      },
+      analysis,
       source,
       clientId,
+      privacy,
+      submissionId,
     })
-  }
-
-  const baseAnalysis = scanUrl(target)
-  const analysis = await enrichUrlAnalysis(target, baseAnalysis)
-  return persistScan({ type: 'URL', target, content: '', analysis, source, clientId })
+  })
 }
 
 export async function previewUrlScan(target) {
@@ -373,95 +492,111 @@ export async function previewUrlScan(target) {
   }
 }
 
-export async function createMessageScan({ target, content }, source = 'api', clientId = null) {
-  const analysis = scanMessage(content)
-  const storedTarget = shouldStoreScanContent() ? target : 'Public message scan'
-  const scan = await persistScan({
-    type: 'Message',
-    target: storedTarget,
-    content,
-    analysis,
-    source,
-    clientId,
-  })
-  const storedMessage = getStoredContent(content)
-
-  const db = await dbPromise
-  await db.run(
-    `INSERT INTO message_scans
-      (id, scan_id, target, message, score, status, risk, summary, warning_signs, recommendations, client_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    uuid(),
-    scan.id,
-    storedTarget,
-    storedMessage,
-    scan.score,
-    scan.status,
-    scan.risk,
-    scan.summary,
-    toJson(scan.warningSigns),
-    toJson(scan.recommendations),
-    normalizeClientId(clientId),
-    scan.date,
+export async function createMessageScan(
+  { target, content },
+  source = 'api',
+  clientId = null,
+  privacy = {},
+) {
+  return runWithSubmission(
+    { type: 'Message', target, content, source, clientId },
+    async (submissionId) => {
+      const analysis = scanMessage(content)
+      const storedTarget = shouldStoreScanContent() ? target : 'Public message scan'
+      const scan = await persistScan({
+        type: 'Message',
+        target: storedTarget,
+        content,
+        analysis,
+        source,
+        clientId,
+        privacy,
+        submissionId,
+      })
+      const db = await dbPromise
+      await db.run(
+        `INSERT INTO message_scans
+          (id, scan_id, target, message, score, status, risk, summary, warning_signs, recommendations, client_id, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        uuid(), scan.id, storedTarget, getStoredContent(content), scan.score, scan.status,
+        scan.risk, scan.summary, toJson(scan.warningSigns), toJson(scan.recommendations),
+        normalizeClientId(clientId), scan.date,
+      )
+      return scan
+    },
   )
-
-  return scan
 }
 
-export async function createEmailScan({ sender, subject = '', body = '' }, source = 'api', clientId = null) {
-  const analysis = analyzeEmail({ sender, subject, body })
-  const storedSubject = getStoredContent(subject)
-  const storedBody = getStoredContent(body)
-  const storedSender = shouldStoreScanContent()
-    ? sender || 'Unknown sender'
-    : getEmailDomain(sender) || 'Sender redacted'
-  const scan = await persistScan({
-    type: 'Email',
-    target: shouldStoreScanContent()
-      ? subject || sender || 'Email content without sender or subject'
-      : getEmailDomain(sender) || 'Public email scan',
-    content: `${subject}\n${body}`.trim(),
-    analysis,
-    source,
-    clientId,
-  })
-
-  const db = await dbPromise
-  await db.run(
-    `INSERT INTO email_scans
-      (id, scan_id, sender, subject, body, score, status, risk, summary, warning_signs, recommendations, client_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    uuid(),
-    scan.id,
-    storedSender,
-    storedSubject,
-    storedBody,
-    scan.score,
-    scan.status,
-    scan.risk,
-    scan.summary,
-    toJson(scan.warningSigns),
-    toJson(scan.recommendations),
-    normalizeClientId(clientId),
-    scan.date,
+export async function createEmailScan(
+  { sender, subject = '', body = '' },
+  source = 'api',
+  clientId = null,
+  privacy = {},
+) {
+  const target = subject || sender || 'Email content without sender or subject'
+  const content = `${subject}\n${body}`.trim()
+  return runWithSubmission(
+    { type: 'Email', target, content, source, clientId },
+    async (submissionId) => {
+      const analysis = analyzeEmail({ sender, subject, body })
+      const storedSender = shouldStoreScanContent()
+        ? sender || 'Unknown sender'
+        : getEmailDomain(sender) || 'Sender redacted'
+      const scan = await persistScan({
+        type: 'Email', target, content, analysis, source, clientId, privacy, submissionId,
+      })
+      const db = await dbPromise
+      await db.run(
+        `INSERT INTO email_scans
+          (id, scan_id, sender, subject, body, score, status, risk, summary, warning_signs, recommendations, client_id, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        uuid(), scan.id, storedSender, getStoredContent(subject), getStoredContent(body),
+        scan.score, scan.status, scan.risk, scan.summary, toJson(scan.warningSigns),
+        toJson(scan.recommendations), normalizeClientId(clientId), scan.date,
+      )
+      return scan
+    },
   )
-
-  return scan
 }
 
 export async function createFileScan(
   { fileName, mimeType = '', size = 0, content = '', sha256 = '' },
   source = 'api',
   clientId = null,
+  privacy = {},
 ) {
-  return persistScan({
-    type: 'File',
-    target: fileName || 'Uploaded file',
-    content,
-    analysis: await scanFile({ fileName, mimeType, size, content, sha256 }),
-    source,
-    clientId,
-  })
+  const target = fileName || 'Uploaded file'
+  return runWithSubmission(
+    { type: 'File', target, content, source, clientId },
+    async (submissionId) =>
+      persistScan({
+        type: 'File',
+        target,
+        content,
+        analysis: await scanFile({ fileName, mimeType, size, content, sha256 }),
+        source,
+        clientId,
+        privacy,
+        submissionId,
+      }),
+  )
+}
+
+const getPrivacyContext = (body = {}, source = 'api') => ({
+  accepted: body.privacyAccepted === true,
+  noticeVersion: String(body.privacyNoticeVersion || privacyNoticeVersion).slice(0, 32),
+  basis: source.startsWith('browser-') ? 'browser-extension-request' : 'service-request',
+})
+
+const validatePrivacyAcknowledgment = (req, source) => {
+  if (
+    isPublicDeployment() &&
+    source === 'public-web-scan' &&
+    req.body.privacyAccepted !== true
+  ) {
+    return 'Accept the privacy notice before submitting a public scan'
+  }
+  return ''
 }
 
 export async function scanUrlHandler(req, res, next) {
@@ -473,7 +608,11 @@ export async function scanUrlHandler(req, res, next) {
     if (req.body.preview === true) {
       return res.json(await previewUrlScan(target))
     }
-    res.status(201).json(await createUrlScan(target, source, clientId))
+    const privacyError = validatePrivacyAcknowledgment(req, source)
+    if (privacyError) return res.status(400).json({ error: privacyError })
+    res
+      .status(201)
+      .json(await createUrlScan(target, source, clientId, getPrivacyContext(req.body, source)))
   } catch (error) {
     next(error)
   }
@@ -487,7 +626,19 @@ export async function scanMessageHandler(req, res, next) {
       (shouldStoreScanContent() ? content?.slice(0, 56) : 'Public message scan') ??
       'Manual message scan'
     if (!content) return res.status(400).json({ error: 'message is required' })
-    res.status(201).json(await createMessageScan({ target, content }, req.body.source ?? 'api', req.body.clientId))
+    const source = req.body.source ?? 'api'
+    const privacyError = validatePrivacyAcknowledgment(req, source)
+    if (privacyError) return res.status(400).json({ error: privacyError })
+    res
+      .status(201)
+      .json(
+        await createMessageScan(
+          { target, content },
+          source,
+          req.body.clientId,
+          getPrivacyContext(req.body, source),
+        ),
+      )
   } catch (error) {
     next(error)
   }
@@ -501,7 +652,19 @@ export async function scanFileHandler(req, res, next) {
     const content = req.body.content ?? ''
     const sha256 = req.body.sha256 ?? ''
     if (!fileName) return res.status(400).json({ error: 'fileName is required' })
-    res.status(201).json(await createFileScan({ fileName, mimeType, size, content, sha256 }, req.body.source ?? 'api', req.body.clientId))
+    const source = req.body.source ?? 'api'
+    const privacyError = validatePrivacyAcknowledgment(req, source)
+    if (privacyError) return res.status(400).json({ error: privacyError })
+    res
+      .status(201)
+      .json(
+        await createFileScan(
+          { fileName, mimeType, size, content, sha256 },
+          source,
+          req.body.clientId,
+          getPrivacyContext(req.body, source),
+        ),
+      )
   } catch (error) {
     next(error)
   }
@@ -515,7 +678,18 @@ export async function scanEmailHandler(req, res, next) {
     const source = req.body.source ?? 'api'
     const clientId = req.body.clientId
     if (!body && !subject) return res.status(400).json({ error: 'email content is required' })
-    res.status(201).json(await createEmailScan({ sender, subject, body }, source, clientId))
+    const privacyError = validatePrivacyAcknowledgment(req, source)
+    if (privacyError) return res.status(400).json({ error: privacyError })
+    res
+      .status(201)
+      .json(
+        await createEmailScan(
+          { sender, subject, body },
+          source,
+          clientId,
+          getPrivacyContext(req.body, source),
+        ),
+      )
   } catch (error) {
     next(error)
   }

@@ -133,10 +133,14 @@ export function ScanHistory() {
         <button
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200"
           type="button"
-          onClick={clearHistory}
+          onClick={() => {
+            if (window.confirm('Permanently delete all scan records for this client?')) {
+              clearHistory().catch(console.error)
+            }
+          }}
         >
           <Trash2 size={16} />
-          Clear History View
+          Delete Scan History
         </button>
       </div>
 

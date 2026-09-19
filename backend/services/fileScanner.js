@@ -1,5 +1,6 @@
 import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
 import { scanMessage } from './messageScanner.js'
+import { hasVirusTotalDetections } from './threatIntel.js'
 
 const requestTimeoutMs = 4500
 
@@ -89,7 +90,7 @@ async function checkVirusTotalFileHash(sha256) {
   return {
     provider: 'VirusTotal File',
     checked: true,
-    found: true,
+    found: hasVirusTotalDetections(stats),
     sha256,
     stats,
     warning:

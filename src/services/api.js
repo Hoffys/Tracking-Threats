@@ -33,6 +33,10 @@ export const apiService = {
   getHealth: () => request('/health'),
   getPublicActivity: (clientId) =>
     request(`/public/activity/${encodeURIComponent(clientId)}`),
+  deletePublicHistory: (clientId) =>
+    request(`/public/activity/${encodeURIComponent(clientId)}`, { method: 'DELETE' }),
+  deletePublicClientData: (clientId) =>
+    request(`/public/data/${encodeURIComponent(clientId)}`, { method: 'DELETE' }),
   getAlerts: () => request('/alerts'),
   getBlockedThreats: () => request('/blocked-threats'),
   getSafeHosts: () => request('/safe-hosts'),

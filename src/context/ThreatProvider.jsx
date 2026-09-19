@@ -93,13 +93,6 @@ const readPublicHiddenScanIds = (clientId = '') => {
   }
 }
 
-const writePublicHiddenScanIds = (scanIds, clientId = '') => {
-  localStorage.setItem(
-    getPublicHiddenScansStorageKey(clientId),
-    JSON.stringify(Array.from(scanIds).filter(Boolean).slice(-300)),
-  )
-}
-
 const readPublicHistoryClearedBefore = (clientId = '') => {
   try {
     return Number(localStorage.getItem(getPublicHistoryClearedBeforeStorageKey(clientId)) ?? 0)
@@ -108,8 +101,10 @@ const readPublicHistoryClearedBefore = (clientId = '') => {
   }
 }
 
-const writePublicHistoryClearedBefore = (timestamp, clientId = '') => {
-  localStorage.setItem(getPublicHistoryClearedBeforeStorageKey(clientId), String(timestamp))
+const clearPublicClientStorage = (clientId = '') => {
+  localStorage.removeItem(getPublicScansStorageKey(clientId))
+  localStorage.removeItem(getPublicHiddenScansStorageKey(clientId))
+  localStorage.removeItem(getPublicHistoryClearedBeforeStorageKey(clientId))
 }
 
 const filterVisiblePublicScans = (scans, clientId = '') => {
@@ -370,12 +365,16 @@ export function ThreatProvider({ children }) {
       sender,
       subject,
       body,
+      privacyAccepted = false,
+      privacyNoticeVersion = '2026.09',
     }) => {
+      const privacyMetadata = { privacyAccepted, privacyNoticeVersion }
       const scan =
         type === 'URL' || type === 'Domain'
           ? await apiService.scanUrl(target, {
               source: isPublicDeployment ? 'public-web-scan' : 'api',
               clientId: publicClientId,
+              ...privacyMetadata,
             })
           : type === 'Email'
             ? await apiService.scanEmail({
@@ -384,6 +383,7 @@ export function ThreatProvider({ children }) {
                 body: body ?? (content.split('\n').slice(1).join('\n') || content),
                 source: isPublicDeployment ? 'public-web-scan' : 'api',
                 clientId: publicClientId,
+                ...privacyMetadata,
               })
             : type === 'File'
               ? await apiService.scanFile({
@@ -394,12 +394,14 @@ export function ThreatProvider({ children }) {
                   sha256,
                   source: isPublicDeployment ? 'public-web-scan' : 'api',
                   clientId: publicClientId,
+                  ...privacyMetadata,
                 })
               : await apiService.scanMessage({
                   target,
                   content,
                   source: isPublicDeployment ? 'public-web-scan' : 'api',
                   clientId: publicClientId,
+                  ...privacyMetadata,
                 })
 
       if (isPublicDeployment) {
@@ -432,16 +434,8 @@ export function ThreatProvider({ children }) {
 
   const clearHistory = useCallback(async () => {
     if (isPublicDeployment) {
-      writePublicHistoryClearedBefore(Date.now() + 3000, publicClientId)
-      writePublicHiddenScanIds(
-        new Set([
-          ...readPublicHiddenScanIds(publicClientId),
-          ...scanHistory.map((scan) => scan.id),
-          ...readPublicScans(publicClientId).map((scan) => scan.id),
-        ]),
-        publicClientId,
-      )
-      writePublicScans([], publicClientId)
+      await apiService.deletePublicHistory(publicClientId)
+      clearPublicClientStorage(publicClientId)
       applyPublicScans([], { systemActive: true })
       return
     }
@@ -449,7 +443,24 @@ export function ThreatProvider({ children }) {
     await apiService.clearHistory()
     await apiService.clearThreatAuditLogs()
     await refreshData()
-  }, [applyPublicScans, publicClientId, refreshData, scanHistory])
+  }, [applyPublicScans, publicClientId, refreshData])
+
+  const deleteMyData = useCallback(async () => {
+    if (isPublicDeployment) {
+      const result = await apiService.deletePublicClientData(publicClientId)
+      clearPublicClientStorage(publicClientId)
+      localStorage.removeItem('threattrack:notification-settings')
+      setNotificationSettings(defaultNotificationSettings)
+      applyPublicScans([], { systemActive: true })
+      return result
+    }
+
+    await apiService.clearHistory()
+    await apiService.clearAlerts()
+    await apiService.clearThreatAuditLogs()
+    await refreshData()
+    return { ok: true }
+  }, [applyPublicScans, publicClientId, refreshData])
 
   const acknowledgeAlert = useCallback(
     async (id) => {
@@ -528,6 +539,7 @@ export function ThreatProvider({ children }) {
       clearHistory,
       clearReviewedThreats,
       createScan,
+      deleteMyData,
       darkMode,
       dismissNotification,
       flaggedThreats,
@@ -554,6 +566,7 @@ export function ThreatProvider({ children }) {
       clearHistory,
       clearReviewedThreats,
       createScan,
+      deleteMyData,
       darkMode,
       flaggedThreats,
       liveFeed,

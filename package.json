@@ -13,6 +13,7 @@
     "server:dev:demo": "cross-env NODE_OPTIONS=--use-system-ca AUTO_MONITOR=true nodemon --ignore backend/*.sqlite --ignore backend/*.sqlite-shm --ignore backend/*.sqlite-wal backend/server.js",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview"
   },
   "dependencies": {

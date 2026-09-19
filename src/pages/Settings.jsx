@@ -106,6 +106,7 @@ function ToggleRow({ checked, description, label, onChange }) {
 
 export function Settings() {
   const {
+    deleteMyData,
     notificationSettings,
     saveNotificationSettings,
     sendHistoryDigest,
@@ -118,6 +119,8 @@ export function Settings() {
   const [digestSent, setDigestSent] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isSendingDigest, setIsSendingDigest] = useState(false)
+  const [isDeletingData, setIsDeletingData] = useState(false)
+  const [dataDeleted, setDataDeleted] = useState(false)
 
   const canSave = useMemo(
     () => draft.reportEmails.length > 0,
@@ -210,6 +213,28 @@ export function Settings() {
       )
     } finally {
       setIsSendingDigest(false)
+    }
+  }
+
+  const deleteData = async () => {
+    const confirmed = window.confirm(
+      'Permanently delete this browser client scan history, evidence, audit records, and saved report-email settings?',
+    )
+    if (!confirmed) return
+
+    setError('')
+    setDataDeleted(false)
+    setIsDeletingData(true)
+    try {
+      await deleteMyData()
+      setDraft({ reportEmails: [], emailScanReports: true, emailHistoryDigest: true })
+      setDataDeleted(true)
+      setSaved(false)
+      setDigestSent(false)
+    } catch (deleteError) {
+      setError(deleteError.message || 'Data deletion failed. Please try again.')
+    } finally {
+      setIsDeletingData(false)
     }
   }
 
@@ -422,6 +447,35 @@ export function Settings() {
           </Panel>
         </div>
       </form>
+
+      <Panel>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Trash2 size={19} className="text-rose-500" />
+              <h2 className="text-lg font-semibold">Privacy and data controls</h2>
+            </div>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+              Permanently remove scan records, normalized evidence, related audit records, and
+              saved report-email settings associated with this browser client ID.
+            </p>
+            {dataDeleted && (
+              <p className="mt-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                Client data deleted.
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={deleteData}
+            disabled={isDeletingData}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-rose-300 px-4 py-3 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300"
+          >
+            <Trash2 size={17} />
+            {isDeletingData ? 'Deleting...' : 'Delete My Data'}
+          </button>
+        </div>
+      </Panel>
 
       <Panel>
         <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
