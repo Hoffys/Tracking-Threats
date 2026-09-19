@@ -4,15 +4,14 @@ import {
   BookOpenCheck,
   CircleX,
   History,
+  Info,
   LayoutDashboard,
-  LibraryBig,
   Moon,
   Radar,
   ScanLine,
   Settings,
   ShieldX,
   Sun,
-  ScrollText,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { isPublicDeployment } from '../config/deployment'
@@ -21,8 +20,7 @@ import { useThreats } from '../hooks/useThreats'
 const allNavItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'learn', label: 'Learn', icon: BookOpenCheck },
-  { id: 'methodology', label: 'Methodology', icon: LibraryBig },
-  { id: 'privacy', label: 'Privacy', icon: ScrollText },
+  { id: 'about', label: 'About', icon: Info },
   { id: 'monitor', label: 'Monitor', icon: Radar },
   { id: 'manual', label: 'Scan', icon: ScanLine },
   { id: 'history', label: 'History', icon: History },
@@ -31,7 +29,7 @@ const allNavItems = [
 ]
 
 const publicNavItems = allNavItems.filter((item) =>
-  ['dashboard', 'learn', 'methodology', 'privacy', 'monitor', 'manual', 'history', 'settings'].includes(item.id),
+  ['dashboard', 'learn', 'about', 'monitor', 'manual', 'history', 'settings'].includes(item.id),
 )
 const navItems = isPublicDeployment ? publicNavItems : allNavItems
 

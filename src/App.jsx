@@ -8,8 +8,7 @@ import { ScanHistory } from './pages/ScanHistory'
 import { Alerts } from './pages/Alerts'
 import { Learn } from './pages/Learn'
 import { Settings } from './pages/Settings'
-import { Methodology } from './pages/Methodology'
-import { PrivacyNotice } from './pages/PrivacyNotice'
+import { About } from './pages/About'
 import { isPublicDeployment } from './config/deployment'
 import { useState } from 'react'
 
@@ -20,39 +19,51 @@ const pages = {
   history: ScanHistory,
   alerts: Alerts,
   learn: Learn,
-  methodology: Methodology,
-  privacy: PrivacyNotice,
+  about: About,
   settings: Settings,
 }
 
 const publicPages = new Set([
   'dashboard',
   'learn',
-  'methodology',
-  'privacy',
+  'about',
   'monitor',
   'manual',
   'history',
   'settings',
 ])
 
-const getInitialPage = () => {
-  const page = new URLSearchParams(window.location.search).get('page')
-  if (page === 'email') return 'manual'
-  if (isPublicDeployment) return publicPages.has(page) ? page : 'dashboard'
-  return pages[page] ? page : 'dashboard'
+const getInitialRoute = () => {
+  const params = new URLSearchParams(window.location.search)
+  const requestedPage = params.get('page')
+  const legacyAboutSection = ['methodology', 'privacy'].includes(requestedPage)
+    ? requestedPage
+    : null
+  const requestedSection = params.get('section')
+  const aboutSection = legacyAboutSection ?? (requestedSection === 'privacy' ? 'privacy' : 'methodology')
+  const page = legacyAboutSection ? 'about' : requestedPage === 'email' ? 'manual' : requestedPage
+  const safePage = isPublicDeployment
+    ? publicPages.has(page) ? page : 'dashboard'
+    : pages[page] ? page : 'dashboard'
+
+  return { page: safePage, aboutSection }
 }
 
 function AppShell() {
-  const [activePage, setActivePage] = useState(getInitialPage)
+  const [route, setRoute] = useState(getInitialRoute)
+  const { page: activePage, aboutSection } = route
   const ActivePage = pages[activePage]
 
   const handleNavigate = (page) => {
-    const nextPage = page === 'email' ? 'manual' : page
+    const requestedAboutSection = ['methodology', 'privacy'].includes(page) ? page : null
+    const nextPage = requestedAboutSection ? 'about' : page === 'email' ? 'manual' : page
     const safePage = isPublicDeployment && !publicPages.has(nextPage) ? 'manual' : nextPage
-    setActivePage(safePage)
+    const nextAboutSection = requestedAboutSection ?? (safePage === 'about' ? aboutSection : 'methodology')
+    setRoute({ page: safePage, aboutSection: nextAboutSection })
     const url = new URL(window.location.href)
     url.searchParams.set('page', safePage)
+    if (safePage === 'about') url.searchParams.set('section', nextAboutSection)
+    else url.searchParams.delete('section')
     url.searchParams.delete('blocked')
     window.history.replaceState({}, '', url)
   }
@@ -61,13 +72,13 @@ function AppShell() {
     <Layout activePage={activePage} onNavigate={handleNavigate}>
       <AnimatePresence mode="wait">
         <motion.div
-          key={activePage}
+          key={activePage === 'about' ? `${activePage}:${aboutSection}` : activePage}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
         >
-          <ActivePage onNavigate={handleNavigate} />
+          <ActivePage aboutSection={aboutSection} onNavigate={handleNavigate} />
         </motion.div>
       </AnimatePresence>
     </Layout>

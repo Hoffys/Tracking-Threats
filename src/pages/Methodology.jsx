@@ -80,7 +80,7 @@ const limitations = [
   'Important contracts, IDs, invoices, and certificates must be confirmed with the issuing organization.',
 ]
 
-export function Methodology() {
+export function Methodology({ embedded = false }) {
   const [activeTab, setActiveTab] = useState('process')
   const [query, setQuery] = useState('')
   const filteredRules = useMemo(() => {
@@ -100,14 +100,23 @@ export function Methodology() {
 
   return (
     <div className="space-y-5">
-      <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
-        <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.09</p>
-        <h1 className="mt-1 text-2xl font-semibold">How Tracking Threats reaches a verdict</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-          This library documents the active process, evidence sources, score deductions, and known
-          limitations used for URL, email, message, and file scans.
-        </p>
-      </header>
+      {!embedded && (
+        <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.09</p>
+          <h1 className="mt-1 text-2xl font-semibold">How Tracking Threats reaches a verdict</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+            This library documents the active process, evidence sources, score deductions, and known
+            limitations used for URL, email, message, and file scans.
+          </p>
+        </header>
+      )}
+
+      {embedded && (
+        <div>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.09</p>
+          <h2 className="mt-1 text-xl font-semibold">How Tracking Threats reaches a verdict</h2>
+        </div>
+      )}
 
       <div className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800" role="tablist">
         {tabs.map(([id, label]) => (

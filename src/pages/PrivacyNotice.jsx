@@ -23,17 +23,30 @@ const sections = [
   },
 ]
 
-export function PrivacyNotice({ onNavigate }) {
+export function PrivacyNotice({ embedded = false, onNavigate }) {
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
-        <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.09</p>
-        <h1 className="mt-1 text-2xl font-semibold">How scan data is handled</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-          Tracking Threats processes submitted data to identify phishing and malware indicators,
-          explain the result, maintain security records, and deliver reports selected by the user.
-        </p>
-      </header>
+      {!embedded && (
+        <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.09</p>
+          <h1 className="mt-1 text-2xl font-semibold">How scan data is handled</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Tracking Threats processes submitted data to identify phishing and malware indicators,
+            explain the result, maintain security records, and deliver reports selected by the user.
+          </p>
+        </header>
+      )}
+
+      {embedded && (
+        <div>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.09</p>
+          <h2 className="mt-1 text-xl font-semibold">How scan data is handled</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+            Tracking Threats processes submitted data to identify phishing and malware indicators,
+            explain the result, maintain security records, and deliver reports selected by the user.
+          </p>
+        </div>
+      )}
 
       <section className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-slate-800 dark:border-slate-800">
         {sections.map(({ icon: Icon, title, body }) => (
