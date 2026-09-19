@@ -601,10 +601,12 @@ const getPrivacyContext = (body = {}, source = 'api') => ({
 const validatePrivacyAcknowledgment = (req, source) => {
   if (
     isPublicDeployment() &&
-    source === 'public-web-scan' &&
+    ['public-web-scan', 'browser-email-monitor'].includes(source) &&
     req.body.privacyAccepted !== true
   ) {
-    return 'Accept the privacy notice before submitting a public scan'
+    return source === 'browser-email-monitor'
+      ? 'Enable email scanning and accept the confidentiality notice first'
+      : 'Accept the privacy notice before submitting a public scan'
   }
   return ''
 }

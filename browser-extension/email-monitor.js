@@ -3,16 +3,305 @@ const SCAN_DEBOUNCE_MS = 1400
 const INBOX_SCAN_DEBOUNCE_MS = 2200
 const MAX_INBOX_ROWS_PER_PASS = 50
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
+const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
+const EMAIL_CONSENT_VERSION = '2026.09'
 
 let scanTimer = null
 let inboxScanTimer = null
 let lastScanKey = ''
+let emailConsentGranted = false
+let emailObserver = null
 const inboxScanKeys = new Set()
 const inboxStats = {
   checked: 0,
   safe: 0,
   caution: 0,
   dangerous: 0,
+}
+
+function getPrivacyNoticeUrl() {
+  const url = new URL(APP_URL)
+  url.searchParams.set('page', 'about')
+  url.searchParams.set('section', 'privacy')
+  return url.toString()
+}
+
+async function readEmailConsent() {
+  const stored = await chrome.storage.local.get(EMAIL_CONSENT_KEY)
+  const consent = stored[EMAIL_CONSENT_KEY]
+  if (consent?.noticeVersion !== EMAIL_CONSENT_VERSION) return 'missing'
+  return consent.accepted === true ? 'accepted' : 'declined'
+}
+
+async function saveEmailConsent(accepted) {
+  await chrome.storage.local.set({
+    [EMAIL_CONSENT_KEY]: {
+      accepted,
+      noticeVersion: EMAIL_CONSENT_VERSION,
+      updatedAt: new Date().toISOString(),
+    },
+  })
+}
+
+function clearEmailMonitorUi() {
+  document.getElementById('threattrack-email-consent')?.remove()
+  document.getElementById('threattrack-email-consent-disabled')?.remove()
+  document.getElementById('threattrack-email-warning')?.remove()
+  document.getElementById('threattrack-inbox-status')?.remove()
+  document.querySelectorAll('.threattrack-inbox-label').forEach((label) => label.remove())
+  document.querySelectorAll('[data-threattrack-risk]').forEach((row) => {
+    row.style.boxShadow = row.dataset.threattrackOriginalBoxShadow ?? ''
+    row.style.backgroundColor = row.dataset.threattrackOriginalBackground ?? ''
+    delete row.dataset.threattrackRisk
+    delete row.dataset.threattrackLevel
+    delete row.dataset.threattrackOriginalBoxShadow
+    delete row.dataset.threattrackOriginalBackground
+  })
+}
+
+function stopEmailMonitoring() {
+  emailConsentGranted = false
+  window.clearTimeout(scanTimer)
+  window.clearTimeout(inboxScanTimer)
+  emailObserver?.disconnect()
+  emailObserver = null
+  lastScanKey = ''
+  inboxScanKeys.clear()
+  Object.keys(inboxStats).forEach((key) => {
+    inboxStats[key] = 0
+  })
+  clearEmailMonitorUi()
+}
+
+async function disableEmailMonitoring() {
+  await saveEmailConsent(false)
+  stopEmailMonitoring()
+  showEmailScanningDisabled()
+}
+
+function createTurnOffButton() {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = 'Turn off'
+  button.title = 'Withdraw consent and stop email scanning'
+  button.style.cssText = [
+    'border:1px solid rgba(255,255,255,.22)',
+    'border-radius:6px',
+    'background:transparent',
+    'color:#f8fafc',
+    'cursor:pointer',
+    'font:700 11px Arial,sans-serif',
+    'padding:5px 8px',
+  ].join(';')
+  button.addEventListener('click', () => {
+    disableEmailMonitoring().catch(() => {})
+  })
+  return button
+}
+
+function showEmailScanningDisabled() {
+  if (document.getElementById('threattrack-email-consent-disabled')) return
+
+  const notice = document.createElement('aside')
+  notice.id = 'threattrack-email-consent-disabled'
+  notice.style.cssText = [
+    'all:initial',
+    'position:fixed',
+    'right:20px',
+    'bottom:20px',
+    'z-index:2147483647',
+    'box-sizing:border-box',
+    'display:flex',
+    'align-items:center',
+    'gap:10px',
+    'width:min(360px,calc(100vw - 32px))',
+    'border:1px solid #334155',
+    'border-radius:8px',
+    'background:#0f172a',
+    'box-shadow:0 16px 45px rgba(0,0,0,.35)',
+    'color:#e2e8f0',
+    'font:13px/1.4 Arial,sans-serif',
+    'padding:12px',
+  ].join(';')
+
+  const text = document.createElement('span')
+  text.textContent = 'Tracking Threats email scanning is off.'
+  text.style.cssText = 'flex:1'
+
+  const enable = document.createElement('button')
+  enable.type = 'button'
+  enable.textContent = 'Review and enable'
+  enable.style.cssText = [
+    'border:0',
+    'border-radius:6px',
+    'background:#0d9488',
+    'color:white',
+    'cursor:pointer',
+    'font:700 12px Arial,sans-serif',
+    'padding:8px 10px',
+  ].join(';')
+  enable.addEventListener('click', () => {
+    notice.remove()
+    showEmailConsentDialog()
+  })
+
+  notice.append(text, enable)
+  document.body.appendChild(notice)
+}
+
+function showEmailConsentDialog() {
+  if (document.getElementById('threattrack-email-consent')) return
+  document.getElementById('threattrack-email-consent-disabled')?.remove()
+
+  const overlay = document.createElement('div')
+  overlay.id = 'threattrack-email-consent'
+  overlay.setAttribute('role', 'dialog')
+  overlay.setAttribute('aria-modal', 'true')
+  overlay.setAttribute('aria-labelledby', 'threattrack-email-consent-title')
+  overlay.style.cssText = [
+    'all:initial',
+    'position:fixed',
+    'inset:0',
+    'z-index:2147483647',
+    'box-sizing:border-box',
+    'display:grid',
+    'place-items:center',
+    'background:rgba(2,6,23,.72)',
+    'font-family:Arial,sans-serif',
+    'padding:16px',
+  ].join(';')
+
+  const panel = document.createElement('section')
+  panel.style.cssText = [
+    'box-sizing:border-box',
+    'width:min(560px,100%)',
+    'max-height:calc(100vh - 32px)',
+    'overflow:auto',
+    'border:1px solid #334155',
+    'border-radius:8px',
+    'background:#0f172a',
+    'box-shadow:0 28px 80px rgba(0,0,0,.5)',
+    'color:#f8fafc',
+    'padding:22px',
+  ].join(';')
+
+  const eyebrow = document.createElement('p')
+  eyebrow.textContent = 'CONFIDENTIALITY AND CONSENT'
+  eyebrow.style.cssText = 'margin:0;color:#5eead4;font:700 11px/1.4 Arial,sans-serif'
+
+  const title = document.createElement('h2')
+  title.id = 'threattrack-email-consent-title'
+  title.textContent = 'Enable email phishing scanning?'
+  title.style.cssText = 'margin:7px 0 0;color:#fff;font:700 21px/1.3 Arial,sans-serif'
+
+  const intro = document.createElement('p')
+  intro.textContent =
+    'Tracking Threats will not inspect or send email content until you provide consent.'
+  intro.style.cssText = 'margin:10px 0 0;color:#cbd5e1;font:14px/1.55 Arial,sans-serif'
+
+  const list = document.createElement('ul')
+  list.style.cssText = 'margin:14px 0 0;padding-left:20px;color:#e2e8f0;font:13px/1.6 Arial,sans-serif'
+  ;[
+    'The extension checks the visible sender, subject, message text, links, and up to 50 visible Gmail inbox previews.',
+    'This information is sent securely to the Tracking Threats backend for automated phishing analysis.',
+    'Production does not retain raw email bodies. Redacted results and evidence are retained for up to 30 days.',
+    'Consent applies to supported webmail opened in this browser. You can turn scanning off at any time.',
+  ].forEach((text) => {
+    const item = document.createElement('li')
+    item.textContent = text
+    item.style.cssText = 'margin:6px 0'
+    list.appendChild(item)
+  })
+
+  const privacyLink = document.createElement('a')
+  privacyLink.href = getPrivacyNoticeUrl()
+  privacyLink.target = '_blank'
+  privacyLink.rel = 'noreferrer'
+  privacyLink.textContent = 'Read the full Privacy Notice'
+  privacyLink.style.cssText =
+    'display:inline-block;margin-top:12px;color:#5eead4;font:700 13px/1.4 Arial,sans-serif;text-decoration:underline'
+
+  const agreementLabel = document.createElement('label')
+  agreementLabel.style.cssText = [
+    'display:flex',
+    'align-items:flex-start',
+    'gap:10px',
+    'margin-top:16px',
+    'border:1px solid #334155',
+    'border-radius:8px',
+    'background:#111827',
+    'color:#f1f5f9',
+    'font:13px/1.5 Arial,sans-serif',
+    'padding:12px',
+    'cursor:pointer',
+  ].join(';')
+  const agreement = document.createElement('input')
+  agreement.type = 'checkbox'
+  agreement.style.cssText = 'width:17px;height:17px;margin:1px 0 0;accent-color:#14b8a6;flex:none'
+  const agreementText = document.createElement('span')
+  agreementText.textContent =
+    'I understand what email data will be processed and I authorize this browser to scan it.'
+  agreementLabel.append(agreement, agreementText)
+
+  const actions = document.createElement('div')
+  actions.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-wrap:wrap'
+
+  const decline = document.createElement('button')
+  decline.type = 'button'
+  decline.textContent = 'Not now'
+  decline.style.cssText = [
+    'border:1px solid #475569',
+    'border-radius:7px',
+    'background:transparent',
+    'color:#e2e8f0',
+    'cursor:pointer',
+    'font:700 13px Arial,sans-serif',
+    'padding:10px 14px',
+  ].join(';')
+
+  const accept = document.createElement('button')
+  accept.type = 'button'
+  accept.disabled = true
+  accept.textContent = 'I Agree and Enable Email Scanning'
+  accept.style.cssText = [
+    'border:0',
+    'border-radius:7px',
+    'background:#0d9488',
+    'color:white',
+    'font:700 13px Arial,sans-serif',
+    'padding:10px 14px',
+    'opacity:.45',
+    'cursor:not-allowed',
+  ].join(';')
+
+  agreement.addEventListener('change', () => {
+    accept.disabled = !agreement.checked
+    accept.style.opacity = agreement.checked ? '1' : '.45'
+    accept.style.cursor = agreement.checked ? 'pointer' : 'not-allowed'
+  })
+  decline.addEventListener('click', () => {
+    saveEmailConsent(false)
+      .catch(() => {})
+      .finally(() => {
+        overlay.remove()
+        showEmailScanningDisabled()
+      })
+  })
+  accept.addEventListener('click', () => {
+    if (!agreement.checked) return
+    saveEmailConsent(true)
+      .then(() => {
+        overlay.remove()
+        startEmailMonitoring()
+      })
+      .catch(() => {})
+  })
+
+  actions.append(decline, accept)
+  panel.append(eyebrow, title, intro, list, privacyLink, agreementLabel, actions)
+  overlay.appendChild(panel)
+  document.body.appendChild(overlay)
+  agreement.focus()
 }
 
 function cleanText(value = '') {
@@ -171,6 +460,10 @@ function getInboxBadgeStyle(scan) {
 function markGmailInboxRow(row, scan) {
   const style = getInboxBadgeStyle(scan)
   const existing = row.querySelector('.threattrack-inbox-label')
+  if (!existing) {
+    row.dataset.threattrackOriginalBoxShadow = row.style.boxShadow
+    row.dataset.threattrackOriginalBackground = row.style.backgroundColor
+  }
   const label = existing ?? document.createElement('span')
   label.className = 'threattrack-inbox-label'
   label.textContent = `${style.text} ${scan.score}/100`
@@ -217,7 +510,7 @@ function markGmailInboxRow(row, scan) {
 }
 
 function showInboxStatus() {
-  if (window.location.hostname !== 'mail.google.com') return
+  if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
 
   const existing = document.getElementById('threattrack-inbox-status')
   const banner = existing ?? document.createElement('aside')
@@ -268,7 +561,11 @@ function showInboxStatus() {
   counts.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} safe - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
-  banner.append(title, body, counts)
+  const header = document.createElement('div')
+  header.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:10px'
+  header.append(title, createTurnOffButton())
+
+  banner.append(header, body, counts)
   if (!existing) document.body.appendChild(banner)
 }
 
@@ -466,7 +763,7 @@ function showEmailWarning(scan, email) {
   header.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:12px'
 
   const title = document.createElement('div')
-  title.innerHTML = `<strong style="display:block;font-size:14px;color:${accentColor}">${titleText}</strong><span style="color:#cbd5e1">Opened email scanned locally.</span>`
+  title.innerHTML = `<strong style="display:block;font-size:14px;color:${accentColor}">${titleText}</strong><span style="color:#cbd5e1">Scanned after your consent.</span>`
 
   const close = document.createElement('button')
   close.type = 'button'
@@ -539,6 +836,10 @@ function showEmailWarning(scan, email) {
   ].join(';')
   banner.appendChild(details)
 
+  const turnOff = createTurnOffButton()
+  turnOff.style.marginLeft = '8px'
+  banner.appendChild(turnOff)
+
   if (!existing) document.body.appendChild(banner)
 }
 
@@ -551,6 +852,7 @@ function showInboxRiskWarning(scan, email) {
 }
 
 function scanGmailInboxRow(row) {
+  if (!emailConsentGranted) return
   const email = getGmailInboxEmail(row)
   const content = `${email.subject}\n${email.body}`.trim()
   if (
@@ -571,6 +873,7 @@ function scanGmailInboxRow(row) {
       email,
     },
     (response) => {
+      if (!emailConsentGranted) return
       if (chrome.runtime.lastError || !response?.ok || !response.scan) return
       const previousLevel = row.dataset.threattrackLevel
       if (!previousLevel) {
@@ -589,12 +892,13 @@ function scanGmailInboxRow(row) {
 }
 
 function scanGmailInbox() {
-  if (window.location.hostname !== 'mail.google.com') return
+  if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
   showInboxStatus()
   getGmailInboxRows().forEach(scanGmailInboxRow)
 }
 
 function scanOpenedEmail() {
+  if (!emailConsentGranted) return
   const email = getOpenedEmail()
   const content = `${email.subject}\n${email.body}`.trim()
   if (
@@ -615,6 +919,7 @@ function scanOpenedEmail() {
       email,
     },
     (response) => {
+      if (!emailConsentGranted) return
       if (chrome.runtime.lastError) return
       if (!response?.ok || !response.scan) return
       showEmailWarning(response.scan, email)
@@ -623,21 +928,36 @@ function scanOpenedEmail() {
 }
 
 function scheduleScan() {
+  if (!emailConsentGranted) return
   window.clearTimeout(scanTimer)
   scanTimer = window.setTimeout(scanOpenedEmail, SCAN_DEBOUNCE_MS)
 }
 
 function scheduleInboxScan() {
+  if (!emailConsentGranted) return
   window.clearTimeout(inboxScanTimer)
   inboxScanTimer = window.setTimeout(scanGmailInbox, INBOX_SCAN_DEBOUNCE_MS)
 }
 
 function scheduleEmailChecks() {
+  if (!emailConsentGranted) return
   scheduleScan()
   scheduleInboxScan()
 }
 
-scheduleEmailChecks()
+function startEmailMonitoring() {
+  if (emailConsentGranted && emailObserver) return
+  emailConsentGranted = true
+  document.getElementById('threattrack-email-consent-disabled')?.remove()
+  scheduleEmailChecks()
+  emailObserver = new MutationObserver(scheduleEmailChecks)
+  emailObserver.observe(document.body, { childList: true, subtree: true })
+}
 
-const observer = new MutationObserver(scheduleEmailChecks)
-observer.observe(document.body, { childList: true, subtree: true })
+readEmailConsent()
+  .then((decision) => {
+    if (decision === 'accepted') startEmailMonitoring()
+    else if (decision === 'declined') showEmailScanningDisabled()
+    else showEmailConsentDialog()
+  })
+  .catch(() => showEmailConsentDialog())

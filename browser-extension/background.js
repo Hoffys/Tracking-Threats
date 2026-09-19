@@ -15,6 +15,8 @@ const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
 const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
 const CLIENT_ID_KEY = 'threattrackClientId'
+const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
+const EMAIL_CONSENT_VERSION = '2026.09'
 const BYPASS_HOSTS_KEY = 'bypassHosts'
 const ALLOWED_HOSTS_KEY = 'allowedHosts'
 const NOTIFICATION_PREFIX = 'threattrack-scan:'
@@ -54,6 +56,12 @@ async function getClientId() {
   const clientId = crypto.randomUUID()
   await chrome.storage.local.set({ [CLIENT_ID_KEY]: clientId })
   return clientId
+}
+
+async function hasEmailScanConsent() {
+  const stored = await chrome.storage.local.get(EMAIL_CONSENT_KEY)
+  const consent = stored[EMAIL_CONSENT_KEY]
+  return Boolean(consent?.accepted && consent?.noticeVersion === EMAIL_CONSENT_VERSION)
 }
 
 function getLinkedAppUrl(clientId, currentUrl = APP_URL) {
@@ -723,6 +731,9 @@ async function recordBlockedVisit(rawUrl) {
 
 async function scanEmailContent({ sender = '', subject = '', body = '' }) {
   try {
+    if (!(await hasEmailScanConsent())) {
+      throw new Error('Email scanning requires explicit user consent')
+    }
     const clientId = await getClientId()
     const response = await fetch(EMAIL_API_URL, {
       method: 'POST',
@@ -733,6 +744,8 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
         body,
         source: 'browser-email-monitor',
         clientId,
+        privacyAccepted: true,
+        privacyNoticeVersion: EMAIL_CONSENT_VERSION,
       }),
     })
 

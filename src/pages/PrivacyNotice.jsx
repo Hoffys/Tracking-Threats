@@ -1,4 +1,12 @@
-import { Database, ExternalLink, FileWarning, LockKeyhole, ShieldCheck, Trash2 } from 'lucide-react'
+import {
+  Database,
+  ExternalLink,
+  FileWarning,
+  LockKeyhole,
+  MailCheck,
+  ShieldCheck,
+  Trash2,
+} from 'lucide-react'
 
 const sections = [
   {
@@ -20,6 +28,11 @@ const sections = [
     icon: Trash2,
     title: 'Retention and deletion',
     body: 'Scan records expire after 30 days by default. Security audit logs expire after 90 days. Clear History permanently removes the current client scan records. Delete My Data also removes saved report-email settings.',
+  },
+  {
+    icon: MailCheck,
+    title: 'Browser email consent',
+    body: 'The browser extension keeps webmail scanning off until the user accepts the confidentiality notice. When enabled, it may process the visible sender, subject, message text, links, and visible Gmail inbox previews. Consent can be withdrawn at any time from the webmail monitor.',
   },
 ]
 

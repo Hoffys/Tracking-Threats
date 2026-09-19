@@ -58,6 +58,19 @@ The browser reads at most the first 200 KB of a selected file as text for static
 indicators. SHA-256 is calculated from the complete selected file. The original
 file is not uploaded as a binary object or retained by the backend.
 
+## Browser email consent
+
+Webmail monitoring is disabled until the user accepts confidentiality notice
+version `2026.09` inside the browser extension. The notice identifies the
+visible sender, subject, message text, links, and visible Gmail inbox previews
+that may be sent to the backend for analysis. Declining leaves monitoring off.
+The user can withdraw consent from the webmail monitor, which stops future
+email scans and removes injected scan labels from the page.
+
+The extension stores only the consent decision, notice version, and decision
+timestamp in browser-local extension storage. The backend rejects public
+`browser-email-monitor` requests that do not include the acknowledgment.
+
 ## Retention and deletion
 
 Default production values:
