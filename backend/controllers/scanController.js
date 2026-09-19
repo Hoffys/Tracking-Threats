@@ -251,13 +251,23 @@ async function persistScan({
   )
 
   await db.run(
-    `INSERT OR REPLACE INTO live_monitor_activity
+    `INSERT INTO live_monitor_activity
       (id, scan_id, activity_type, source, target, domain, title, detail, score, status, risk_status, warning_signs, client_id, history_visible, created_at)
-      VALUES (
-        COALESCE((SELECT id FROM live_monitor_activity WHERE scan_id = ?), ?),
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-      )`,
-    scan.id,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(scan_id) DO UPDATE SET
+        activity_type = excluded.activity_type,
+        source = excluded.source,
+        target = excluded.target,
+        domain = excluded.domain,
+        title = excluded.title,
+        detail = excluded.detail,
+        score = excluded.score,
+        status = excluded.status,
+        risk_status = excluded.risk_status,
+        warning_signs = excluded.warning_signs,
+        client_id = excluded.client_id,
+        history_visible = excluded.history_visible,
+        created_at = excluded.created_at`,
     uuid(),
     scan.id,
     scan.type,

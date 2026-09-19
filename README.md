@@ -1,7 +1,7 @@
 # Tracking Threats Phishing Detection
 
-A React + Vite phishing detection system with an Express API, SQLite storage,
-and an optional browser extension.
+A React + Vite phishing detection system with an Express API, PostgreSQL or
+SQLite storage, and an optional browser extension.
 
 ## Stack
 
@@ -31,8 +31,9 @@ npm run dev:demo
 
 ## Railway deployment
 
-This repository is prepared for a single Railway web service. The production
-backend serves the built React app from `dist` and the API from `/api`.
+The production backend serves the built React app from `dist` and the API from
+`/api`. Use a separate Railway PostgreSQL service as the production scan
+repository; SQLite remains the zero-configuration local development fallback.
 
 Railway uses `railway.json` for the deploy settings:
 
@@ -53,15 +54,25 @@ SCAN_RETENTION_DAYS=30
 AUDIT_RETENTION_DAYS=90
 SMTP_ENABLED=false
 ADMIN_API_TOKEN=replace-with-a-long-random-secret
-DATABASE_PATH=/data/threattrack.sqlite
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+DATABASE_SSL=false
+DATABASE_POOL_SIZE=10
 FRONTEND_ORIGIN=https://your-railway-domain.up.railway.app
 CORS_ORIGINS=https://your-railway-domain.up.railway.app
 VITE_API_BASE_URL=
 CORS_ALLOW_CHROME_EXTENSIONS=false
 ```
 
-If you attach a Railway volume for SQLite, mount it at `/data` so
-`DATABASE_PATH=/data/threattrack.sqlite` persists scan records across restarts.
+Create the PostgreSQL service in the same Railway project and reference its
+private `DATABASE_URL` from the web service. If the database service has a name
+other than `Postgres`, update the Railway reference accordingly. Do not expose a
+public database endpoint. The health endpoint reports `"repository":"postgresql"`
+after the connection is active.
+
+When `DATABASE_URL` is absent, the backend uses SQLite. An attached Railway
+volume mounted at `/data` with `DATABASE_PATH=/data/threattrack.sqlite` can be
+kept temporarily as a rollback option, but it is not used while `DATABASE_URL`
+is configured. Existing SQLite rows are not automatically copied to PostgreSQL.
 
 Production scan submissions are recorded without raw payloads, move through a
 queued/scanning/completed-or-failed lifecycle, and store normalized evidence for

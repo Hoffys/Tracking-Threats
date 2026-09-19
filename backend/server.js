@@ -1,21 +1,15 @@
 import path from 'node:path'
-import { loadEnvFile } from 'node:process'
 import { fileURLToPath } from 'node:url'
+import './config/loadEnv.js'
 import cors from 'cors'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
-import { initDatabase } from './db/database.js'
+import { databaseProvider, initDatabase } from './db/database.js'
 import { dataRoutes } from './routes/dataRoutes.js'
 import { scanRoutes } from './routes/scanRoutes.js'
 import { startAutoMonitor } from './services/autoMonitor.js'
 import { purgeExpiredData } from './services/scanRepository.js'
-
-try {
-  loadEnvFile()
-} catch (error) {
-  if (error.code !== 'ENOENT') throw error
-}
 
 const app = express()
 const port = process.env.PORT ?? 4000
@@ -94,7 +88,7 @@ app.use(
 )
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, systemActive: true })
+  res.json({ ok: true, systemActive: true, repository: databaseProvider })
 })
 
 app.use('/api', scanRoutes)
@@ -131,6 +125,7 @@ if (process.env.AUTO_MONITOR === 'true') {
 
 app.listen(port, () => {
   console.log(`Tracking Threats backend running at http://localhost:${port}`)
+  console.log(`Scan repository: ${databaseProvider}`)
   console.log(
     `Auto monitor ${process.env.AUTO_MONITOR === 'true' ? 'enabled' : 'disabled'}`,
   )

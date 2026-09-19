@@ -22,6 +22,11 @@ making an authenticity guarantee.
 
 ## Repository tables
 
+Production uses a dedicated PostgreSQL service connected to the application
+over Railway's private network. Local development uses SQLite when
+`DATABASE_URL` is not set. The database is a data repository, not a GitHub code
+repository, and it must not have a public endpoint.
+
 | Table | Purpose | Raw content in public production |
 | --- | --- | --- |
 | `scan_submissions` | Intake queue and processing lifecycle | No |
@@ -93,7 +98,7 @@ processing may occur outside the Philippines.
 - Separate admin token for administrative APIs
 - Secrets kept in Railway variables and excluded from Git
 - No-store API cache policy
-- Persistent private Railway volume for SQLite
+- Separate private Railway PostgreSQL service for production scan records
 - Normalized evidence and redacted operational logs
 - Data-subject deletion controls
 

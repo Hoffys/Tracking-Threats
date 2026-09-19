@@ -1,22 +1,98 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import pg from 'pg'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
+import '../config/loadEnv.js'
 
+const { Pool, types } = pg
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const databaseUrl = String(process.env.DATABASE_URL ?? '').trim()
 const databasePath = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
   : path.join(__dirname, '..', 'threattrack.sqlite')
 
-const openDatabase = async () => {
-  await fs.mkdir(path.dirname(databasePath), { recursive: true })
+export const databaseProvider = databaseUrl ? 'postgresql' : 'sqlite'
 
-  return open({
-    filename: databasePath,
-    driver: sqlite3.Database,
-  })
+// PostgreSQL returns BIGINT values such as COUNT(*) as strings by default.
+types.setTypeParser(20, (value) => Number(value))
+
+const toPostgresQuery = (sql) => {
+  let parameter = 0
+  return sql
+    .replace(/\?/g, () => `$${++parameter}`)
+    .replace(/LIMIT\s+-1\s+OFFSET/gi, 'LIMIT ALL OFFSET')
 }
+
+const createPostgresAdapter = (queryable, pool = null) => ({
+  provider: 'postgresql',
+  async exec(sql) {
+    await queryable.query(sql)
+  },
+  async run(sql, ...params) {
+    const result = await queryable.query(toPostgresQuery(sql), params)
+    return { changes: result.rowCount ?? 0 }
+  },
+  async get(sql, ...params) {
+    const result = await queryable.query(toPostgresQuery(sql), params)
+    return result.rows[0]
+  },
+  async all(sql, ...params) {
+    const result = await queryable.query(toPostgresQuery(sql), params)
+    return result.rows
+  },
+  async transaction(callback) {
+    if (!pool) throw new Error('Nested PostgreSQL transactions are not supported')
+    const client = await pool.connect()
+    const transactionDb = createPostgresAdapter(client)
+    try {
+      await client.query('BEGIN')
+      const result = await callback(transactionDb)
+      await client.query('COMMIT')
+      return result
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  },
+})
+
+const openPostgresDatabase = async () => {
+  const useTls = process.env.DATABASE_SSL === 'true'
+  const poolSize = Number.parseInt(process.env.DATABASE_POOL_SIZE ?? '10', 10)
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    max: Number.isInteger(poolSize) && poolSize > 0 ? poolSize : 10,
+    ssl: useTls
+      ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+      : undefined,
+  })
+  await pool.query('SELECT 1')
+  return createPostgresAdapter(pool, pool)
+}
+
+const openSqliteDatabase = async () => {
+  await fs.mkdir(path.dirname(databasePath), { recursive: true })
+  const db = await open({ filename: databasePath, driver: sqlite3.Database })
+  db.provider = 'sqlite'
+  db.transaction = async (callback) => {
+    await db.exec('BEGIN')
+    try {
+      const result = await callback(db)
+      await db.exec('COMMIT')
+      return result
+    } catch (error) {
+      await db.exec('ROLLBACK')
+      throw error
+    }
+  }
+  return db
+}
+
+const openDatabase = () => (databaseUrl ? openPostgresDatabase() : openSqliteDatabase())
 
 export const dbPromise = openDatabase()
 
@@ -183,7 +259,6 @@ export async function initDatabase() {
       processing_basis TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
-
   `)
 
   await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
@@ -212,14 +287,20 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_scan_submissions_status ON scan_submissions(processing_status);
   `)
   await db.run(
-    `INSERT OR IGNORE INTO notification_settings
+    `INSERT INTO notification_settings
       (id, report_emails, email_scan_reports, email_history_digest, updated_at)
-      VALUES ('default', '[]', 1, 1, ?)`,
+      VALUES ('default', '[]', 1, 1, ?)
+      ON CONFLICT(id) DO NOTHING`,
     new Date().toISOString(),
   )
 }
 
 async function ensureColumn(db, table, column, definition) {
+  if (db.provider === 'postgresql') {
+    await db.exec(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`)
+    return
+  }
+
   const columns = await db.all(`PRAGMA table_info(${table})`)
   if (!columns.some((item) => item.name === column)) {
     await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)

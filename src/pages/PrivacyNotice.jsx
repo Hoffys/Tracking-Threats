@@ -9,7 +9,7 @@ const sections = [
   {
     icon: LockKeyhole,
     title: 'Storage and access',
-    body: 'Production is configured with STORE_SCAN_CONTENT=false, so raw email bodies, messages, and extracted file text are not retained after analysis. Results are stored in a private SQLite database on a Railway volume and are separated by a pseudonymous client ID.',
+    body: 'Production is configured with STORE_SCAN_CONTENT=false, so raw email bodies, messages, and extracted file text are not retained after analysis. Results are stored in a private server-side scan repository and are separated by a pseudonymous client ID.',
   },
   {
     icon: ExternalLink,

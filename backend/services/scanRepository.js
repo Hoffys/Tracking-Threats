@@ -173,24 +173,21 @@ const deleteClientRows = async (db, clientId) => {
 
 export async function deleteClientScanData(clientId, { includeSettings = false } = {}) {
   const db = await dbPromise
-  await db.exec('BEGIN')
-  try {
-    const deletedScans = await deleteClientRows(db, clientId)
+  return db.transaction(async (transactionDb) => {
+    const deletedScans = await deleteClientRows(transactionDb, clientId)
     if (includeSettings) {
-      await db.run('DELETE FROM notification_settings WHERE id = ?', `client:${clientId}`)
+      await transactionDb.run(
+        'DELETE FROM notification_settings WHERE id = ?',
+        `client:${clientId}`,
+      )
     }
-    await db.exec('COMMIT')
     return { deletedScans, settingsDeleted: includeSettings }
-  } catch (error) {
-    await db.exec('ROLLBACK')
-    throw error
-  }
+  })
 }
 
 export async function deleteAllScanData() {
   const db = await dbPromise
-  await db.exec('BEGIN')
-  try {
+  await db.transaction(async (transactionDb) => {
     for (const table of [
       'scan_evidence',
       'privacy_consents',
@@ -203,24 +200,23 @@ export async function deleteAllScanData() {
       'scans',
       'system_logs',
     ]) {
-      await db.run(`DELETE FROM ${table}`)
+      await transactionDb.run(`DELETE FROM ${table}`)
     }
-    await db.exec('COMMIT')
-  } catch (error) {
-    await db.exec('ROLLBACK')
-    throw error
-  }
+  })
 }
 
 export async function purgeExpiredData() {
   const db = await dbPromise
-  const retentionModifier = `+${getScanRetentionDays()} days`
-  await db.run(
-    `UPDATE scans
-     SET expires_at = strftime('%Y-%m-%dT%H:%M:%fZ', created_at, ?)
-     WHERE expires_at IS NULL`,
-    retentionModifier,
+  const scansWithoutExpiry = await db.all(
+    'SELECT id, created_at FROM scans WHERE expires_at IS NULL',
   )
+  for (const scan of scansWithoutExpiry) {
+    await db.run(
+      'UPDATE scans SET expires_at = ? WHERE id = ?',
+      getScanExpiry(scan.created_at),
+      scan.id,
+    )
+  }
   const now = new Date().toISOString()
   const expiredScans = await db.all(
     'SELECT id FROM scans WHERE expires_at IS NOT NULL AND expires_at <= ?',
@@ -229,8 +225,7 @@ export async function purgeExpiredData() {
   const ids = expiredScans.map((scan) => scan.id)
   if (ids.length > 0) {
     const placeholders = ids.map(() => '?').join(', ')
-    await db.exec('BEGIN')
-    try {
+    await db.transaction(async (transactionDb) => {
       for (const table of [
         'scan_evidence',
         'privacy_consents',
@@ -241,14 +236,13 @@ export async function purgeExpiredData() {
         'alerts',
         'blocked_threats',
       ]) {
-        await db.run(`DELETE FROM ${table} WHERE scan_id IN (${placeholders})`, ...ids)
+        await transactionDb.run(
+          `DELETE FROM ${table} WHERE scan_id IN (${placeholders})`,
+          ...ids,
+        )
       }
-      await db.run(`DELETE FROM scans WHERE id IN (${placeholders})`, ...ids)
-      await db.exec('COMMIT')
-    } catch (error) {
-      await db.exec('ROLLBACK')
-      throw error
-    }
+      await transactionDb.run(`DELETE FROM scans WHERE id IN (${placeholders})`, ...ids)
+    })
   }
 
   const auditCutoff = new Date()
