@@ -20,9 +20,7 @@ const tokensMatch = (left, right) => {
   )
 }
 
-export function requireAdmin(req, res, next) {
-  if (!isPublicDeployment()) return next()
-
+export function requireAdminStrict(req, res, next) {
   const adminToken = process.env.ADMIN_API_TOKEN
   if (!adminToken) {
     return res.status(503).json({ error: 'Admin API is disabled' })
@@ -38,4 +36,9 @@ export function requireAdmin(req, res, next) {
   }
 
   return next()
+}
+
+export function requireAdmin(req, res, next) {
+  if (!isPublicDeployment()) return next()
+  return requireAdminStrict(req, res, next)
 }

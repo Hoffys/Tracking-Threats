@@ -1,10 +1,47 @@
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
+const clientCredentialKey = 'threattrack:client-credential'
+const validClientId = (value) => /^cl_[a-f0-9]{32}$/.test(value ?? '')
+const validClientToken = (value) => /^[A-Za-z0-9_-]{40,80}$/.test(value ?? '')
+let registrationPromise
+
+const clearLinkedClientQuery = () => {
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has('client')) return
+  url.searchParams.delete('client')
+  window.history.replaceState({}, '', url)
+}
+
+const readStoredCredential = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(clientCredentialKey) ?? 'null')
+    return validClientId(stored?.clientId) && validClientToken(stored?.token)
+      ? stored
+      : null
+  } catch {
+    return null
+  }
+}
+
+const receiveExtensionCredential = (clientId) => new Promise((resolve) => {
+  const finish = (credential) => {
+    window.removeEventListener('message', onMessage)
+    window.clearTimeout(timeout)
+    resolve(credential)
+  }
+  const onMessage = (event) => {
+    if (event.source !== window || event.origin !== window.location.origin ||
+        event.data?.type !== 'tracking-threats:client-credential' ||
+        event.data.clientId !== clientId || !validClientToken(event.data.token)) return
+    finish({ clientId, token: event.data.token })
+  }
+  window.addEventListener('message', onMessage)
+  const timeout = window.setTimeout(() => finish(null), 1200)
+  window.postMessage({ type: 'tracking-threats:request-client-credential', clientId }, window.location.origin)
+})
 
 const request = async (path, options) => {
-  const adminToken = localStorage.getItem('threattrack:admin-token')
   const headers = {
     'Content-Type': 'application/json',
-    ...(adminToken ? { 'X-Admin-Token': adminToken } : {}),
     ...(options?.headers ?? {}),
   }
 
@@ -27,16 +64,80 @@ const request = async (path, options) => {
   return response.json()
 }
 
+export const readClientCredential = () => {
+  const linkedId = new URLSearchParams(window.location.search).get('client')
+  const stored = readStoredCredential()
+  if (validClientId(linkedId) && linkedId !== stored?.clientId) return null
+  if (linkedId && stored) clearLinkedClientQuery()
+  return stored
+}
+
+export const clearClientCredential = () => {
+  localStorage.removeItem(clientCredentialKey)
+}
+
+export const ensureClientCredential = async () => {
+  const stored = readClientCredential()
+  if (stored) return stored
+  if (!registrationPromise) {
+    registrationPromise = (async () => {
+      const linkedId = new URLSearchParams(window.location.search).get('client')
+      const bridged = validClientId(linkedId)
+        ? await receiveExtensionCredential(linkedId)
+        : null
+      return bridged ?? request('/public/clients', { method: 'POST' })
+    })()
+      .then((credential) => {
+        if (!validClientId(credential.clientId) || !validClientToken(credential.token)) {
+          throw new Error('Invalid client credential response')
+        }
+        localStorage.setItem(clientCredentialKey, JSON.stringify(credential))
+        clearLinkedClientQuery()
+        return credential
+      })
+      .finally(() => { registrationPromise = null })
+  }
+  return registrationPromise
+}
+
+const clientRequest = (path, clientId, options = {}) => {
+  if (!clientId) return request(path, options)
+  const credential = readClientCredential()
+  if (!credential || credential.clientId !== clientId) {
+    throw new Error('This browser does not own the requested client history')
+  }
+  return request(path, {
+    ...options,
+    headers: { ...options.headers, 'X-Client-Token': credential.token },
+  })
+}
+
+const adminRequest = (path, token, options = {}) =>
+  request(path, {
+    ...options,
+    headers: { ...options.headers, Authorization: `Bearer ${token}` },
+  })
+
 const clientQuery = (clientId) => (clientId ? `?clientId=${encodeURIComponent(clientId)}` : '')
 
 export const apiService = {
   getHealth: () => request('/health'),
   getPublicActivity: (clientId) =>
-    request(`/public/activity/${encodeURIComponent(clientId)}`),
+    clientRequest(`/public/activity/${encodeURIComponent(clientId)}`, clientId),
   deletePublicHistory: (clientId) =>
-    request(`/public/activity/${encodeURIComponent(clientId)}`, { method: 'DELETE' }),
+    clientRequest(`/public/activity/${encodeURIComponent(clientId)}`, clientId, { method: 'DELETE' }),
   deletePublicClientData: (clientId) =>
-    request(`/public/data/${encodeURIComponent(clientId)}`, { method: 'DELETE' }),
+    clientRequest(`/public/data/${encodeURIComponent(clientId)}`, clientId, { method: 'DELETE' }),
+  getAdminOverview: (token) => adminRequest('/admin/overview', token),
+  getAdminClients: (token) => adminRequest('/admin/clients', token),
+  getAdminClient: (token, clientId) =>
+    adminRequest(`/admin/clients/${encodeURIComponent(clientId)}`, token),
+  getAdminLogs: (token) => adminRequest('/admin/logs', token),
+  deleteAdminClientData: (token, clientId) =>
+    adminRequest(`/admin/clients/${encodeURIComponent(clientId)}/data`, token, {
+      method: 'DELETE',
+      body: JSON.stringify({ confirmClientId: clientId, verifiedRequest: true }),
+    }),
   getAlerts: () => request('/alerts'),
   getBlockedThreats: () => request('/blocked-threats'),
   getSafeHosts: () => request('/safe-hosts'),
@@ -44,7 +145,7 @@ export const apiService = {
   getHistory: () => request('/history'),
   getLiveFeed: () => request('/live-feed'),
   getNotificationSettings: (clientId = '') =>
-    request(`/notification-settings${clientQuery(clientId)}`),
+    clientRequest(`/notification-settings${clientQuery(clientId)}`, clientId),
   getStats: () => request('/stats'),
   getSystemLogs: () => request('/system-logs'),
   clearAlerts: () => request('/alerts', { method: 'DELETE' }),
@@ -59,32 +160,32 @@ export const apiService = {
       body: JSON.stringify({ status }),
     }),
   saveNotificationSettings: (settings, clientId = '') =>
-    request(`/notification-settings${clientQuery(clientId)}`, {
+    clientRequest(`/notification-settings${clientQuery(clientId)}`, clientId, {
       method: 'PUT',
       body: JSON.stringify({ ...settings, clientId }),
     }),
   sendHistoryDigest: (settings = {}, clientId = '') =>
-    request(`/notification-settings/history-digest${clientQuery(clientId)}`, {
+    clientRequest(`/notification-settings/history-digest${clientQuery(clientId)}`, clientId, {
       method: 'POST',
       body: JSON.stringify({ ...settings, clientId }),
     }),
   scanUrl: (url, metadata = {}) =>
-    request('/scan/url', {
+    clientRequest('/scan/url', metadata.clientId, {
       method: 'POST',
       body: JSON.stringify({ url, ...metadata }),
     }),
   scanEmail: ({ sender, subject, body, ...metadata }) =>
-    request('/scan/email', {
+    clientRequest('/scan/email', metadata.clientId, {
       method: 'POST',
       body: JSON.stringify({ sender, subject, body, ...metadata }),
     }),
   scanMessage: ({ target, content, ...metadata }) =>
-    request('/scan/message', {
+    clientRequest('/scan/message', metadata.clientId, {
       method: 'POST',
       body: JSON.stringify({ target, message: content, ...metadata }),
     }),
   scanFile: ({ fileName, mimeType, size, content, sha256, ...metadata }) =>
-    request('/scan/file', {
+    clientRequest('/scan/file', metadata.clientId, {
       method: 'POST',
       body: JSON.stringify({ fileName, mimeType, size, content, sha256, ...metadata }),
     }),

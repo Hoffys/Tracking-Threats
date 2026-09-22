@@ -17,7 +17,7 @@ const sections = [
   {
     icon: LockKeyhole,
     title: 'Storage and access',
-    body: 'Production is configured with STORE_SCAN_CONTENT=false, so raw email bodies, messages, and extracted file text are not retained after analysis. Results are stored in a private server-side scan repository and are separated by a pseudonymous client ID.',
+    body: 'Production is configured with STORE_SCAN_CONTENT=false, so raw email bodies, messages, and extracted file text are not retained after analysis. Results are stored in a private server-side scan repository. Each browser has a separate access credential; administrators can view redacted outcomes and operational logs, not raw submitted content.',
   },
   {
     icon: ExternalLink,
@@ -27,7 +27,7 @@ const sections = [
   {
     icon: Trash2,
     title: 'Retention and deletion',
-    body: 'Scan records expire after 30 days by default. Security audit logs expire after 90 days. Clear History permanently removes the current client scan records. Delete My Data also removes saved report-email settings.',
+    body: 'Scan records expire after 30 days by default. Security audit logs expire after 90 days. Clear History removes the current client scan records. Delete My Data also removes saved report-email settings and revokes the browser credential. Administrators may process verified deletion requests, with the action logged.',
   },
   {
     icon: MailCheck,

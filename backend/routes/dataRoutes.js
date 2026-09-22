@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { requireAdmin } from '../middleware/adminAuth.js'
+import { requireClient } from '../middleware/clientAuth.js'
 import {
   clearHistory,
   clearAlerts,
@@ -28,12 +29,12 @@ export const dataRoutes = Router()
 
 dataRoutes.get('/safe-hosts', getSafeHosts)
 dataRoutes.get('/stats', getStats)
-dataRoutes.get('/public/activity/:clientId', getPublicActivity)
-dataRoutes.delete('/public/activity/:clientId', deletePublicScanHistory)
-dataRoutes.delete('/public/data/:clientId', deletePublicClientData)
-dataRoutes.get('/notification-settings', getNotificationSettings)
-dataRoutes.put('/notification-settings', saveNotificationSettings)
-dataRoutes.post('/notification-settings/history-digest', emailHistoryDigest)
+dataRoutes.get('/public/activity/:clientId', requireClient, getPublicActivity)
+dataRoutes.delete('/public/activity/:clientId', requireClient, deletePublicScanHistory)
+dataRoutes.delete('/public/data/:clientId', requireClient, deletePublicClientData)
+dataRoutes.get('/notification-settings', requireClient, getNotificationSettings)
+dataRoutes.put('/notification-settings', requireClient, saveNotificationSettings)
+dataRoutes.post('/notification-settings/history-digest', requireClient, emailHistoryDigest)
 
 dataRoutes.use(requireAdmin)
 

@@ -7,6 +7,8 @@ import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import { databaseProvider, initDatabase } from './db/database.js'
 import { dataRoutes } from './routes/dataRoutes.js'
+import { adminRoutes } from './routes/adminRoutes.js'
+import { clientRoutes } from './routes/clientRoutes.js'
 import { scanRoutes } from './routes/scanRoutes.js'
 import { startAutoMonitor } from './services/autoMonitor.js'
 import { purgeExpiredData } from './services/scanRepository.js'
@@ -91,7 +93,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, systemActive: true, repository: databaseProvider })
 })
 
+app.use('/api', clientRoutes)
 app.use('/api', scanRoutes)
+app.use('/api/admin', adminRoutes)
 app.use('/api', dataRoutes)
 
 if (process.env.NODE_ENV === 'production') {

@@ -259,6 +259,20 @@ export async function initDatabase() {
       processing_basis TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS client_credentials (
+      client_id TEXT PRIMARY KEY,
+      token_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_actions (
+      id TEXT PRIMARY KEY,
+      action TEXT NOT NULL,
+      client_ref TEXT NOT NULL,
+      deleted_scans INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
   `)
 
   await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
@@ -285,6 +299,7 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_privacy_consents_scan_id ON privacy_consents(scan_id);
     CREATE INDEX IF NOT EXISTS idx_scan_submissions_client_id ON scan_submissions(client_id);
     CREATE INDEX IF NOT EXISTS idx_scan_submissions_status ON scan_submissions(processing_status);
+    CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON admin_actions(created_at);
   `)
   await db.run(
     `INSERT INTO notification_settings

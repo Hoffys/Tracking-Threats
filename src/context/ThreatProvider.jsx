@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ThreatContext } from './ThreatContext'
 import { isPublicDeployment } from '../config/deployment'
-import { apiService } from '../services/api'
+import { apiService, clearClientCredential, ensureClientCredential, readClientCredential } from '../services/api'
 
 const emptyStats = {
   blocked: 0,
@@ -23,12 +23,10 @@ const defaultNotificationSettings = {
 }
 
 const publicScansStorageKeyPrefix = 'threattrack:public-scans'
-const publicClientStorageKey = 'threattrack:public-client-id'
-const publicWebClientStorageKey = 'threattrack:public-web-client-id'
 const publicHiddenScansStorageKeyPrefix = 'threattrack:public-hidden-scan-ids'
 const publicHistoryClearedBeforeStorageKeyPrefix = 'threattrack:public-history-cleared-before'
 
-const getPublicSessionKey = (clientId) => normalizeClientId(clientId) || 'local'
+const getPublicSessionKey = (clientId) => clientId || 'local'
 const getPublicScansStorageKey = (clientId) =>
   `${publicScansStorageKeyPrefix}:${getPublicSessionKey(clientId)}`
 const getPublicHiddenScansStorageKey = (clientId) =>
@@ -36,40 +34,7 @@ const getPublicHiddenScansStorageKey = (clientId) =>
 const getPublicHistoryClearedBeforeStorageKey = (clientId) =>
   `${publicHistoryClearedBeforeStorageKeyPrefix}:${getPublicSessionKey(clientId)}`
 
-const normalizeClientId = (clientId) => {
-  const normalized = String(clientId ?? '').trim()
-  return /^[a-zA-Z0-9_-]{12,80}$/.test(normalized) ? normalized : ''
-}
-
-const createPublicWebClientId = () => {
-  try {
-    return `web_${crypto.randomUUID().replace(/-/g, '')}`
-  } catch {
-    return `web_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`
-  }
-}
-
-const readPublicClientId = () => {
-  const params = new URLSearchParams(window.location.search)
-  const linkedClientId = normalizeClientId(params.get('client'))
-  if (linkedClientId) {
-    localStorage.setItem(publicClientStorageKey, linkedClientId)
-    return linkedClientId
-  }
-
-  try {
-    localStorage.removeItem(publicClientStorageKey)
-  } catch {
-    // A plain hosted app URL should not inherit extension-linked scan history.
-  }
-
-  const storedWebClientId = normalizeClientId(localStorage.getItem(publicWebClientStorageKey))
-  if (storedWebClientId) return storedWebClientId
-
-  const nextWebClientId = createPublicWebClientId()
-  localStorage.setItem(publicWebClientStorageKey, nextWebClientId)
-  return nextWebClientId
-}
+const readPublicClientId = () => readClientCredential()?.clientId ?? ''
 
 const readPublicScans = (clientId = '') => {
   try {
@@ -214,7 +179,7 @@ const readNotificationSettings = () => {
 }
 
 export function ThreatProvider({ children }) {
-  const [publicClientId] = useState(() => (isPublicDeployment ? readPublicClientId() : ''))
+  const [publicClientId, setPublicClientId] = useState(() => (isPublicDeployment ? readPublicClientId() : ''))
   const initialPublicScans = isPublicDeployment
     ? filterVisiblePublicScans(readPublicScans(publicClientId), publicClientId)
     : []
@@ -326,6 +291,14 @@ export function ThreatProvider({ children }) {
   }, [darkMode])
 
   useEffect(() => {
+    if (!isPublicDeployment) return
+    ensureClientCredential()
+      .then(({ clientId }) => setPublicClientId(clientId))
+      .catch(console.error)
+  }, [])
+
+  useEffect(() => {
+    if (isPublicDeployment && !publicClientId) return
     apiService
       .getNotificationSettings(isPublicDeployment ? publicClientId : '')
       .then((settings) => setNotificationSettings((current) => ({ ...current, ...settings })))
@@ -369,11 +342,15 @@ export function ThreatProvider({ children }) {
       privacyNoticeVersion = '2026.09',
     }) => {
       const privacyMetadata = { privacyAccepted, privacyNoticeVersion }
+      const clientId = isPublicDeployment
+        ? (await ensureClientCredential()).clientId
+        : ''
+      if (isPublicDeployment && clientId !== publicClientId) setPublicClientId(clientId)
       const scan =
         type === 'URL' || type === 'Domain'
           ? await apiService.scanUrl(target, {
               source: isPublicDeployment ? 'public-web-scan' : 'api',
-              clientId: publicClientId,
+              clientId,
               ...privacyMetadata,
             })
           : type === 'Email'
@@ -382,7 +359,7 @@ export function ThreatProvider({ children }) {
                 subject: subject ?? content.split('\n')[0] ?? '',
                 body: body ?? (content.split('\n').slice(1).join('\n') || content),
                 source: isPublicDeployment ? 'public-web-scan' : 'api',
-                clientId: publicClientId,
+                clientId,
                 ...privacyMetadata,
               })
             : type === 'File'
@@ -393,14 +370,14 @@ export function ThreatProvider({ children }) {
                   content,
                   sha256,
                   source: isPublicDeployment ? 'public-web-scan' : 'api',
-                  clientId: publicClientId,
+                  clientId,
                   ...privacyMetadata,
                 })
               : await apiService.scanMessage({
                   target,
                   content,
                   source: isPublicDeployment ? 'public-web-scan' : 'api',
-                  clientId: publicClientId,
+                  clientId,
                   ...privacyMetadata,
                 })
 
@@ -408,11 +385,11 @@ export function ThreatProvider({ children }) {
         const publicScan = toPublicScanRecord(scan)
         const nextScans = [
           publicScan,
-          ...readPublicScans(publicClientId).filter(
+          ...readPublicScans(clientId).filter(
             (storedScan) => storedScan.id !== publicScan.id,
           ),
         ].slice(0, 50)
-        writePublicScans(nextScans, publicClientId)
+        writePublicScans(nextScans, clientId)
         applyPublicScans(nextScans, { systemActive: true })
       } else {
         refreshData().catch(console.error)
@@ -434,8 +411,9 @@ export function ThreatProvider({ children }) {
 
   const clearHistory = useCallback(async () => {
     if (isPublicDeployment) {
-      await apiService.deletePublicHistory(publicClientId)
-      clearPublicClientStorage(publicClientId)
+      const clientId = (await ensureClientCredential()).clientId
+      await apiService.deletePublicHistory(clientId)
+      clearPublicClientStorage(clientId)
       applyPublicScans([], { systemActive: true })
       return
     }
@@ -443,15 +421,21 @@ export function ThreatProvider({ children }) {
     await apiService.clearHistory()
     await apiService.clearThreatAuditLogs()
     await refreshData()
-  }, [applyPublicScans, publicClientId, refreshData])
+  }, [applyPublicScans, refreshData])
 
   const deleteMyData = useCallback(async () => {
     if (isPublicDeployment) {
-      const result = await apiService.deletePublicClientData(publicClientId)
-      clearPublicClientStorage(publicClientId)
+      const clientId = (await ensureClientCredential()).clientId
+      const result = await apiService.deletePublicClientData(clientId)
+      clearPublicClientStorage(clientId)
+      clearClientCredential()
+      setPublicClientId('')
       localStorage.removeItem('threattrack:notification-settings')
       setNotificationSettings(defaultNotificationSettings)
       applyPublicScans([], { systemActive: true })
+      ensureClientCredential()
+        .then(({ clientId: nextClientId }) => setPublicClientId(nextClientId))
+        .catch(console.error)
       return result
     }
 
@@ -460,7 +444,7 @@ export function ThreatProvider({ children }) {
     await apiService.clearThreatAuditLogs()
     await refreshData()
     return { ok: true }
-  }, [applyPublicScans, publicClientId, refreshData])
+  }, [applyPublicScans, refreshData])
 
   const acknowledgeAlert = useCallback(
     async (id) => {
@@ -509,20 +493,27 @@ export function ThreatProvider({ children }) {
 
   const saveNotificationSettings = useCallback(
     async (settings) => {
+      const clientId = isPublicDeployment
+        ? (await ensureClientCredential()).clientId
+        : ''
       const savedSettings = await apiService.saveNotificationSettings(
         settings,
-        isPublicDeployment ? publicClientId : '',
+        clientId,
       )
       setNotificationSettings(savedSettings)
       return savedSettings
     },
-    [publicClientId],
+    [],
   )
 
   const sendHistoryDigest = useCallback(
-    (settings = notificationSettings) =>
-      apiService.sendHistoryDigest(settings, isPublicDeployment ? publicClientId : ''),
-    [notificationSettings, publicClientId],
+    async (settings = notificationSettings) => {
+      const clientId = isPublicDeployment
+        ? (await ensureClientCredential()).clientId
+        : ''
+      return apiService.sendHistoryDigest(settings, clientId)
+    },
+    [notificationSettings],
   )
 
   const dismissNotification = () => setActiveNotification(null)

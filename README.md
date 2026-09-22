@@ -84,6 +84,37 @@ After Railway gives you the public domain, update `FRONTEND_ORIGIN` and
 extension with the hosted backend, set `CORS_ALLOW_CHROME_EXTENSIONS=true` and
 update `browser-extension/config.js` and `browser-extension/manifest.json`.
 
+## Admin access and client privacy
+
+Set a unique, long `ADMIN_API_TOKEN` in the Railway **web service** Variables
+and redeploy. Generate one locally with:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+Do not place the token in `VITE_*` variables, Git, screenshots, or browser
+localStorage. Open `https://your-railway-domain.up.railway.app/?page=admin` and
+enter the token. The page keeps it only in memory, so a refresh signs out.
+The Admin tab is visible in navigation, but its data endpoints require the
+token. It shows pseudonymous client IDs, scan outcome counts, redacted events,
+and admin deletion records. It does not display raw email bodies or files.
+
+For local development, add `ADMIN_API_TOKEN` to the repo-root `.env`, restart
+the backend, then open `http://localhost:5173/?page=admin`. The Admin Page
+stays disabled until a token is configured. Other legacy development-only
+endpoints still bypass admin authentication when `PUBLIC_DEPLOYMENT=false`;
+never use that configuration for a public deployment.
+
+Public scan history, notification settings, and deletion now require a private
+client credential in addition to the client ID. New browser sessions register
+automatically. Reload unpacked extension version 1.0.22 after deploying this
+backend; older extension versions cannot save new scan history. The extension
+passes only a client ID in app links and transfers its credential on the app
+origin. Historical records created before this change have no ownership
+credential and are not automatically claimable by a browser. An admin can
+review or delete those legacy records after verifying the request.
+
 ## Optional threat intelligence
 
 The URL scanner works locally by default. DNS reputation uses the machine's DNS

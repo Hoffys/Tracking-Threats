@@ -15,6 +15,7 @@ const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
 const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
 const CLIENT_ID_KEY = 'threattrackClientId'
+const CLIENT_TOKEN_KEY = 'threattrackClientToken'
 const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
 const EMAIL_CONSENT_VERSION = '2026.09'
 const BYPASS_HOSTS_KEY = 'bypassHosts'
@@ -46,16 +47,49 @@ const recentScans = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
 const notificationTargets = new Map()
+let clientToken = ''
+let credentialPromise = null
 let allowedHosts = new Set()
 let safeHosts = new Set()
 
-async function getClientId() {
-  const stored = await chrome.storage.local.get(CLIENT_ID_KEY)
-  if (stored[CLIENT_ID_KEY]) return stored[CLIENT_ID_KEY]
+async function getClientCredentials() {
+  if (!credentialPromise) {
+    credentialPromise = (async () => {
+      const stored = await chrome.storage.local.get([CLIENT_ID_KEY, CLIENT_TOKEN_KEY])
+      if (/^cl_[a-f0-9]{32}$/.test(stored[CLIENT_ID_KEY] ?? '') &&
+          /^[A-Za-z0-9_-]{40,80}$/.test(stored[CLIENT_TOKEN_KEY] ?? '')) {
+        clientToken = stored[CLIENT_TOKEN_KEY]
+        return { clientId: stored[CLIENT_ID_KEY], token: clientToken }
+      }
 
-  const clientId = crypto.randomUUID()
-  await chrome.storage.local.set({ [CLIENT_ID_KEY]: clientId })
-  return clientId
+      const response = await fetch(`${API_BASE_URL}/api/public/clients`, { method: 'POST' })
+      if (!response.ok) throw new Error(await getScannerError(response, 'Client registration'))
+      const credential = await response.json()
+      if (!/^cl_[a-f0-9]{32}$/.test(credential.clientId ?? '') ||
+          !/^[A-Za-z0-9_-]{40,80}$/.test(credential.token ?? '')) {
+        throw new Error('Invalid client credential response')
+      }
+      clientToken = credential.token
+      await chrome.storage.local.set({
+        [CLIENT_ID_KEY]: credential.clientId,
+        [CLIENT_TOKEN_KEY]: credential.token,
+      })
+      return credential
+    })().finally(() => { credentialPromise = null })
+  }
+  return credentialPromise
+}
+
+async function getClientId() {
+  return (await getClientCredentials()).clientId
+}
+
+async function scanFetch(url, options) {
+  const { token } = await getClientCredentials()
+  return fetch(url, {
+    ...options,
+    headers: { ...options?.headers, 'X-Client-Token': token },
+  })
 }
 
 async function hasEmailScanConsent() {
@@ -141,13 +175,12 @@ async function linkAppTab(tabId, rawUrl) {
   if (!tabId || tabId < 0 || !isAppUrl(rawUrl)) return false
 
   const url = new URL(rawUrl)
-  if (url.searchParams.get('client')) return false
-
   const clientId = await getClientId()
-  url.searchParams.set('client', clientId)
+  if (url.searchParams.get('client') === clientId) return false
+  const linkedUrl = getLinkedAppUrl(clientId, url.toString())
 
   try {
-    const updateResult = chrome.tabs.update(tabId, { url: url.toString() })
+    const updateResult = chrome.tabs.update(tabId, { url: linkedUrl })
     if (updateResult?.catch) updateResult.catch(() => {})
     return true
   } catch {
@@ -601,7 +634,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   if (!previewOnly) remember(rawUrl)
   try {
     const clientId = await getClientId()
-    const response = await fetch(API_URL, {
+    const response = await scanFetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -659,7 +692,7 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
     }
   }
 
-  const response = await fetch(API_URL, {
+  const response = await scanFetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -694,7 +727,7 @@ async function recordBlockedVisit(rawUrl) {
 
   try {
     const clientId = await getClientId()
-    const response = await fetch(API_URL, {
+    const response = await scanFetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -735,7 +768,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
       throw new Error('Email scanning requires explicit user consent')
     }
     const clientId = await getClientId()
-    const response = await fetch(EMAIL_API_URL, {
+    const response = await scanFetch(EMAIL_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -769,7 +802,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
 }
 
 async function scanDownloadFile(downloadItem, clientId) {
-  const response = await fetch(FILE_API_URL, {
+  const response = await scanFetch(FILE_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -789,7 +822,7 @@ async function scanDownloadFile(downloadItem, clientId) {
 async function scanDownloadUrl(downloadItem, clientId) {
   if (!isTrackableUrl(downloadItem.url)) return null
 
-  const response = await fetch(API_URL, {
+  const response = await scanFetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -934,6 +967,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'get-linked-app-url') {
     getClientId()
       .then((clientId) => sendResponse({ ok: true, clientId, appUrl: getLinkedAppUrl(clientId) }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'get-client-credential') {
+    try {
+      if (new URL(_sender.url).origin !== APP_ORIGIN) {
+        sendResponse({ ok: false, error: 'Untrusted page' })
+        return false
+      }
+    } catch {
+      sendResponse({ ok: false, error: 'Untrusted page' })
+      return false
+    }
+    getClientCredentials()
+      .then((credential) => sendResponse({ ok: true, ...credential }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }

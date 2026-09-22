@@ -171,7 +171,7 @@ const deleteClientRows = async (db, clientId) => {
   return scanIds.length
 }
 
-export async function deleteClientScanData(clientId, { includeSettings = false } = {}) {
+export async function deleteClientScanData(clientId, { includeSettings = false, adminAction = false } = {}) {
   const db = await dbPromise
   return db.transaction(async (transactionDb) => {
     const deletedScans = await deleteClientRows(transactionDb, clientId)
@@ -179,6 +179,20 @@ export async function deleteClientScanData(clientId, { includeSettings = false }
       await transactionDb.run(
         'DELETE FROM notification_settings WHERE id = ?',
         `client:${clientId}`,
+      )
+      await transactionDb.run(
+        'DELETE FROM client_credentials WHERE client_id = ?',
+        clientId,
+      )
+    }
+    if (adminAction) {
+      await transactionDb.run(
+        'INSERT INTO admin_actions (id, action, client_ref, deleted_scans, created_at) VALUES (?, ?, ?, ?, ?)',
+        crypto.randomUUID(),
+        'client-data-deletion',
+        createHash('sha256').update(clientId).digest('hex').slice(0, 16),
+        deletedScans,
+        new Date().toISOString(),
       )
     }
     return { deletedScans, settingsDeleted: includeSettings }
@@ -248,6 +262,7 @@ export async function purgeExpiredData() {
   const auditCutoff = new Date()
   auditCutoff.setUTCDate(auditCutoff.getUTCDate() - getAuditRetentionDays())
   await db.run('DELETE FROM system_logs WHERE created_at < ?', auditCutoff.toISOString())
+  await db.run('DELETE FROM admin_actions WHERE created_at < ?', auditCutoff.toISOString())
   await db.run(
     "DELETE FROM scan_submissions WHERE processing_status = 'failed' AND completed_at < ?",
     auditCutoff.toISOString(),

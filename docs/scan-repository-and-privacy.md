@@ -38,6 +38,8 @@ repository, and it must not have a public endpoint.
 | `privacy_consents` | Notice version, acknowledgment, and processing basis | No |
 | `system_logs` | Operational and security events | No raw payloads |
 | `notification_settings` | User-selected report recipients and preferences | Email address only |
+| `client_credentials` | Client ID and SHA-256 hash of its access token | No token plaintext |
+| `admin_actions` | Admin deletion audit with hashed client reference | No raw scan content |
 
 ## Data minimization
 
@@ -67,8 +69,9 @@ that may be sent to the backend for analysis. Declining leaves monitoring off.
 The user can withdraw consent from the webmail monitor, which stops future
 email scans and removes injected scan labels from the page.
 
-The extension stores only the consent decision, notice version, and decision
-timestamp in browser-local extension storage. The backend rejects public
+The extension stores the consent decision, notice version, decision timestamp,
+and a separate private client credential in browser-local extension storage.
+The backend rejects public
 `browser-email-monitor` requests that do not include the acknowledgment.
 
 ## Retention and deletion
@@ -82,10 +85,18 @@ AUDIT_RETENTION_DAYS=90
 
 - Scan results and related evidence expire after 30 days.
 - Failed intake records and system logs expire after 90 days.
+- Admin deletion audit records expire after 90 days.
 - Cleanup runs at startup and every six hours.
-- Public Clear History permanently deletes rows associated with the current
-  pseudonymous client ID.
-- Delete My Data also deletes saved report-email settings.
+- Public Clear History permanently deletes rows associated with the
+  authenticated browser client.
+- Delete My Data also deletes saved report-email settings and revokes the
+  browser client credential.
+- Admin deletion requires an admin token, a manual request-verification
+  acknowledgment, and exact client ID confirmation. It leaves a limited audit
+  record without the raw client ID.
+- Client credential rows do not yet expire automatically; they are revoked by
+  Delete My Data or admin deletion. A formal inactivity-retention rule is still
+  needed before wider public use.
 
 ## External processors and data recipients
 
@@ -107,17 +118,22 @@ processing may occur outside the Philippines.
 
 - HTTPS and Helmet security headers
 - Restricted CORS origins and API rate limits
-- Random pseudonymous client IDs
-- Separate admin token for administrative APIs
+- Random pseudonymous client IDs with per-browser access tokens; only token
+  hashes are stored server-side
+- Separate admin token for administrative APIs, held only in page memory
 - Secrets kept in Railway variables and excluded from Git
 - No-store API cache policy
 - Separate private Railway PostgreSQL service for production scan records
 - Normalized evidence and redacted operational logs
 - Data-subject deletion controls
 
-The client ID currently acts as a bearer identifier for public history. It must
-not be published or shared. Account authentication and a server-issued session
-credential are recommended before supporting higher-risk or multi-user data.
+The client ID alone does not authorize access to public history, notification
+settings, or deletion. Existing pre-credential records remain in the
+repository until retention cleanup or verified admin deletion, but cannot be
+claimed merely by knowing their client ID. This is an anonymous browser-based
+credential model, not a named-user account system. Formal multi-user use
+would still need individual accounts, stronger administrator authentication,
+and a documented identity-verification procedure for manual deletion.
 
 ## Verdict interpretation
 

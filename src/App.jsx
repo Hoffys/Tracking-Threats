@@ -9,6 +9,7 @@ import { Alerts } from './pages/Alerts'
 import { Learn } from './pages/Learn'
 import { Settings } from './pages/Settings'
 import { About } from './pages/About'
+import { Admin } from './pages/Admin'
 import { isPublicDeployment } from './config/deployment'
 import { useState } from 'react'
 
@@ -21,6 +22,7 @@ const pages = {
   learn: Learn,
   about: About,
   settings: Settings,
+  admin: Admin,
 }
 
 const publicPages = new Set([
@@ -31,6 +33,7 @@ const publicPages = new Set([
   'manual',
   'history',
   'settings',
+  'admin',
 ])
 
 const getInitialRoute = () => {
