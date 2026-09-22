@@ -159,7 +159,7 @@ export function Admin() {
           </div>
         </div>
         <form onSubmit={signIn} className="rounded-lg border border-emerald-100 bg-white p-5 dark:border-slate-700 dark:bg-slate-800">
-          <label htmlFor="admin-token" className="mb-2 block text-sm font-semibold">Admin API token</label>
+          <label htmlFor="admin-token" className="mb-2 block text-sm font-semibold">Admin Only Access Key</label>
           <div className="relative">
             <LockKeyhole size={18} className="absolute left-3 top-3 text-slate-400" />
             <input
