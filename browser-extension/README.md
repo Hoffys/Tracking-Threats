@@ -33,3 +33,8 @@ the current Gmail tab's memory and disappears when that tab is reloaded or
 email scanning is turned off. Opened-email scanning remains enabled while inbox
 scanning is paused; use "Turn off" to withdraw consent for all email scanning.
 Reload the unpacked extension and then reload Gmail to use the new content script.
+
+Version 1.0.24 also ends a batch when no more eligible messages are visible,
+even if fewer than 50 were checked. For example, 45 eligible rows on a Gmail
+page now trigger the review and next-batch choice. Each new choice still allows
+at most 50 additional attempts.

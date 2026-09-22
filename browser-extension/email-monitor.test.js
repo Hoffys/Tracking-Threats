@@ -115,6 +115,27 @@ test('failed scans are reported and continuing waits for a new Gmail page', () =
   assert.equal(callbacks.length, 4)
 })
 
+test('Gmail offers the next batch after 45 eligible rows, then caps it at 50 more', () => {
+  const { monitor, callbacks } = createMonitor()
+  monitor.setRows(rows(0, 45))
+  monitor.scan()
+  for (let index = 0; index < 45; index += 1) {
+    callbacks.shift()({ ok: true, scan: { status: 'Safe', score: 100 } })
+  }
+  assert.equal(monitor.state().attempts, 45)
+  assert.equal(monitor.state().paused, true)
+  assert.equal(monitor.state().reviewPrompts, 1)
+
+  monitor.setRows(rows(45, 60))
+  monitor.continueBatch()
+  for (let index = 0; index < 50; index += 1) {
+    callbacks.shift()({ ok: true, scan: { status: 'Safe', score: 100 } })
+  }
+  assert.equal(monitor.state().attempts, 95)
+  assert.equal(monitor.state().paused, true)
+  assert.equal(callbacks.length, 0)
+})
+
 test('withdrawn consent ignores responses already in flight', () => {
   const { monitor, callbacks } = createMonitor()
   monitor.setRows(rows(0, 50))

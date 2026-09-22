@@ -13,6 +13,7 @@ let lastScanKey = ''
 let emailConsentGranted = false
 let emailObserver = null
 let inboxBatchNumber = 1
+let inboxBatchStart = 0
 let inboxBatchLimit = MAX_INBOX_ROWS_PER_PASS
 let inboxAttempts = 0
 let inboxPending = 0
@@ -81,6 +82,7 @@ function stopEmailMonitoring() {
   inboxScanKeys.clear()
   inboxResults.length = 0
   inboxBatchNumber = 1
+  inboxBatchStart = 0
   inboxBatchLimit = MAX_INBOX_ROWS_PER_PASS
   inboxAttempts = 0
   inboxPending = 0
@@ -540,7 +542,7 @@ function showInboxStatus() {
   const banner = existing ?? document.createElement('aside')
   const riskyCount = inboxStats.caution + inboxStats.dangerous
   const hasRisk = riskyCount > 0
-  const batchProgress = inboxAttempts - (inboxBatchNumber - 1) * MAX_INBOX_ROWS_PER_PASS
+  const batchProgress = inboxAttempts - inboxBatchStart
   const accentColor = inboxStats.dangerous > 0 ? '#fecdd3' : hasRisk ? '#fde68a' : '#6ee7b7'
   const borderColor =
     inboxStats.dangerous > 0
@@ -626,7 +628,8 @@ function showInboxStatus() {
 function continueInboxBatch() {
   if (!emailConsentGranted || !inboxPaused) return
   inboxBatchNumber += 1
-  inboxBatchLimit += MAX_INBOX_ROWS_PER_PASS
+  inboxBatchStart = inboxAttempts
+  inboxBatchLimit = inboxBatchStart + MAX_INBOX_ROWS_PER_PASS
   inboxPaused = false
   inboxWaitingForRows = false
   document.getElementById('threattrack-inbox-review')?.remove()
@@ -1076,7 +1079,8 @@ function scanGmailInbox() {
     if (inboxPending >= MAX_INBOX_SCANS_IN_FLIGHT || inboxAttempts >= inboxBatchLimit) break
     if (scanGmailInboxRow(row)) started += 1
   }
-  if (inboxAttempts >= inboxBatchLimit && inboxPending === 0) {
+  const visibleRowsExhausted = started === 0 && inboxAttempts > inboxBatchStart
+  if (inboxPending === 0 && (inboxAttempts >= inboxBatchLimit || visibleRowsExhausted)) {
     inboxPaused = true
     showInboxStatus()
     showInboxReview()
