@@ -4,13 +4,6 @@ const validClientId = (value) => /^cl_[a-f0-9]{32}$/.test(value ?? '')
 const validClientToken = (value) => /^[A-Za-z0-9_-]{40,80}$/.test(value ?? '')
 let registrationPromise
 
-const clearLinkedClientQuery = () => {
-  const url = new URL(window.location.href)
-  if (!url.searchParams.has('client')) return
-  url.searchParams.delete('client')
-  window.history.replaceState({}, '', url)
-}
-
 const readStoredCredential = () => {
   try {
     const stored = JSON.parse(localStorage.getItem(clientCredentialKey) ?? 'null')
@@ -68,7 +61,6 @@ export const readClientCredential = () => {
   const linkedId = new URLSearchParams(window.location.search).get('client')
   const stored = readStoredCredential()
   if (validClientId(linkedId) && linkedId !== stored?.clientId) return null
-  if (linkedId && stored) clearLinkedClientQuery()
   return stored
 }
 
@@ -85,6 +77,9 @@ export const ensureClientCredential = async () => {
       const bridged = validClientId(linkedId)
         ? await receiveExtensionCredential(linkedId)
         : null
+      if (validClientId(linkedId) && !bridged) {
+        throw new Error('Cannot access extension history. Reload the extension or open the app without the client link.')
+      }
       return bridged ?? request('/public/clients', { method: 'POST' })
     })()
       .then((credential) => {
@@ -92,7 +87,6 @@ export const ensureClientCredential = async () => {
           throw new Error('Invalid client credential response')
         }
         localStorage.setItem(clientCredentialKey, JSON.stringify(credential))
-        clearLinkedClientQuery()
         return credential
       })
       .finally(() => { registrationPromise = null })
