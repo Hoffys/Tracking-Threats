@@ -786,7 +786,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
     const scan = await response.json()
     await saveStatus({
       ok: true,
-      lastUrl: sender || subject || 'Opened email',
+      lastUrl: 'Email scan',
       lastStatus: scan.status,
       lastScore: scan.score,
     })
@@ -794,7 +794,7 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
   } catch (error) {
     await saveStatus({
       ok: false,
-      lastUrl: sender || subject || 'Opened email',
+      lastUrl: 'Email scan',
       error: error.message,
     })
     return { ok: false, error: error.message }

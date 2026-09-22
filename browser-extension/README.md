@@ -23,3 +23,13 @@ scan history after the client access change. Opening History from the extension
 passes only the client ID in the link. A content script on the Tracking Threats
 origin transfers the credential to the app after navigation. Do not add the
 credential to links placed in Gmail, search results, or other third-party pages.
+
+Version 1.0.23 scans visible Gmail inbox rows in batches of at most 50 attempts,
+with at most four requests in flight. After each batch, it pauses and shows the
+sender, subject, and outcome for each attempted row. "Not now" leaves inbox
+scanning paused; "Scan next 50" authorizes another batch. If no unscanned rows
+are visible, open the next Gmail page manually. The review list stays only in
+the current Gmail tab's memory and disappears when that tab is reloaded or
+email scanning is turned off. Opened-email scanning remains enabled while inbox
+scanning is paused; use "Turn off" to withdraw consent for all email scanning.
+Reload the unpacked extension and then reload Gmail to use the new content script.

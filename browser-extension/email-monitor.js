@@ -2,6 +2,7 @@ const MIN_EMAIL_TEXT_LENGTH = 40
 const SCAN_DEBOUNCE_MS = 1400
 const INBOX_SCAN_DEBOUNCE_MS = 2200
 const MAX_INBOX_ROWS_PER_PASS = 50
+const MAX_INBOX_SCANS_IN_FLIGHT = 4
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
 const EMAIL_CONSENT_VERSION = '2026.09'
@@ -11,12 +12,21 @@ let inboxScanTimer = null
 let lastScanKey = ''
 let emailConsentGranted = false
 let emailObserver = null
+let inboxBatchNumber = 1
+let inboxBatchLimit = MAX_INBOX_ROWS_PER_PASS
+let inboxAttempts = 0
+let inboxPending = 0
+let inboxPaused = false
+let inboxWaitingForRows = false
+let inboxGeneration = 0
 const inboxScanKeys = new Set()
+const inboxResults = []
 const inboxStats = {
   checked: 0,
   safe: 0,
   caution: 0,
   dangerous: 0,
+  failed: 0,
 }
 
 function getPrivacyNoticeUrl() {
@@ -48,6 +58,7 @@ function clearEmailMonitorUi() {
   document.getElementById('threattrack-email-consent-disabled')?.remove()
   document.getElementById('threattrack-email-warning')?.remove()
   document.getElementById('threattrack-inbox-status')?.remove()
+  document.getElementById('threattrack-inbox-review')?.remove()
   document.querySelectorAll('.threattrack-inbox-label').forEach((label) => label.remove())
   document.querySelectorAll('[data-threattrack-risk]').forEach((row) => {
     row.style.boxShadow = row.dataset.threattrackOriginalBoxShadow ?? ''
@@ -61,12 +72,20 @@ function clearEmailMonitorUi() {
 
 function stopEmailMonitoring() {
   emailConsentGranted = false
+  inboxGeneration += 1
   window.clearTimeout(scanTimer)
   window.clearTimeout(inboxScanTimer)
   emailObserver?.disconnect()
   emailObserver = null
   lastScanKey = ''
   inboxScanKeys.clear()
+  inboxResults.length = 0
+  inboxBatchNumber = 1
+  inboxBatchLimit = MAX_INBOX_ROWS_PER_PASS
+  inboxAttempts = 0
+  inboxPending = 0
+  inboxPaused = false
+  inboxWaitingForRows = false
   Object.keys(inboxStats).forEach((key) => {
     inboxStats[key] = 0
   })
@@ -202,7 +221,7 @@ function showEmailConsentDialog() {
   const list = document.createElement('ul')
   list.style.cssText = 'margin:14px 0 0;padding-left:20px;color:#e2e8f0;font:13px/1.6 Arial,sans-serif'
   ;[
-    'The extension checks the visible sender, subject, message text, links, and up to 50 visible Gmail inbox previews.',
+    'The extension checks the visible sender, subject, message text, links, and Gmail inbox previews in batches of up to 50. Each further batch requires your choice.',
     'This information is sent securely to the Tracking Threats backend for automated phishing analysis.',
     'Production does not retain raw email bodies. Redacted results and evidence are retained for up to 30 days.',
     'Consent applies to supported webmail opened in this browser. You can turn scanning off at any time.',
@@ -401,7 +420,12 @@ function getGmailInboxRows() {
       const email = getGmailInboxEmail(row)
       return email.subject || email.body
     })
-    .slice(0, MAX_INBOX_ROWS_PER_PASS)
+}
+
+function getGmailInboxRowKey(row, email) {
+  const threadId = row.getAttribute('data-legacy-thread-id') ||
+    row.getAttribute('data-thread-id') || row.getAttribute('data-thread-perm-id') || row.id
+  return threadId ? `thread:${threadId}` : `preview:${getScanKey(email)}`
 }
 
 function getRowText(row, selector) {
@@ -516,6 +540,7 @@ function showInboxStatus() {
   const banner = existing ?? document.createElement('aside')
   const riskyCount = inboxStats.caution + inboxStats.dangerous
   const hasRisk = riskyCount > 0
+  const batchProgress = inboxAttempts - (inboxBatchNumber - 1) * MAX_INBOX_ROWS_PER_PASS
   const accentColor = inboxStats.dangerous > 0 ? '#fecdd3' : hasRisk ? '#fde68a' : '#6ee7b7'
   const borderColor =
     inboxStats.dangerous > 0
@@ -523,12 +548,18 @@ function showInboxStatus() {
       : hasRisk
         ? 'rgba(245,158,11,.45)'
         : 'rgba(16,185,129,.45)'
-  const statusText =
-    inboxStats.checked === 0
-      ? 'Scanning visible Gmail inbox messages...'
-      : hasRisk
-        ? `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
-        : 'No risky email found in visible inbox'
+  let statusText = 'Scanning visible Gmail messages...'
+  if (inboxPaused) {
+    statusText = `Batch ${inboxBatchNumber} finished. Inbox scanning is paused.`
+  } else if (inboxWaitingForRows) {
+    statusText = 'No new visible messages. Open another Gmail page to continue.'
+  } else if (inboxPending === 0 && hasRisk) {
+    statusText = `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
+  } else if (inboxPending === 0 && inboxStats.failed > 0) {
+    statusText = 'Some messages could not be checked.'
+  } else if (inboxPending === 0 && inboxStats.checked > 0) {
+    statusText = 'No risky email found in checked messages.'
+  }
 
   banner.id = 'threattrack-inbox-status'
   banner.style.cssText = [
@@ -558,15 +589,144 @@ function showInboxStatus() {
   body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
 
   const counts = document.createElement('p')
-  counts.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} safe - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk`
+  counts.textContent = `Batch ${inboxBatchNumber}: ${batchProgress}/50 attempted - ${inboxPending} pending`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
+
+  const totals = document.createElement('p')
+  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} safe - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
+  totals.style.cssText = 'margin:3px 0 0;color:#cbd5e1;font-size:11px'
 
   const header = document.createElement('div')
   header.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:10px'
   header.append(title, createTurnOffButton())
 
-  banner.append(header, body, counts)
+  banner.append(header, body, counts, totals)
+  if (inboxResults.length > 0) {
+    const actions = document.createElement('div')
+    actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'
+    const review = document.createElement('button')
+    review.type = 'button'
+    review.textContent = 'Review scanned emails'
+    review.style.cssText = 'border:1px solid #475569;border-radius:6px;background:transparent;color:#f8fafc;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
+    review.addEventListener('click', () => showInboxReview())
+    actions.appendChild(review)
+    if (inboxPaused) {
+      const next = document.createElement('button')
+      next.type = 'button'
+      next.textContent = 'Scan next 50'
+      next.style.cssText = 'border:0;border-radius:6px;background:#0d9488;color:#fff;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
+      next.addEventListener('click', continueInboxBatch)
+      actions.appendChild(next)
+    }
+    banner.appendChild(actions)
+  }
   if (!existing) document.body.appendChild(banner)
+}
+
+function continueInboxBatch() {
+  if (!emailConsentGranted || !inboxPaused) return
+  inboxBatchNumber += 1
+  inboxBatchLimit += MAX_INBOX_ROWS_PER_PASS
+  inboxPaused = false
+  inboxWaitingForRows = false
+  document.getElementById('threattrack-inbox-review')?.remove()
+  scanGmailInbox()
+}
+
+function showInboxReview(selectedBatch = inboxBatchNumber) {
+  if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
+  document.getElementById('threattrack-inbox-review')?.remove()
+
+  const overlay = document.createElement('div')
+  overlay.id = 'threattrack-inbox-review'
+  overlay.setAttribute('role', 'dialog')
+  overlay.setAttribute('aria-modal', 'true')
+  overlay.setAttribute('aria-labelledby', 'threattrack-inbox-review-title')
+  overlay.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:rgba(2,6,23,.72);font-family:Arial,sans-serif;padding:16px'
+
+  const panel = document.createElement('section')
+  panel.style.cssText = 'box-sizing:border-box;width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#f8fafc;box-shadow:0 28px 80px rgba(0,0,0,.5);padding:20px'
+
+  const title = document.createElement('h2')
+  title.id = 'threattrack-inbox-review-title'
+  title.textContent = 'Scanned Gmail messages'
+  title.style.cssText = 'margin:0;color:#fff;font:700 20px/1.3 Arial,sans-serif'
+
+  const summary = document.createElement('p')
+  const entries = inboxResults.filter((result) => result.batch === selectedBatch)
+  const failed = entries.filter((result) => result.failed).length
+  const pending = entries.filter((result) => result.pending).length
+  summary.textContent = `Batch ${selectedBatch}: ${entries.length - failed - pending} checked, ${failed} failed, ${pending} pending. Sender and subject are shown only in this browser tab.`
+  summary.style.cssText = 'margin:8px 0 14px;color:#cbd5e1;font:13px/1.5 Arial,sans-serif'
+  panel.append(title, summary)
+
+  if (inboxBatchNumber > 1) {
+    const batchSelect = document.createElement('select')
+    batchSelect.setAttribute('aria-label', 'Choose scan batch')
+    batchSelect.style.cssText = 'box-sizing:border-box;width:100%;margin-bottom:12px;border:1px solid #475569;border-radius:6px;background:#111827;color:#f8fafc;font:13px Arial,sans-serif;padding:8px'
+    for (let batch = 1; batch <= inboxBatchNumber; batch += 1) {
+      const option = document.createElement('option')
+      option.value = String(batch)
+      option.textContent = `Batch ${batch}`
+      batchSelect.appendChild(option)
+    }
+    batchSelect.value = String(selectedBatch)
+    batchSelect.addEventListener('change', () => showInboxReview(Number(batchSelect.value)))
+    panel.appendChild(batchSelect)
+  }
+
+  const list = document.createElement('ul')
+  list.style.cssText = 'list-style:none;margin:0;padding:0;max-height:42vh;overflow:auto;border-top:1px solid #334155'
+  entries.forEach((result) => {
+    const item = document.createElement('li')
+    item.style.cssText = 'display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #334155;padding:10px 0'
+    const identity = document.createElement('div')
+    identity.style.cssText = 'min-width:0;overflow-wrap:anywhere'
+    const subject = document.createElement('strong')
+    subject.textContent = result.subject || '(No subject)'
+    subject.style.cssText = 'display:block;color:#f8fafc;font:700 13px/1.4 Arial,sans-serif'
+    const sender = document.createElement('span')
+    sender.textContent = result.sender || 'Unknown sender'
+    sender.style.cssText = 'display:block;margin-top:2px;color:#94a3b8;font:12px/1.4 Arial,sans-serif'
+    identity.append(subject, sender)
+    const status = document.createElement('span')
+    status.textContent = result.pending ? 'Scanning' : result.failed ? 'Failed' : `${getStatusLabel(result.status)} ${result.score}/100`
+    status.style.cssText = `flex:none;align-self:center;color:${result.failed ? '#fca5a5' : result.pending ? '#cbd5e1' : result.level === 'dangerous' ? '#fecdd3' : result.level === 'caution' ? '#fde68a' : '#6ee7b7'};font:700 11px/1.4 Arial,sans-serif`
+    item.append(identity, status)
+    list.appendChild(item)
+  })
+  panel.appendChild(list)
+
+  if (inboxPaused) {
+    const scope = document.createElement('p')
+    scope.textContent = 'Not now pauses inbox previews. Opened emails remain covered by your consent; Turn off stops all email scanning.'
+    scope.style.cssText = 'margin:12px 0 0;color:#cbd5e1;font:12px/1.5 Arial,sans-serif'
+    panel.appendChild(scope)
+  }
+
+  const actions = document.createElement('div')
+  actions.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap'
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.textContent = inboxPaused ? 'Not now' : 'Close'
+  close.style.cssText = 'border:1px solid #475569;border-radius:6px;background:transparent;color:#f8fafc;cursor:pointer;font:700 13px Arial,sans-serif;padding:9px 13px'
+  close.addEventListener('click', () => overlay.remove())
+  actions.appendChild(close)
+  if (inboxPaused) {
+    const next = document.createElement('button')
+    next.type = 'button'
+    next.textContent = 'Scan next 50'
+    next.style.cssText = 'border:0;border-radius:6px;background:#0d9488;color:#fff;cursor:pointer;font:700 13px Arial,sans-serif;padding:9px 13px'
+    next.addEventListener('click', continueInboxBatch)
+    actions.appendChild(next)
+  }
+  panel.appendChild(actions)
+  overlay.appendChild(panel)
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') overlay.remove()
+  })
+  document.body.appendChild(overlay)
+  close.focus()
 }
 
 function getOutlookEmail() {
@@ -852,7 +1012,7 @@ function showInboxRiskWarning(scan, email) {
 }
 
 function scanGmailInboxRow(row) {
-  if (!emailConsentGranted) return
+  if (!emailConsentGranted || inboxPaused || inboxAttempts >= inboxBatchLimit) return false
   const email = getGmailInboxEmail(row)
   const content = `${email.subject}\n${email.body}`.trim()
   if (
@@ -860,12 +1020,23 @@ function scanGmailInboxRow(row) {
     isTrackingThreatsReport(email) ||
     content.length < 12
   ) {
-    return
+    return false
   }
 
-  const scanKey = getScanKey(email)
-  if (inboxScanKeys.has(scanKey)) return
+  const scanKey = getGmailInboxRowKey(row, email)
+  if (inboxScanKeys.has(scanKey)) return false
   inboxScanKeys.add(scanKey)
+  inboxAttempts += 1
+  inboxPending += 1
+  inboxWaitingForRows = false
+  const generation = inboxGeneration
+  const result = {
+    batch: inboxBatchNumber,
+    sender: email.sender,
+    subject: email.subject,
+    pending: true,
+  }
+  inboxResults.push(result)
 
   chrome.runtime.sendMessage(
     {
@@ -873,28 +1044,46 @@ function scanGmailInboxRow(row) {
       email,
     },
     (response) => {
-      if (!emailConsentGranted) return
-      if (chrome.runtime.lastError || !response?.ok || !response.scan) return
-      const previousLevel = row.dataset.threattrackLevel
-      if (!previousLevel) {
+      if (!emailConsentGranted || generation !== inboxGeneration) return
+      inboxPending -= 1
+      result.pending = false
+      if (chrome.runtime.lastError || !response?.ok || !response.scan) {
+        result.failed = true
+        inboxStats.failed += 1
+      } else {
         inboxStats.checked += 1
-      } else if (inboxStats[previousLevel] > 0) {
-        inboxStats[previousLevel] -= 1
+        const nextLevel = getScanLevel(response.scan)
+        inboxStats[nextLevel] += 1
+        result.level = nextLevel
+        result.status = response.scan.status
+        result.score = response.scan.score
+        row.dataset.threattrackLevel = nextLevel
+        markGmailInboxRow(row, response.scan)
+        if (isRiskyScan(response.scan)) showInboxRiskWarning(response.scan, email)
       }
-      const nextLevel = getScanLevel(response.scan)
-      inboxStats[nextLevel] += 1
-      row.dataset.threattrackLevel = nextLevel
-      markGmailInboxRow(row, response.scan)
       showInboxStatus()
-      if (isRiskyScan(response.scan)) showInboxRiskWarning(response.scan, email)
+      scanGmailInbox()
     },
   )
+  return true
 }
 
 function scanGmailInbox() {
   if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
+  if (inboxPaused) return
+  let started = 0
+  for (const row of getGmailInboxRows()) {
+    if (inboxPending >= MAX_INBOX_SCANS_IN_FLIGHT || inboxAttempts >= inboxBatchLimit) break
+    if (scanGmailInboxRow(row)) started += 1
+  }
+  if (inboxAttempts >= inboxBatchLimit && inboxPending === 0) {
+    inboxPaused = true
+    showInboxStatus()
+    showInboxReview()
+    return
+  }
+  inboxWaitingForRows = started === 0 && inboxPending === 0
   showInboxStatus()
-  getGmailInboxRows().forEach(scanGmailInboxRow)
 }
 
 function scanOpenedEmail() {
