@@ -20,6 +20,14 @@ dist-ssr
 !.env.example
 browser-extension/_metadata/
 
+# Keep local documentation diagrams out of commits.
+/docs/*.png
+/docs/*.svg
+/docs/*.jpg
+/docs/*.jpeg
+/docs/*.webp
+/docs/*.gif
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
