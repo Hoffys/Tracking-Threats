@@ -18,6 +18,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
+import { LearningCertificate } from '../components/LearningCertificate'
 
 const modules = [
   {
@@ -667,6 +668,9 @@ export function Learn({ onNavigate }) {
                 ? 'Perfect score. You caught every threat pattern.'
                 : 'Review the explanations, then try the quiz again.'}
             </p>
+          )}
+          {quizAnswered === scenarios.length && (
+            <LearningCertificate score={quizScore} total={scenarios.length} />
           )}
         </Panel>
       </section>
