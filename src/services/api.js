@@ -29,7 +29,7 @@ const receiveExtensionCredential = (clientId) => new Promise((resolve) => {
     finish({ clientId: event.data.clientId, token: event.data.token })
   }
   window.addEventListener('message', onMessage)
-  const timeout = window.setTimeout(() => finish(null), 1200)
+  const timeout = window.setTimeout(() => finish(null), 10000)
   window.postMessage({ type: 'tracking-threats:request-client-credential', clientId }, window.location.origin)
 })
 
