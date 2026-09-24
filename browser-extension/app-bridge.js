@@ -7,9 +7,9 @@ if (window.top === window && window.location.origin === trackingThreatsOrigin) {
 
     chrome.runtime.sendMessage({ type: 'get-client-credential' }, (response) => {
       if (chrome.runtime.lastError || !response?.ok) return
-      if (response.clientId !== event.data.clientId) return
       window.postMessage({
         type: 'tracking-threats:client-credential',
+        requestedClientId: event.data.clientId,
         clientId: response.clientId,
         token: response.token,
       }, trackingThreatsOrigin)

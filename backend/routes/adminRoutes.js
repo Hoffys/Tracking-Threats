@@ -19,12 +19,22 @@ adminRoutes.use(
 adminRoutes.get('/overview', async (_req, res, next) => {
   try {
     const db = await dbPromise
-    const [clients, scans, recentScans, byType, byStatus] = await Promise.all([
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const [clients, scans, recentScans, byType, byStatus, downloads, usage] = await Promise.all([
       db.get('SELECT COUNT(*) AS count FROM client_credentials'),
       db.get('SELECT COUNT(*) AS count FROM scans'),
       db.get("SELECT COUNT(*) AS count FROM scans WHERE created_at >= ?", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
       db.all('SELECT type, COUNT(*) AS count FROM scans GROUP BY type ORDER BY count DESC'),
       db.all('SELECT status, COUNT(*) AS count FROM scans GROUP BY status ORDER BY count DESC'),
+      db.get("SELECT count, started_at FROM usage_counters WHERE name = 'extension-downloads'"),
+      db.get(`SELECT
+        COUNT(CASE WHEN extension_seen_at IS NOT NULL THEN 1 END) AS extensions,
+        COUNT(CASE WHEN extension_seen_at >= ? THEN 1 END) AS extensions_day,
+        COUNT(CASE WHEN extension_seen_at >= ? THEN 1 END) AS extensions_week,
+        COUNT(CASE WHEN last_seen_at >= ? THEN 1 END) AS clients_day,
+        COUNT(CASE WHEN last_seen_at >= ? THEN 1 END) AS clients_week
+        FROM client_credentials`, dayAgo, weekAgo, dayAgo, weekAgo),
     ])
     res.json({
       clients: clients.count,
@@ -32,6 +42,15 @@ adminRoutes.get('/overview', async (_req, res, next) => {
       scansLast24Hours: recentScans.count,
       byType,
       byStatus,
+      usage: {
+        extensionDownloads: downloads?.count ?? 0,
+        trackingStartedAt: downloads?.started_at ?? null,
+        registeredExtensions: usage.extensions,
+        activeExtensions24h: usage.extensions_day,
+        activeExtensions7d: usage.extensions_week,
+        activeClients24h: usage.clients_day,
+        activeClients7d: usage.clients_week,
+      },
     })
   } catch (error) {
     next(error)
@@ -42,7 +61,7 @@ adminRoutes.get('/clients', async (_req, res, next) => {
   try {
     const db = await dbPromise
     const [registered, activity] = await Promise.all([
-      db.all('SELECT client_id, created_at FROM client_credentials ORDER BY created_at DESC LIMIT 100'),
+      db.all('SELECT client_id, created_at, last_seen_at, extension_seen_at, extension_version FROM client_credentials ORDER BY COALESCE(last_seen_at, created_at) DESC LIMIT 100'),
       db.all(`
         SELECT client_id, COUNT(*) AS scan_count, MAX(created_at) AS last_scan_at
         FROM scans WHERE client_id IS NOT NULL AND client_id != ''
@@ -53,6 +72,9 @@ adminRoutes.get('/clients', async (_req, res, next) => {
       registered.map((row) => [row.client_id, {
         clientId: row.client_id,
         registeredAt: row.created_at,
+        lastSeenAt: row.last_seen_at,
+        extensionLastSeenAt: row.extension_seen_at,
+        extensionVersion: row.extension_version,
         scanCount: 0,
         lastScanAt: null,
         accessStatus: 'active',
@@ -61,6 +83,7 @@ adminRoutes.get('/clients', async (_req, res, next) => {
     activity.forEach((row) => {
       const previous = clients.get(row.client_id)
       clients.set(row.client_id, {
+        ...previous,
         clientId: row.client_id,
         registeredAt: previous?.registeredAt ?? null,
         scanCount: row.scan_count,

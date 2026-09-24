@@ -1,5 +1,12 @@
 # Tracking Threats Browser Extension
 
+Users can now open **Get Extension** on the hosted website to download the manual
+installation ZIP and follow the setup instructions. Version 1.0.26 reports its
+client ID, version, and latest activity every five minutes using browser alarms.
+Update existing unpacked extensions and reload them to enable this reporting.
+The Admin usage section separates ZIP download requests from extension clients
+and recently active system clients. These are not unique-person counts.
+
 Before loading or packaging the extension for a hosted deployment:
 
 1. Edit `config.js`.
@@ -38,3 +45,10 @@ Version 1.0.24 also ends a batch when no more eligible messages are visible,
 even if fewer than 50 were checked. For example, 45 eligible rows on a Gmail
 page now trigger the review and next-batch choice. Each new choice still allows
 at most 50 additional attempts.
+
+Version 1.0.25 automatically registers a fresh client ID and token when a scan
+is rejected after client deletion, then retries the scan once. Concurrent scans
+share the replacement identity. Deleted history stays deleted. The linked web
+app also checks its credentials and adopts the extension's new ID. Deploy the
+updated backend and frontend, reload the unpacked extension, then refresh the
+app tab to load the updated credential bridge.

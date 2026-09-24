@@ -18,6 +18,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
+import { LearningCertificate } from '../components/LearningCertificate'
 
 const modules = [
   {
@@ -276,6 +277,9 @@ export function Learn({ onNavigate }) {
   const progress = Math.round((completedModules.length / modules.length) * 100)
   const isComplete = progress === 100
   const quizAnswered = Object.keys(scenarioAnswers).length
+  const beginnerModules = modules.filter((module) => module.level === 'Beginner')
+  const beginnerCompleted = beginnerModules.filter((module) => completedModules.includes(module.title)).length
+  const beginnerCertificateReady = beginnerCompleted === beginnerModules.length && quizAnswered === scenarios.length
   const quizScore = scenarios.filter(
     (scenario) => scenarioAnswers[scenario.prompt] === scenario.answer,
   ).length
@@ -667,6 +671,13 @@ export function Learn({ onNavigate }) {
                 ? 'Perfect score. You caught every threat pattern.'
                 : 'Review the explanations, then try the quiz again.'}
             </p>
+          )}
+          <p className="mt-4 text-sm text-slate-600 dark:text-slate-300" role="status">
+            Beginner certificate: {beginnerCompleted}/{beginnerModules.length} modules complete and {quizAnswered}/{scenarios.length} test questions answered.
+            {!beginnerCertificateReady && ' Complete all Beginner modules and answer every test question to unlock your certificate.'}
+          </p>
+          {beginnerCertificateReady && (
+            <LearningCertificate score={quizScore} total={scenarios.length} moduleCount={beginnerModules.length} />
           )}
         </Panel>
       </section>

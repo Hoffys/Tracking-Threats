@@ -52,11 +52,16 @@ let credentialPromise = null
 let allowedHosts = new Set()
 let safeHosts = new Set()
 
-async function getClientCredentials() {
+async function getClientCredentials(rejectedClientId = '') {
+  if (credentialPromise) {
+    const credential = await credentialPromise
+    if (credential.clientId !== rejectedClientId) return credential
+  }
   if (!credentialPromise) {
     credentialPromise = (async () => {
       const stored = await chrome.storage.local.get([CLIENT_ID_KEY, CLIENT_TOKEN_KEY])
-      if (/^cl_[a-f0-9]{32}$/.test(stored[CLIENT_ID_KEY] ?? '') &&
+      if (stored[CLIENT_ID_KEY] !== rejectedClientId &&
+          /^cl_[a-f0-9]{32}$/.test(stored[CLIENT_ID_KEY] ?? '') &&
           /^[A-Za-z0-9_-]{40,80}$/.test(stored[CLIENT_TOKEN_KEY] ?? '')) {
         clientToken = stored[CLIENT_TOKEN_KEY]
         return { clientId: stored[CLIENT_ID_KEY], token: clientToken }
@@ -74,6 +79,7 @@ async function getClientCredentials() {
         [CLIENT_ID_KEY]: credential.clientId,
         [CLIENT_TOKEN_KEY]: credential.token,
       })
+      if (rejectedClientId) recentScans.clear()
       return credential
     })().finally(() => { credentialPromise = null })
   }
@@ -85,11 +91,35 @@ async function getClientId() {
 }
 
 async function scanFetch(url, options) {
-  const { token } = await getClientCredentials()
-  return fetch(url, {
+  const send = (credential) => fetch(url, {
     ...options,
-    headers: { ...options?.headers, 'X-Client-Token': token },
+    body: options?.body
+      ? JSON.stringify({ ...JSON.parse(options.body), clientId: credential.clientId })
+      : undefined,
+    headers: { ...options?.headers, 'X-Client-Token': credential.token },
   })
+  const credential = await getClientCredentials()
+  const response = await send(credential)
+  if (!(await isRejectedCredential(response))) return response
+  const replacement = await getClientCredentials(credential.clientId)
+  return send(replacement)
+}
+
+async function isRejectedCredential(response) {
+  if (response.status !== 403) return false
+  const payload = await response.clone().json().catch(() => null)
+  return payload?.code === 'CLIENT_ACCESS_DENIED' || payload?.error === 'Client access denied'
+}
+
+async function getVerifiedClientCredentials() {
+  const credential = await getClientCredentials()
+  const response = await fetch(`${API_BASE_URL}/api/public/clients/${credential.clientId}`, {
+    headers: { 'X-Client-Token': credential.token },
+    cache: 'no-store',
+  })
+  if (await isRejectedCredential(response)) return getClientCredentials(credential.clientId)
+  if (!response.ok) throw new Error(await getScannerError(response, 'Client verification'))
+  return credential
 }
 
 async function hasEmailScanConsent() {
@@ -981,7 +1011,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ ok: false, error: 'Untrusted page' })
       return false
     }
-    getClientCredentials()
+    getVerifiedClientCredentials()
       .then((credential) => sendResponse({ ok: true, ...credential }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
@@ -1006,3 +1036,21 @@ Promise.all([loadBlockedHosts(), loadBypassHosts(), loadAllowedHosts()])
   })
 
 setInterval(syncSafeHosts, SAFE_HOST_SYNC_MS)
+
+async function reportExtensionUsage() {
+  try {
+    await scanFetch(`${API_BASE_URL}/api/public/extension/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version: chrome.runtime.getManifest().version }),
+    })
+  } catch {
+    // Retry on the next alarm; reporting must not interrupt scans.
+  }
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'tracking-threats-usage') reportExtensionUsage()
+})
+chrome.alarms.create('tracking-threats-usage', { periodInMinutes: 5 })
+reportExtensionUsage()

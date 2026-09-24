@@ -234,6 +234,14 @@ export function ThreatProvider({ children }) {
 
   const refreshData = useCallback(async () => {
     if (isPublicDeployment) {
+      const { clientId } = await ensureClientCredential()
+      if (clientId !== publicClientId) {
+        if (publicClientId) clearPublicClientStorage(publicClientId)
+        setPublicClientId(clientId)
+        setNotificationSettings(defaultNotificationSettings)
+        applyPublicScans([], { systemActive: true })
+        return
+      }
       const [health, activity] = await Promise.all([
         apiService.getHealth(),
         publicClientId
@@ -345,7 +353,12 @@ export function ThreatProvider({ children }) {
       const clientId = isPublicDeployment
         ? (await ensureClientCredential()).clientId
         : ''
-      if (isPublicDeployment && clientId !== publicClientId) setPublicClientId(clientId)
+      if (isPublicDeployment && clientId !== publicClientId) {
+        if (publicClientId) clearPublicClientStorage(publicClientId)
+        setPublicClientId(clientId)
+        setNotificationSettings(defaultNotificationSettings)
+        applyPublicScans([], { systemActive: true })
+      }
       const scan =
         type === 'URL' || type === 'Domain'
           ? await apiService.scanUrl(target, {

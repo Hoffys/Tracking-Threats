@@ -1,0 +1,23 @@
+Tracking Threats Browser Extension
+
+1. Extract tracking-threats-extension.zip to a permanent folder.
+2. Open desktop Chrome or Edge.
+3. Visit chrome://extensions or edge://extensions.
+4. Enable Developer mode, click Load unpacked, and select the extracted
+   tracking-threats-extension folder containing manifest.json.
+5. Pin Tracking Threats from the browser's Extensions menu.
+6. Browse normally. Open the extension popup to check scan status and open
+   your linked History. The Railway backend is already configured.
+
+This is a manual installation package, not a Chrome Web Store listing.
+The ZIP does not install itself. Do not delete the extracted folder.
+For an existing installation, replace its files and click Reload.
+Chrome and Edge desktop are the supported setup instructions. The PWA and
+extension are separate; installing the PWA does not install the extension.
+
+Usage monitoring: while enabled, the extension sends its random client ID,
+version and a heartbeat about every 5 minutes while the browser is running.
+Admins see aggregate download requests and recently active clients; these
+are not verified counts of unique people. No Google login is required.
+Email scanning needs separate consent. Privacy details:
+https://tracking-threats-production.up.railway.app/?page=about&section=privacy

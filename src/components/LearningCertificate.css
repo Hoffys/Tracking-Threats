@@ -1,0 +1,51 @@
+.learning-certificate {
+  border: 6px double #047857;
+  background: #fff;
+  color: #163b32;
+  padding: clamp(20px, 4vw, 44px);
+  text-align: center;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.learning-certificate-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #047857;
+  font: 700 18px system-ui, sans-serif;
+}
+
+.learning-certificate-eyebrow {
+  margin: 12px 0 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font: 11px system-ui, sans-serif;
+}
+
+.learning-certificate h3 { margin: 16px 0; font-size: clamp(24px, 3vw, 36px); font-weight: 700; line-height: 1.2; }
+.learning-certificate p { line-height: 1.6; }
+.learning-certificate .learning-certificate-name {
+  margin: 12px auto;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #9cbaae;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.learning-certificate h4 { margin: 10px 0; font-size: 20px; font-weight: 700; }
+.learning-certificate-details { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 20px; margin-top: 28px; }
+.learning-certificate-details strong, .learning-certificate-details span { display: block; }
+.learning-certificate-details span { margin-top: 5px; font: 12px system-ui, sans-serif; }
+.learning-certificate-footer { margin-top: 28px; font: 12px system-ui, sans-serif; }
+.learning-certificate-print { display: none; }
+
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body:has(> .learning-certificate-print) { background: white !important; margin: 0 !important; }
+  body:has(> .learning-certificate-print) > :not(.learning-certificate-print) { display: none !important; }
+  .learning-certificate-print { display: block; }
+  .learning-certificate-print .learning-certificate { width: 100%; padding: 12mm; box-sizing: border-box; break-inside: avoid; }
+  .learning-certificate-print .learning-certificate h3 { font-size: 32pt; }
+  .learning-certificate-print .learning-certificate-name { font-size: 26pt; }
+}
