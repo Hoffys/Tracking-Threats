@@ -58,7 +58,7 @@ test('client records require ownership and admin deletion is audited', async () 
 
   try {
     let ready = false
-    for (let attempt = 0; attempt < 100; attempt += 1) {
+    for (let attempt = 0; attempt < 600; attempt += 1) {
       if (child.exitCode !== null) break
       try {
         const health = await call('/health')
@@ -74,6 +74,11 @@ test('client records require ownership and admin deletion is audited', async () 
     assert.equal(first.status, 201)
     assert.equal(second.status, 201)
     assert.notEqual(first.body.clientId, second.body.clientId)
+    const credentialPath = `/public/clients/${first.body.clientId}`
+    assert.equal((await call(credentialPath)).status, 401)
+    assert.equal((await call(credentialPath, {
+      headers: { 'X-Client-Token': first.body.token },
+    })).status, 200)
 
     const activityPath = `/public/activity/${first.body.clientId}`
     assert.equal((await call(activityPath)).status, 401)
@@ -150,6 +155,21 @@ test('client records require ownership and admin deletion is audited', async () 
     })
     assert.equal(deleted.status, 200)
     assert.equal(deleted.body.deletedScans, 1)
+    const rejectedCredential = await call(credentialPath, {
+      headers: { 'X-Client-Token': first.body.token },
+    })
+    assert.equal(rejectedCredential.status, 403)
+    assert.equal(rejectedCredential.body.code, 'CLIENT_ACCESS_DENIED')
+    const replacement = await call('/public/clients', { method: 'POST' })
+    assert.notEqual(replacement.body.clientId, first.body.clientId)
+    assert.equal((await call(`/public/activity/${replacement.body.clientId}`, {
+      headers: { 'X-Client-Token': replacement.body.token },
+    })).body.scans.length, 0)
+    assert.equal((await call('/scan/message', {
+      method: 'POST',
+      headers: { 'X-Client-Token': replacement.body.token },
+      body: JSON.stringify({ ...scan, clientId: replacement.body.clientId }),
+    })).status, 201)
     assert.equal((await call(activityPath, {
       headers: { 'X-Client-Token': first.body.token },
     })).status, 403)

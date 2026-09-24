@@ -24,8 +24,9 @@ const receiveExtensionCredential = (clientId) => new Promise((resolve) => {
   const onMessage = (event) => {
     if (event.source !== window || event.origin !== window.location.origin ||
         event.data?.type !== 'tracking-threats:client-credential' ||
-        event.data.clientId !== clientId || !validClientToken(event.data.token)) return
-    finish({ clientId, token: event.data.token })
+        (event.data.requestedClientId ?? event.data.clientId) !== clientId ||
+        !validClientId(event.data.clientId) || !validClientToken(event.data.token)) return
+    finish({ clientId: event.data.clientId, token: event.data.token })
   }
   window.addEventListener('message', onMessage)
   const timeout = window.setTimeout(() => finish(null), 1200)
@@ -45,13 +46,15 @@ const request = async (path, options) => {
 
   if (!response.ok) {
     let message = `API request failed: ${response.status}`
+    let code
     try {
       const payload = await response.clone().json()
       if (payload?.error) message = payload.error
+      code = payload?.code
     } catch {
       // Keep the status-based message when the backend does not return JSON.
     }
-    throw new Error(message)
+    throw Object.assign(new Error(message), { status: response.status, code })
   }
 
   return response.json()
@@ -69,10 +72,21 @@ export const clearClientCredential = () => {
 }
 
 export const ensureClientCredential = async () => {
-  const stored = readClientCredential()
-  if (stored) return stored
   if (!registrationPromise) {
     registrationPromise = (async () => {
+      const stored = readClientCredential()
+      if (stored) {
+        try {
+          await request(`/public/clients/${stored.clientId}`, {
+            headers: { 'X-Client-Token': stored.token },
+            cache: 'no-store',
+          })
+          return stored
+        } catch (error) {
+          if (error.status !== 403 ||
+              (error.code !== 'CLIENT_ACCESS_DENIED' && error.message !== 'Client access denied')) throw error
+        }
+      }
       const linkedId = new URLSearchParams(window.location.search).get('client')
       const bridged = validClientId(linkedId)
         ? await receiveExtensionCredential(linkedId)
@@ -87,6 +101,12 @@ export const ensureClientCredential = async () => {
           throw new Error('Invalid client credential response')
         }
         localStorage.setItem(clientCredentialKey, JSON.stringify(credential))
+        const url = new URL(window.location.href)
+        if (validClientId(url.searchParams.get('client')) &&
+            url.searchParams.get('client') !== credential.clientId) {
+          url.searchParams.set('client', credential.clientId)
+          window.history.replaceState(window.history.state, '', url)
+        }
         return credential
       })
       .finally(() => { registrationPromise = null })

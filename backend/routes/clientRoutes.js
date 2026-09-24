@@ -1,8 +1,12 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { createClientCredential } from '../middleware/clientAuth.js'
+import { createClientCredential, requireClient } from '../middleware/clientAuth.js'
 
 export const clientRoutes = Router()
+
+clientRoutes.get('/public/clients/:clientId', requireClient, (req, res) => {
+  res.set('Cache-Control', 'no-store').json({ clientId: req.params.clientId })
+})
 
 clientRoutes.post(
   '/public/clients',

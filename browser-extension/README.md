@@ -38,3 +38,10 @@ Version 1.0.24 also ends a batch when no more eligible messages are visible,
 even if fewer than 50 were checked. For example, 45 eligible rows on a Gmail
 page now trigger the review and next-batch choice. Each new choice still allows
 at most 50 additional attempts.
+
+Version 1.0.25 automatically registers a fresh client ID and token when a scan
+is rejected after client deletion, then retries the scan once. Concurrent scans
+share the replacement identity. Deleted history stays deleted. The linked web
+app also checks its credentials and adopts the extension's new ID. Deploy the
+updated backend and frontend, reload the unpacked extension, then refresh the
+app tab to load the updated credential bridge.

@@ -36,7 +36,7 @@ export async function requireClient(req, res, next) {
     const candidate = crypto.createHash('sha256').update(token).digest()
     const expected = Buffer.from(row?.token_hash ?? '0'.repeat(64), 'hex')
     if (!crypto.timingSafeEqual(candidate, expected) || !row) {
-      return res.status(403).json({ error: 'Client access denied' })
+      return res.status(403).json({ error: 'Client access denied', code: 'CLIENT_ACCESS_DENIED' })
     }
     req.clientId = clientId
     return next()
