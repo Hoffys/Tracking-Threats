@@ -11,6 +11,11 @@ import {
 const sections = [
   {
     icon: Database,
+    title: 'Extension downloads and usage',
+    body: 'We count extension ZIP download requests as an aggregate, including repeat requests. Authenticated clients record their latest server contact time. While enabled, the extension reports its random client ID, version, and activity timestamp about every five minutes while the browser is running. Administrators use these records to monitor recently active browser clients, not identify unique people or Google accounts. Usage timestamps are removed when the client is deleted; the anonymous aggregate download count remains.',
+  },
+  {
+    icon: Database,
     title: 'Data processed',
     body: 'The service processes the submitted URL, sender details, message text, or a limited file-text preview to perform the requested scan. It records a random client and scan ID, redacted target metadata, SHA-256 where available, verdict, score, evidence, timestamps, and methodology version.',
   },

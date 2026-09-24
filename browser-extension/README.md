@@ -1,5 +1,12 @@
 # Tracking Threats Browser Extension
 
+Users can now open **Get Extension** on the hosted website to download the manual
+installation ZIP and follow the setup instructions. Version 1.0.26 reports its
+client ID, version, and latest activity every five minutes using browser alarms.
+Update existing unpacked extensions and reload them to enable this reporting.
+The Admin usage section separates ZIP download requests from extension clients
+and recently active system clients. These are not unique-person counts.
+
 Before loading or packaging the extension for a hosted deployment:
 
 1. Edit `config.js`.

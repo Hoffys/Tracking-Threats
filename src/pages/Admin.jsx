@@ -25,6 +25,15 @@ const tabs = [
   { id: 'logs', label: 'Logs' },
 ]
 
+const usageMetrics = [
+  ['extensionDownloads', 'Extension download requests'],
+  ['registeredExtensions', 'Registered extension clients'],
+  ['activeExtensions24h', 'Active extensions · 24 hours'],
+  ['activeExtensions7d', 'Active extensions · 7 days'],
+  ['activeClients24h', 'Active system clients · 24 hours'],
+  ['activeClients7d', 'Active system clients · 7 days'],
+]
+
 export function Admin() {
   const [tokenInput, setTokenInput] = useState('')
   const [adminToken, setAdminToken] = useState('')
@@ -135,6 +144,7 @@ export function Admin() {
       ['Summary', 'Registered clients', overview.clients],
       ['Summary', 'Stored scans', overview.scans],
       ['Summary', 'Scans in 24 hours', overview.scansLast24Hours],
+      ...usageMetrics.map(([key, label]) => ['Usage', label, overview.usage?.[key] ?? 0]),
       ...overview.byType.map((row) => ['Scan type', row.type, row.count]),
       ...overview.byStatus.map((row) => ['Outcome', row.status, row.count]),
     ]
@@ -201,6 +211,24 @@ export function Admin() {
       {error && <p role="alert" className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{error}</p>}
       {notice && <p role="status" className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</p>}
 
+      <section aria-label="Extension and system usage" className="rounded-lg border border-emerald-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+        <h2 className="text-lg font-semibold">Extension and system usage</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {usageMetrics.map(([key, label]) => (
+            <div key={key}>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+              <p className="mt-1 text-2xl font-semibold">{overview?.usage?.[key] ?? 0}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          Tracking since {formatDate(overview?.usage?.trackingStartedAt)}. Downloads count ZIP requests, including repeats, not confirmed installs.
+          Registered extensions are current client IDs that have reported from extension v1.0.26 or newer, not verified installed copies.
+          Active means a recent server contact; it does not mean someone is online right now. System clients include web, installed app, and extension activity.
+          One person can have multiple clients. Older downloads cannot be recovered; existing extensions must be updated to report usage. Deleted client records leave these client counts. Use Refresh to update.
+        </p>
+      </section>
+
       <div role="tablist" aria-label="Admin views" className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
         {tabs.map((item) => (
           <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => { setTab(item.id); setSelected(null) }}
@@ -263,11 +291,13 @@ export function Admin() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[650px] text-left text-sm">
-                <thead className="border-b border-slate-300 text-slate-500 dark:border-slate-700"><tr><th className="py-2">Client ID</th><th>Scans</th><th>Last scan</th><th>Access</th></tr></thead>
+                <thead className="border-b border-slate-300 text-slate-500 dark:border-slate-700"><tr><th className="py-2">Client ID</th><th>Scans</th><th>Last scan</th><th>Last active</th><th>Extension</th><th>Access</th></tr></thead>
                 <tbody>{visibleClients.map((client) => (
                   <tr key={client.clientId} className="border-b border-slate-200 dark:border-slate-800">
                     <td className="py-2"><button type="button" onClick={() => selectClient(client.clientId)} className="font-mono text-emerald-700 hover:underline dark:text-emerald-300">{client.clientId}</button></td>
-                    <td>{client.scanCount}</td><td>{formatDate(client.lastScanAt)}</td><td>{client.accessStatus === 'legacy' ? 'Legacy (unclaimed)' : 'Active'}</td>
+                    <td>{client.scanCount}</td><td>{formatDate(client.lastScanAt)}</td><td>{formatDate(client.lastSeenAt)}</td>
+                    <td>{client.extensionVersion ? <><span>v{client.extensionVersion}</span><p className="text-xs text-slate-500">{formatDate(client.extensionLastSeenAt)}</p></> : 'Not reported'}</td>
+                    <td>{client.accessStatus === 'legacy' ? 'Legacy (unclaimed)' : 'Active'}</td>
                   </tr>
                 ))}</tbody>
               </table>

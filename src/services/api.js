@@ -1,4 +1,5 @@
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
+export const extensionDownloadUrl = `${apiBaseUrl}/api/public/extension/download`
 const clientCredentialKey = 'threattrack:client-credential'
 const validClientId = (value) => /^cl_[a-f0-9]{32}$/.test(value ?? '')
 const validClientToken = (value) => /^[A-Za-z0-9_-]{40,80}$/.test(value ?? '')

@@ -10,9 +10,10 @@ export async function createClientCredential() {
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
   const db = await dbPromise
   await db.run(
-    'INSERT INTO client_credentials (client_id, token_hash, created_at) VALUES (?, ?, ?)',
+    'INSERT INTO client_credentials (client_id, token_hash, created_at, last_seen_at) VALUES (?, ?, ?, ?)',
     clientId,
     tokenHash,
+    new Date().toISOString(),
     new Date().toISOString(),
   )
   return { clientId, token }
@@ -39,6 +40,8 @@ export async function requireClient(req, res, next) {
       return res.status(403).json({ error: 'Client access denied', code: 'CLIENT_ACCESS_DENIED' })
     }
     req.clientId = clientId
+    await db.run('UPDATE client_credentials SET last_seen_at = ? WHERE client_id = ? AND (last_seen_at IS NULL OR last_seen_at < ?)',
+      new Date().toISOString(), clientId, new Date(Date.now() - 60 * 1000).toISOString())
     return next()
   } catch (error) {
     return next(error)

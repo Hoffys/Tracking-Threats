@@ -99,6 +99,11 @@ export const dbPromise = openDatabase()
 export async function initDatabase() {
   const db = await dbPromise
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS usage_counters (
+      name TEXT PRIMARY KEY,
+      count INTEGER NOT NULL DEFAULT 0,
+      started_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS scans (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
@@ -275,6 +280,10 @@ export async function initDatabase() {
     );
   `)
 
+  await ensureColumn(db, 'client_credentials', 'last_seen_at', 'TEXT')
+  await ensureColumn(db, 'client_credentials', 'extension_seen_at', 'TEXT')
+  await ensureColumn(db, 'client_credentials', 'extension_version', 'TEXT')
+  await db.run("INSERT INTO usage_counters (name, count, started_at) VALUES ('extension-downloads', 0, ?) ON CONFLICT(name) DO NOTHING", new Date().toISOString())
   await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
   await ensureColumn(db, 'blocked_threats', 'active_visible', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'blocked_threats', 'audit_visible', 'INTEGER NOT NULL DEFAULT 1')

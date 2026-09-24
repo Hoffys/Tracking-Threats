@@ -56,6 +56,7 @@ export function InstallApp() {
       {showHelp && (
         <div id="install-app-help" className="absolute right-0 z-40 mt-3 w-72 max-w-[85vw] space-y-3 rounded-lg border border-emerald-200 bg-white p-4 text-sm shadow-xl dark:border-slate-700 dark:bg-slate-900">
           <h2 className="font-semibold">Install Tracking Threats</h2>
+          <p>If you use Opera or Opera GX and no install prompt appears, open this website in desktop Chrome or Edge to install the app. To download the browser extension, use <strong>Get Extension</strong> at the top of the page.</p>
           <p>Chrome: open the browser menu, then Cast, save, and share → Install page as app. You may also see an install icon in the address bar.</p>
           <p>Edge: browser menu → Apps → Install this site as an app.</p>
           <p>iPhone/iPad: open in Safari → Share → Add to Home Screen.</p>

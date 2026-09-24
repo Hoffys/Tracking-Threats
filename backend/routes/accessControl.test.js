@@ -132,9 +132,44 @@ test('client records require ownership and admin deletion is audited', async () 
       headers: { Authorization: 'Bearer wrong-token' },
     })).status, 403)
     const adminHeaders = { Authorization: `Bearer ${adminToken}` }
+    assert.equal((await call('/public/extension/heartbeat', {
+      method: 'POST', body: JSON.stringify({ clientId: first.body.clientId, version: '1.0.26' }),
+    })).status, 401)
+    assert.equal((await call('/public/extension/heartbeat', {
+      method: 'POST', headers: { 'X-Client-Token': second.body.token },
+      body: JSON.stringify({ clientId: first.body.clientId, version: '1.0.26' }),
+    })).status, 403)
+    for (let index = 0; index < 2; index += 1) {
+      assert.equal((await call('/public/extension/heartbeat', {
+        method: 'POST', headers: { 'X-Client-Token': first.body.token },
+        body: JSON.stringify({ clientId: first.body.clientId, version: '1.0.26' }),
+      })).status, 200)
+    }
+    assert.equal((await call('/public/extension/heartbeat', {
+      method: 'POST', headers: { 'X-Client-Token': first.body.token },
+      body: JSON.stringify({ clientId: first.body.clientId, version: '<invalid>' }),
+    })).status, 400)
+    const downloadUrl = `http://127.0.0.1:${port}/api/public/extension/download`
+    assert.equal((await fetch(downloadUrl, { method: 'HEAD' })).status, 200)
+    assert.equal((await call('/admin/overview', { headers: adminHeaders })).body.usage.extensionDownloads, 0)
+    const archive = await fetch(downloadUrl)
+    assert.equal(archive.status, 200)
+    assert.match(archive.headers.get('content-disposition'), /attachment.*tracking-threats-extension.zip/)
+    assert.equal(Buffer.from(await archive.arrayBuffer()).readUInt32LE(0), 0x04034b50)
     const overview = await call('/admin/overview', { headers: adminHeaders })
     assert.equal(overview.status, 200)
     assert.equal(overview.body.clients, 2)
+    assert.equal(overview.body.usage.extensionDownloads, 1)
+    assert.equal(overview.body.usage.registeredExtensions, 1)
+    assert.equal(overview.body.usage.activeExtensions24h, 1)
+    assert.equal(overview.body.usage.activeExtensions7d, 1)
+    assert.equal(overview.body.usage.activeClients24h, 2)
+    assert.equal(overview.body.usage.activeClients7d, 2)
+    const clientList = await call('/admin/clients', { headers: adminHeaders })
+    const extensionClient = clientList.body.find((client) => client.clientId === first.body.clientId)
+    assert.equal(extensionClient.extensionVersion, '1.0.26')
+    assert.ok(extensionClient.lastSeenAt)
+    assert.ok(extensionClient.extensionLastSeenAt)
     const detail = await call(`/admin/clients/${first.body.clientId}`, {
       headers: adminHeaders,
     })
@@ -155,6 +190,7 @@ test('client records require ownership and admin deletion is audited', async () 
     })
     assert.equal(deleted.status, 200)
     assert.equal(deleted.body.deletedScans, 1)
+    assert.equal((await call('/admin/overview', { headers: adminHeaders })).body.usage.registeredExtensions, 0)
     const rejectedCredential = await call(credentialPath, {
       headers: { 'X-Client-Token': first.body.token },
     })

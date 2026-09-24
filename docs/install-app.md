@@ -8,6 +8,25 @@
 
 ## Browser extension
 
+Click **Get Extension → Download Extension ZIP** at the top of the website.
+Extract the ZIP and follow the on-screen setup steps. The downloadable folder is
+named `tracking-threats-extension`; select the folder containing `manifest.json`.
+Existing users should replace their extension files and reload to receive updates.
+
+## Admin usage monitoring
+
+Sign in to Admin to see download requests, registered extension clients, active
+extensions (24 hours / 7 days), and active system clients (24 hours / 7 days).
+Use Refresh for current counts or Download CSV in Reports. Download requests
+include repeats and do not prove installation. Active clients are credentialed
+browser clients recently contacting the server, not verified unique people or
+currently online users. Extension-specific metrics require version 1.0.26 or newer.
+The dashboard displays when tracking began; prior downloads cannot be reconstructed.
+Deleting a client's data removes its usage timestamps and its client counts.
+The download counter is anonymous and remains after client deletion.
+
+## Existing local development installation
+
 Install the extension separately in the same desktop browser profile. For the current
 unpacked development version, open `chrome://extensions` (or `edge://extensions`),
 enable Developer mode, choose **Load unpacked**, and select the project's

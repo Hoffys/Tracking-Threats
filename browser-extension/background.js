@@ -1036,3 +1036,21 @@ Promise.all([loadBlockedHosts(), loadBypassHosts(), loadAllowedHosts()])
   })
 
 setInterval(syncSafeHosts, SAFE_HOST_SYNC_MS)
+
+async function reportExtensionUsage() {
+  try {
+    await scanFetch(`${API_BASE_URL}/api/public/extension/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version: chrome.runtime.getManifest().version }),
+    })
+  } catch {
+    // Retry on the next alarm; reporting must not interrupt scans.
+  }
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'tracking-threats-usage') reportExtensionUsage()
+})
+chrome.alarms.create('tracking-threats-usage', { periodInMinutes: 5 })
+reportExtensionUsage()
