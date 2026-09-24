@@ -224,7 +224,7 @@ export function Admin() {
         <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
           Tracking since {formatDate(overview?.usage?.trackingStartedAt)}. Downloads count ZIP requests, including repeats, not confirmed installs.
           Registered extensions are current client IDs that have reported from extension v1.0.26 or newer, not verified installed copies.
-          Active means a recent server contact; it does not mean someone is online right now. System clients include web, installed app, and extension activity.
+          Active means a recent server contact; it does not mean someone is online right now. System clients include website and extension activity.
           One person can have multiple clients. Older downloads cannot be recovered; existing extensions must be updated to report usage. Deleted client records leave these client counts. Use Refresh to update.
         </p>
       </section>

@@ -28,7 +28,7 @@ export function GetExtension() {
             <li>Browse supported sites, then open the extension popup to view scan status and your linked history.</li>
           </ol>
           <p className="mt-4">Already installed? Replace the files in your existing extension folder with the extracted files, then click <strong>Reload</strong> on the extensions page.</p>
-          <p className="mt-3">Installing the app is separate. No Google account connection is needed; email scanning requires your consent.</p>
+          <p className="mt-3">No Google account connection is needed; email scanning requires your consent.</p>
           <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">We count ZIP download requests. The enabled extension reports its random client ID, version, and activity time about every 5 minutes so admins can monitor usage. Counts represent browser clients, not unique people.</p>
         </section>
       )}

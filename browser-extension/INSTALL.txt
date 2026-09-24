@@ -12,8 +12,7 @@ Tracking Threats Browser Extension
 This is a manual installation package, not a Chrome Web Store listing.
 The ZIP does not install itself. Do not delete the extracted folder.
 For an existing installation, replace its files and click Reload.
-Chrome and Edge desktop are the supported setup instructions. The PWA and
-extension are separate; installing the PWA does not install the extension.
+Chrome and Edge desktop are the supported browsers for these setup instructions.
 
 Usage monitoring: while enabled, the extension sends its random client ID,
 version and a heartbeat about every 5 minutes while the browser is running.

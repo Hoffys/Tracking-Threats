@@ -17,7 +17,6 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 import { isPublicDeployment } from '../config/deployment'
 import { useThreats } from '../hooks/useThreats'
-import { InstallApp } from './InstallApp'
 import { GetExtension } from './GetExtension'
 
 const allNavItems = [
@@ -193,7 +192,6 @@ export function Layout({ activePage, children, onNavigate }) {
 
           <div className="flex items-center gap-2">
             <GetExtension />
-            <InstallApp />
             <div className="hidden items-center gap-2 rounded-full border border-emerald-400 bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 md:flex">
               <span className="relative flex h-3 w-3 items-center justify-center">
                 {systemActive && (
