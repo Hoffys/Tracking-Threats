@@ -68,6 +68,9 @@ function AppShell() {
     if (safePage === 'about') url.searchParams.set('section', nextAboutSection)
     else url.searchParams.delete('section')
     url.searchParams.delete('blocked')
+    url.searchParams.delete('scan')
+    url.searchParams.delete('preview')
+    url.hash = ''
     window.history.replaceState({}, '', url)
   }
 

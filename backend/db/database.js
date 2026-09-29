@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import sqlite3 from 'sqlite3'
 import { open } from 'sqlite'
+import { createSqliteAdapter } from './sqliteAdapter.js'
 import '../config/loadEnv.js'
 
 const { Pool, types } = pg
@@ -77,19 +78,7 @@ const openPostgresDatabase = async () => {
 const openSqliteDatabase = async () => {
   await fs.mkdir(path.dirname(databasePath), { recursive: true })
   const db = await open({ filename: databasePath, driver: sqlite3.Database })
-  db.provider = 'sqlite'
-  db.transaction = async (callback) => {
-    await db.exec('BEGIN')
-    try {
-      const result = await callback(db)
-      await db.exec('COMMIT')
-      return result
-    } catch (error) {
-      await db.exec('ROLLBACK')
-      throw error
-    }
-  }
-  return db
+  return createSqliteAdapter(db)
 }
 
 const openDatabase = () => (databaseUrl ? openPostgresDatabase() : openSqliteDatabase())

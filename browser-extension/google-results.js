@@ -122,19 +122,37 @@ function getResultStyle(scan) {
   }
 }
 
-function getDetailsUrl(url, appUrl = APP_URL) {
+function getDetailsUrl(url, appUrl = APP_URL, scan = null) {
   const detailsUrl = new URL(APP_URL)
   detailsUrl.href = appUrl
   detailsUrl.searchParams.set('page', 'history')
-  detailsUrl.searchParams.set('blocked', url)
+  detailsUrl.searchParams.delete('scan')
+  detailsUrl.searchParams.delete('blocked')
+  detailsUrl.searchParams.delete('preview')
+  detailsUrl.hash = ''
+  if (scan) {
+    detailsUrl.searchParams.set('preview', '1')
+    // Carry the displayed result without saving it or running another scan.
+    // A fragment stays in the browser rather than entering server request logs.
+    detailsUrl.hash = new URLSearchParams({ preview: JSON.stringify({
+      target: url,
+      status: scan.status,
+      score: scan.score,
+      summary: scan.summary,
+      warningSigns: scan.warningSigns ?? [],
+      recommendations: scan.recommendations ?? [],
+    }) }).toString()
+  } else {
+    detailsUrl.searchParams.set('blocked', url)
+  }
   return detailsUrl.toString()
 }
 
-function setDetailsHref(anchor, url) {
-  anchor.href = getDetailsUrl(url)
+function setDetailsHref(anchor, url, scan) {
+  anchor.href = getDetailsUrl(url, APP_URL, scan)
   chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
     if (chrome.runtime.lastError || !response?.ok || !response.appUrl) return
-    anchor.href = getDetailsUrl(url, response.appUrl)
+    anchor.href = getDetailsUrl(url, response.appUrl, scan)
   })
 }
 
@@ -181,7 +199,7 @@ function addBadge(anchor, scan) {
     chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
       const appUrl =
         chrome.runtime.lastError || !response?.ok || !response.appUrl ? APP_URL : response.appUrl
-      window.open(getDetailsUrl(normalized, appUrl), '_blank', 'noopener,noreferrer')
+      window.open(getDetailsUrl(normalized, appUrl, scan), '_blank', 'noopener,noreferrer')
     })
   }
 
@@ -387,7 +405,7 @@ function showResultPopup(url, scan) {
   }
 
   const details = document.createElement('a')
-  setDetailsHref(details, topUrl)
+  setDetailsHref(details, topUrl, topScan)
   details.target = '_blank'
   details.rel = 'noreferrer'
   details.textContent = 'Open in Tracking Threats'
@@ -518,7 +536,7 @@ function showClickPreview(url, scan, anchor) {
   actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;margin-top:16px'
 
   const details = document.createElement('a')
-  setDetailsHref(details, url)
+  setDetailsHref(details, url, scan)
   details.target = '_blank'
   details.rel = 'noreferrer'
   details.textContent = 'Open details'

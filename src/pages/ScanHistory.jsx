@@ -5,6 +5,7 @@ import { RiskBadge } from '../components/RiskBadge'
 import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
+import { readSearchPreview } from '../utils/searchPreview'
 
 const formatTime = (date) =>
   new Intl.DateTimeFormat(undefined, {
@@ -79,6 +80,11 @@ export function ScanHistory() {
   const [typeFilter, setTypeFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sourceFilter, setSourceFilter] = useState('All')
+  const previewRequested = useMemo(
+    () => new URLSearchParams(window.location.search).get('preview') === '1',
+    [],
+  )
+  const searchPreview = useMemo(() => readSearchPreview(window.location.href), [])
   const blockedTarget = useMemo(
     () => new URLSearchParams(window.location.search).get('blocked') ?? '',
     [],
@@ -116,12 +122,12 @@ export function ScanHistory() {
   }, [query, scanHistory, sourceFilter, statusFilter, typeFilter])
 
   useEffect(() => {
-    if (!focusedScan) return
+    if (previewRequested || !focusedScan) return
     document.getElementById(`scan-${focusedScan.id}`)?.scrollIntoView({
       block: 'center',
       behavior: 'smooth',
     })
-  }, [focusedScan])
+  }, [focusedScan, previewRequested])
 
   return (
     <div className="space-y-5">
@@ -144,7 +150,48 @@ export function ScanHistory() {
         </button>
       </div>
 
-      {blockedTarget && (
+      {previewRequested && (
+        <Panel>
+          <p className="text-sm font-semibold text-teal-700 dark:text-teal-300">Search result preview</p>
+          {searchPreview ? (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="break-all font-medium">{searchPreview.target}</p>
+                  <p className="mt-1 text-sm">Safety score {searchPreview.score}/100</p>
+                </div>
+                <RiskBadge risk={searchPreview.status} />
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                This is the result shown by your extension before opening the link. It has not been saved to scan history. Saved scans are listed below.
+              </p>
+              {searchPreview.summary && <p className="text-sm">{searchPreview.summary}</p>}
+              {searchPreview.warningSigns.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold">Warning signs</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+                    {searchPreview.warningSigns.map((warning, index) => <li key={index}>{warning}</li>)}
+                  </ul>
+                </div>
+              )}
+              {searchPreview.recommendations.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold">Recommendations</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+                    {searchPreview.recommendations.map((recommendation, index) => <li key={index}>{recommendation}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              This preview link is incomplete or invalid. Return to the search results and open the extension result again.
+            </p>
+          )}
+        </Panel>
+      )}
+
+      {!previewRequested && blockedTarget && (
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -160,7 +207,7 @@ export function ScanHistory() {
               <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-300">
                 {focusedScan
                   ? 'The matching scan is highlighted below with warning signs and recommendations.'
-                  : 'Waiting for the matching scan record to appear here.'}
+                  : 'No matching saved scan is available. Search result previews are not saved until you visit the site. To see a preview, open it again from the updated extension.'}
               </p>
             </div>
             {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} />}

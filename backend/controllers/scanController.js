@@ -166,15 +166,17 @@ export async function createSystemLog({ level = 'info', event, message, metadata
   )
 }
 
-async function enforceVisibleScanLimit(db) {
+async function enforceVisibleScanLimit(db, clientId) {
   const rowsToHide = await db.all(
     `
       SELECT id
       FROM scans
       WHERE history_visible = 1
-      ORDER BY created_at DESC
+        AND ${clientId ? 'client_id = ?' : 'client_id IS NULL'}
+      ORDER BY created_at DESC, id DESC
       LIMIT -1 OFFSET ?
     `,
+    ...(clientId ? [clientId] : []),
     visibleScanLimit,
   )
 
@@ -360,7 +362,7 @@ async function persistScan({
   await recordScanEvidence(db, scan, storedAnalysis)
   await recordPrivacyConsent(db, scan, privacy)
 
-  await enforceVisibleScanLimit(db)
+  await enforceVisibleScanLimit(db, storedClientId)
 
   const savedScan = mapScan({
     ...scan,
@@ -615,7 +617,7 @@ export async function scanUrlHandler(req, res, next) {
   try {
     const target = req.body.url ?? req.body.target
     const source = req.body.source ?? 'api'
-    const clientId = req.body.clientId
+    const clientId = req.clientId ?? req.body.clientId
     if (!target) return res.status(400).json({ error: 'url is required' })
     if (req.body.preview === true) {
       return res.json(await previewUrlScan(target))
@@ -647,7 +649,7 @@ export async function scanMessageHandler(req, res, next) {
         await createMessageScan(
           { target, content },
           source,
-          req.body.clientId,
+          req.clientId ?? req.body.clientId,
           getPrivacyContext(req.body, source),
         ),
       )
@@ -673,7 +675,7 @@ export async function scanFileHandler(req, res, next) {
         await createFileScan(
           { fileName, mimeType, size, content, sha256 },
           source,
-          req.body.clientId,
+          req.clientId ?? req.body.clientId,
           getPrivacyContext(req.body, source),
         ),
       )
@@ -688,7 +690,7 @@ export async function scanEmailHandler(req, res, next) {
     const subject = req.body.subject ?? ''
     const body = req.body.body ?? req.body.content ?? ''
     const source = req.body.source ?? 'api'
-    const clientId = req.body.clientId
+    const clientId = req.clientId ?? req.body.clientId
     if (!body && !subject) return res.status(400).json({ error: 'email content is required' })
     const privacyError = validatePrivacyAcknowledgment(req, source)
     if (privacyError) return res.status(400).json({ error: privacyError })

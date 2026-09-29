@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { once } from 'node:events'
 import fs from 'node:fs/promises'
+import http from 'node:http'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
@@ -20,7 +21,7 @@ const freePort = async () => {
   return port
 }
 
-test('client records require ownership and admin deletion is audited', async () => {
+test('client records require ownership and admin deletion is audited', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tracking-threats-access-'))
   const port = await freePort()
   const adminToken = 'test-admin-token-with-sufficient-random-length'
@@ -36,6 +37,7 @@ test('client records require ownership and admin deletion is audited', async () 
       STORE_SCAN_CONTENT: 'false',
       AUTO_MONITOR: 'false',
       SMTP_ENABLED: 'false',
+      RESEND_API_KEY: '',
       URLHAUS_AUTH_KEY: '',
       PHISHTANK_APP_KEY: '',
       VIRUSTOTAL_API_KEY: '',
@@ -97,6 +99,52 @@ test('client records require ownership and admin deletion is audited', async () 
       headers: { 'X-Client-Token': first.body.token },
     })).status, 200)
 
+    await t.test('notification settings use the authenticated client when body and query disagree', async () => {
+      const secondSettingsPath = `/notification-settings?clientId=${second.body.clientId}`
+      assert.equal((await call(secondSettingsPath, {
+        method: 'PUT',
+        headers: { 'X-Client-Token': second.body.token },
+        body: JSON.stringify({ clientId: second.body.clientId, reportEmails: ['private@example.com'] }),
+      })).status, 200)
+
+      // fetch disallows GET bodies; an HTTP client can still send one.
+      const body = JSON.stringify({ clientId: first.body.clientId })
+      const response = await new Promise((resolve, reject) => {
+        const request = http.request({
+          hostname: '127.0.0.1', port,
+          path: `/api${secondSettingsPath}`,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+            'X-Client-Token': first.body.token,
+          },
+        }, (res) => {
+          let text = ''
+          res.on('data', (chunk) => { text += chunk })
+          res.on('error', reject)
+          res.on('end', () => resolve({ status: res.statusCode, body: JSON.parse(text) }))
+        })
+        request.on('error', reject)
+        request.end(body)
+      })
+      assert.equal(response.status, 200)
+      assert.deepEqual(response.body.reportEmails, [])
+
+      const updated = await call(secondSettingsPath, {
+        method: 'PUT',
+        headers: { 'X-Client-Token': first.body.token },
+        body: JSON.stringify({ clientId: first.body.clientId, reportEmails: ['own@example.com'] }),
+      })
+      assert.equal(updated.status, 200)
+      assert.deepEqual((await call(settingsPath, {
+        headers: { 'X-Client-Token': first.body.token },
+      })).body.reportEmails, ['own@example.com'])
+      assert.deepEqual((await call(secondSettingsPath, {
+        headers: { 'X-Client-Token': second.body.token },
+      })).body.reportEmails, ['private@example.com'])
+    })
+
     const scan = {
       target: 'Example message',
       message: 'Hello from the access test',
@@ -122,6 +170,30 @@ test('client records require ownership and admin deletion is audited', async () 
     assert.equal((await call(activityPath, {
       headers: { 'X-Client-Token': first.body.token },
     })).body.scans.length, 1)
+
+    await t.test('the 50-scan limit is isolated to each client', async () => {
+      const secondScanIds = []
+      for (let index = 0; index < 51; index += 1) {
+        const result = await call('/scan/message', {
+          method: 'POST',
+          headers: { 'X-Client-Token': second.body.token },
+          body: JSON.stringify({ ...scan, clientId: second.body.clientId }),
+        })
+        assert.equal(result.status, 201)
+        secondScanIds.push(result.body.id)
+      }
+      const firstActivity = await call(activityPath, {
+        headers: { 'X-Client-Token': first.body.token },
+      })
+      assert.deepEqual(firstActivity.body.scans.map((item) => item.id), [saved.body.id])
+      const secondActivity = await call(`/public/activity/${second.body.clientId}`, {
+        headers: { 'X-Client-Token': second.body.token },
+      })
+      assert.equal(secondActivity.body.scans.length, 50)
+      assert.equal(secondActivity.body.scans.some((item) => item.id === secondScanIds[0]), false)
+      assert.equal(secondActivity.body.scans.some((item) => item.id === secondScanIds.at(-1)), true)
+      assert.equal(secondActivity.body.liveFeed.length, 50)
+    })
 
     assert.equal((await call(`/public/data/${first.body.clientId}`, {
       method: 'DELETE',

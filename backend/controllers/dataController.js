@@ -180,7 +180,7 @@ export async function getSafeHosts(_req, res, next) {
 
 export async function getPublicActivity(req, res, next) {
   try {
-    const clientId = normalizeClientId(req.params.clientId)
+    const clientId = req.clientId ?? normalizeClientId(req.params.clientId)
     if (!clientId) return res.status(400).json({ error: 'invalid client id' })
 
     const db = await dbPromise
@@ -231,7 +231,7 @@ export async function getPublicActivity(req, res, next) {
 
 export async function deletePublicScanHistory(req, res, next) {
   try {
-    const clientId = normalizeClientId(req.params.clientId)
+    const clientId = req.clientId ?? normalizeClientId(req.params.clientId)
     if (!clientId) return res.status(400).json({ error: 'invalid client id' })
 
     res.json({ ok: true, ...(await deleteClientScanData(clientId)) })
@@ -242,7 +242,7 @@ export async function deletePublicScanHistory(req, res, next) {
 
 export async function deletePublicClientData(req, res, next) {
   try {
-    const clientId = normalizeClientId(req.params.clientId)
+    const clientId = req.clientId ?? normalizeClientId(req.params.clientId)
     if (!clientId) return res.status(400).json({ error: 'invalid client id' })
 
     res.json({
@@ -415,7 +415,7 @@ export async function getStats(_req, res, next) {
 
 export async function getNotificationSettings(_req, res, next) {
   try {
-    const clientId = normalizeClientId(_req.query.clientId)
+    const clientId = _req.clientId ?? normalizeClientId(_req.query.clientId)
     res.json({
       ...(await readNotificationSettings(clientId)),
       mailConfigured: isMailConfigured(),
@@ -428,7 +428,7 @@ export async function getNotificationSettings(_req, res, next) {
 
 export async function saveNotificationSettings(req, res, next) {
   try {
-    const clientId = normalizeClientId(req.body.clientId ?? req.query.clientId)
+    const clientId = req.clientId ?? normalizeClientId(req.body.clientId ?? req.query.clientId)
     res.json({
       ...(await writeNotificationSettings(req.body, clientId)),
       mailConfigured: isMailConfigured(),
@@ -447,7 +447,7 @@ export async function saveNotificationSettings(req, res, next) {
 
 export async function emailHistoryDigest(_req, res, next) {
   try {
-    const clientId = normalizeClientId(_req.body?.clientId ?? _req.query.clientId)
+    const clientId = _req.clientId ?? normalizeClientId(_req.body?.clientId ?? _req.query.clientId)
     if (!isMailConfigured()) {
       return res.status(409).json({ error: 'SMTP is not configured' })
     }

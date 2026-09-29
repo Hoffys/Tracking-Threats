@@ -901,12 +901,15 @@ async function scanDownload(downloadItem) {
   try {
     const clientId = await getClientId()
     const urlScan = await scanDownloadUrl(downloadItem, clientId)
-    const fileScan = await scanDownloadFile(downloadItem, clientId)
-    const blockingScan = [urlScan, fileScan].find(isBlockedScan)
+    if (isBlockedScan(urlScan)) {
+      await cancelDangerousDownload(downloadItem, urlScan)
+      return urlScan
+    }
 
-    if (blockingScan) {
-      await cancelDangerousDownload(downloadItem, blockingScan)
-      return blockingScan
+    const fileScan = await scanDownloadFile(downloadItem, clientId)
+    if (isBlockedScan(fileScan)) {
+      await cancelDangerousDownload(downloadItem, fileScan)
+      return fileScan
     }
 
     await saveStatus({
