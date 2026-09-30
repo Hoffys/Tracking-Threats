@@ -1,4 +1,4 @@
-import dns from 'node:dns/promises'
+7import dns from 'node:dns/promises'
 import net from 'node:net'
 import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
 import { providerCoverage } from './coverage.js'
@@ -362,6 +362,21 @@ async function checkAbuseIpDb(target) {
       },
     },
   )
+  
+  console.log('AbuseIPDB status:', response.status)
+console.log(
+  'AbuseIPDB remaining:',
+  response.headers.get('x-ratelimit-remaining')
+)
+console.log(
+  'AbuseIPDB reset:',
+  response.headers.get('x-ratelimit-reset')
+)
+console.log(
+  'AbuseIPDB retry after:',
+  response.headers.get('retry-after')
+)
+  
 
   if (!response.ok) throw new Error(`AbuseIPDB returned ${response.status}`)
 
