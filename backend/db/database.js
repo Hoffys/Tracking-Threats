@@ -2,8 +2,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
-import sqlite3 from 'sqlite3'
-import { open } from 'sqlite'
 import { createSqliteAdapter } from './sqliteAdapter.js'
 import '../config/loadEnv.js'
 
@@ -76,8 +74,18 @@ const openPostgresDatabase = async () => {
 }
 
 const openSqliteDatabase = async () => {
+  const [{ default: sqlite3 }, { open }] = await Promise.all([
+    import('sqlite3'),
+    import('sqlite'),
+  ])
+
   await fs.mkdir(path.dirname(databasePath), { recursive: true })
-  const db = await open({ filename: databasePath, driver: sqlite3.Database })
+
+  const db = await open({
+    filename: databasePath,
+    driver: sqlite3.Database,
+  })
+
   return createSqliteAdapter(db)
 }
 
