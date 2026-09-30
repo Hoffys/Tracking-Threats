@@ -272,21 +272,39 @@ async function checkUrlhausHost(target) {
 
 async function checkPhishTank(target) {
   const appKey = process.env.PHISHTANK_APP_KEY
-  const response = await postForm('https://checkurl.phishtank.com/checkurl/', {
-    format: 'json',
-    url: target,
-    ...(appKey ? { app_key: appKey } : {}),
-  }, {
-    'User-Agent': phishTankUserAgent,
-  })
+
+  if (!appKey) {
+    return {
+      provider: 'PhishTank',
+      checked: false,
+      found: false,
+      skipped: 'PhishTank API key is not configured',
+    }
+  }
+
+  const response = await postForm(
+    'https://checkurl.phishtank.com/checkurl/',
+    {
+      format: 'json',
+      url: target,
+      app_key: appKey,
+    },
+    {
+      'User-Agent': phishTankUserAgent,
+    },
+  )
 
   if (response.status === 509) {
     throw new Error('PhishTank rate limit reached; set PHISHTANK_APP_KEY')
   }
-  if (!response.ok) throw new Error(`PhishTank returned ${response.status}`)
+
+  if (!response.ok) {
+    throw new Error(`PhishTank returned ${response.status}`)
+  }
 
   const payload = await response.json()
   const results = payload.results ?? {}
+
   const listed = parseProviderFlag(results.in_database)
   const verified = parseProviderFlag(results.verified)
   const valid = parseProviderFlag(results.valid)
@@ -300,7 +318,9 @@ async function checkPhishTank(target) {
     verified,
     valid,
     phishId: results.phish_id,
-    warning: confirmed ? 'PhishTank verified this URL as an active phishing page' : null,
+    warning: confirmed
+      ? 'PhishTank verified this URL as an active phishing page'
+      : null,
     deduction: confirmed ? 60 : 0,
   }
 }
