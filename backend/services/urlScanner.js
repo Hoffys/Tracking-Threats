@@ -1,6 +1,8 @@
 import { domainToUnicode } from 'node:url'
 import { parse, getDomain as getRegistrableDomain } from 'tldts'
 import { getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
+import urlLexicalModel from './urlLexicalModel.js'
+import { lexicalProbability } from './urlLexicalFeatures.js'
 
 export const MAX_URL_LENGTH = 8192
 export const MAX_TEXT_LENGTH = 100000
@@ -153,6 +155,28 @@ export function scanUrl(urlInput) {
   }
   if (url?.protocol === 'http:' && findings.some((item) => item.deduction >= 20)) {
     findings.push(finding('unencrypted-context', 'An already concerning URL also uses unencrypted HTTP', 5, { protocol: 'http:' }))
+  }
+  if (url && domain) {
+    const probability = lexicalProbability(target, urlLexicalModel)
+    const officialOwner = Object.values(officialDomains).some((owners) => owners.includes(domain))
+    const structuralSignals = [
+      target.length >= 80,
+      labels.length >= 3,
+      !host.includes('xn--') && (host.match(/-/g) ?? []).length >= 2,
+      ((target.match(/\d/g) ?? []).length / Math.max(1, target.length)) >= 0.12,
+      url.search.length >= 20,
+      url.pathname.split('/').filter(Boolean).length >= 5,
+    ].filter(Boolean).length
+    const modelSupported = !officialOwner && structuralSignals > 0
+    // The learned value is uncalibrated and cannot establish a block by itself.
+    // Require independent structural support and the zero-training-FP threshold.
+    const deduction = modelSupported && probability >= urlLexicalModel.blockThreshold ? 25 : 0
+    if (deduction) findings.push(finding(
+      'external-url-model',
+      'URL pattern resembles labeled phishing URLs',
+      deduction,
+      { model: 'phiusiil-url-lexical-v1', phishingLikelihood: Number(probability.toFixed(4)), structuralSignals, calibration: 'uncalibrated' },
+    ))
   }
   return localResult(findings, {
     domain: host, registrableDomain: domain, publicSuffix: parsed.publicSuffix,

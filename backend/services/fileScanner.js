@@ -27,6 +27,20 @@ const sha256Pattern = /^[a-f0-9]{64}$/i
 
 const withTimeout = providerRequest
 
+export function summarizeSandboxVerdicts(verdicts = {}) {
+  const entries = Object.values(verdicts ?? {}).filter((item) => item && typeof item === 'object')
+  const malicious = entries.filter((item) => item.category === 'malicious')
+  const suspicious = entries.filter((item) => item.category === 'suspicious')
+  return {
+    checked: entries.length > 0,
+    found: malicious.length > 0 || suspicious.length > 0,
+    malicious: malicious.length,
+    suspicious: suspicious.length,
+    sandboxes: entries.map((item) => item.sandbox_name).filter(Boolean).slice(0, 20),
+    deduction: malicious.length > 0 ? 70 : suspicious.length > 0 ? 35 : 0,
+  }
+}
+
 const formatProviderError = (error) => {
   const code = error?.cause?.code ?? error?.code
   const message = error?.cause?.message ?? error?.message ?? 'File reputation lookup failed'
@@ -76,23 +90,30 @@ async function checkVirusTotalFileHash(sha256) {
   if (!response.ok) throw new Error(`VirusTotal file lookup returned ${response.status}`)
 
   const payload = await response.json()
-  const stats = payload?.data?.attributes?.last_analysis_stats ?? {}
+  const attributes = payload?.data?.attributes ?? {}
+  const stats = attributes.last_analysis_stats ?? {}
+  const sandbox = summarizeSandboxVerdicts(attributes.sandbox_verdicts)
   const malicious = Number(stats.malicious ?? 0)
   const suspicious = Number(stats.suspicious ?? 0)
 
   return {
     provider: 'VirusTotal File',
     checked: true,
-    found: hasVirusTotalDetections(stats),
+    found: hasVirusTotalDetections(stats) || sandbox.found,
     sha256,
     stats,
     warning:
-      malicious > 0
+      sandbox.malicious > 0
+        ? `${sandbox.malicious} VirusTotal sandbox${sandbox.malicious === 1 ? '' : 'es'} classified this file as malicious`
+        : sandbox.suspicious > 0
+          ? `${sandbox.suspicious} VirusTotal sandbox${sandbox.suspicious === 1 ? '' : 'es'} classified this file as suspicious`
+          : malicious > 0
         ? `VirusTotal reports ${malicious} malicious engine detection${malicious === 1 ? '' : 's'} for this file hash`
         : suspicious > 0
           ? `VirusTotal reports ${suspicious} suspicious engine detection${suspicious === 1 ? '' : 's'} for this file hash`
           : null,
-    deduction: malicious > 0 ? 65 : suspicious > 0 ? 30 : 0,
+    deduction: Math.max(sandbox.deduction, malicious > 0 ? 65 : suspicious > 0 ? 30 : 0),
+    sandbox,
   }
 }
 
@@ -186,7 +207,7 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
       },
       threatIntel,
       coverage: providerCoverage(threatIntel, [
-        'File metadata and limited text only; no full binary parsing, OCR, signature verification or sandbox execution.',
+        'File metadata and limited text were checked. When available, VirusTotal sandbox verdicts for the supplied hash were used; unknown files are not uploaded or executed by Tracking Threats.',
       ]),
       categories: warnings.length ? ['file-risk'] : [],
     },

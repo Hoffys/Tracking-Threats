@@ -62,6 +62,21 @@
         font-weight: 700;
         text-decoration: none;
       }
+
+      button {
+        width: 100%;
+        margin-top: 12px;
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 10px;
+        background: #0f766e;
+        color: white;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
@@ -71,6 +86,8 @@
         <p id="message">Waiting for browsing activity...</p>
         <span id="pill" class="pill">Ready</span>
       </div>
+      <button id="inspectPage" type="button">Inspect this page</button>
+      <p id="inspectionNote">Checks rendered forms and page signals only when you request it.</p>
       <a id="openApp" href="http://localhost:5173/" target="_blank">Open Tracking Threats</a>
     </main>
     <script src="config.js"></script>

@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client\"",
     "dev:demo": "concurrently \"npm run server:dev:demo\" \"npm run client\"",
@@ -16,6 +19,8 @@
     "test": "node --test",
     "evaluate": "node evaluation/run.mjs",
     "evaluate:validate": "node evaluation/run.mjs validate",
+    "evaluate:import:phiusiil": "node evaluation/import-phiusiil.mjs",
+    "evaluate:train:url": "node evaluation/train-url-model.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -27,14 +32,17 @@
     "express-rate-limit": "^8.7.0",
     "framer-motion": "^12.38.0",
     "helmet": "^8.3.0",
+    "jsqr": "1.4.0",
     "lucide-react": "^1.11.0",
-    "nodemailer": "^9.0.5",
+    "mailauth": "7.1.0",
+    "nodemailer": "10.0.13",
     "pg": "^8.16.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "sqlite": "^5.1.1",
     "sqlite3": "^6.0.1",
     "tailwindcss": "^4.2.4",
+    "tesseract.js": "7.0.0",
     "tldts": "^7.4.16"
   },
   "devDependencies": {
@@ -42,6 +50,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "csv-parse": "^7.0.3",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",

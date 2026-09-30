@@ -330,6 +330,18 @@ async function run() {
     await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
   })
 
+  test('mobile viewport keeps primary navigation and scan form usable', async ({ newPage, evidence }) => {
+    const page = await newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    await open(page, 'dashboard')
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible()
+    await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: 'Scan', exact: true }).click()
+    await expect(page.getByRole('heading', { name: /Scan a URL/i })).toBeVisible()
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    assert.ok(overflow <= 1, `Mobile page overflows horizontally by ${overflow}px`)
+    evidence.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, overflow }))
+    await screenshot(page, 'mobile-manual-scan')
+  })
+
   for (const { name, fn } of cases) {
     const evidence = { name, status: 'running' }
     report.cases.push(evidence)
@@ -338,8 +350,8 @@ async function run() {
     const errors = []
     const external = []
     const slug = `${String(report.cases.length).padStart(2, '0')}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 85)}`
-    async function newPage() {
-      const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, serviceWorkers: 'block' })
+    async function newPage(options = {}) {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, serviceWorkers: 'block', ...options })
       contexts.push(context)
       await context.tracing.start({ screenshots: true, snapshots: true, sources: false })
       await context.route('**/*', async (route) => {

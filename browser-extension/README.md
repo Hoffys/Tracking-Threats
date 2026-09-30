@@ -1,5 +1,10 @@
 # Tracking Threats Browser Extension
 
+The extension uses `activeTab` for user-requested rendered-page inspection instead
+of permanent access to every website. URL navigation and download monitoring remain
+in the background; opening the popup and choosing **Inspect this page** temporarily
+allows form and rendered-page signals to be read from the active tab.
+
 Users can now open **Get Extension** on the hosted website to download the manual
 installation ZIP and follow the setup instructions. Version 1.0.26 reports its
 client ID, version, and latest activity every five minutes using browser alarms.
@@ -52,3 +57,10 @@ share the replacement identity. Deleted history stays deleted. The linked web
 app also checks its credentials and adopts the extension's new ID. Deploy the
 updated backend and frontend, reload the unpacked extension, then refresh the
 app tab to load the updated credential bridge.
+
+Version 1.0.30 replaces persistent `<all_urls>` host access with `activeTab` and
+`scripting`. Open the popup and choose **Inspect this page** to authorize a
+one-time rendered-form check for the active page. The extension sends bounded
+counts and booleans, not page HTML. Navigation URL monitoring, reputation
+checks, and dynamic block rules continue to run with their declared browser
+permissions. Reload the unpacked extension after installing this version.

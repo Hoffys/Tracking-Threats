@@ -94,7 +94,7 @@ AUDIT_RETENTION_DAYS=90
 - Admin deletion requires an admin token, a manual request-verification
   acknowledgment, and exact client ID confirmation. It leaves a limited audit
   record without the raw client ID.
-- Client credential rows do not yet expire automatically; they are revoked by
+- Inactive client credential rows expire automatically after 180 days by default; they are also revoked by
   Delete My Data or admin deletion. A formal inactivity-retention rule is still
   needed before wider public use.
 
@@ -165,16 +165,22 @@ establish phishing. The UI preserves these fields in browser-local public
 history and extension search-preview fragments. Preview fragments are display
 snapshots, not saved or authenticated scan records.
 
-URL inspection currently uses static URL features and reputation providers.
-It does **not** fetch redirects or page content, inspect rendered forms, or
-verify behavior at the destination. Email and SMS reputation checks cover at
-most five unique links, with two checks in flight; extra links remain unchecked
-and are reflected in coverage. Messages without links have local-only coverage.
+URL inspection uses local URL features, reputation providers, up to three HTTPS
+redirects, and at most 512 KB of static HTML from public network addresses. The
+extension can submit bounded rendered-form signals after the user clicks
+"Inspect this page." These checks do not execute a destination in an isolated
+sandbox or establish who owns it. Email and SMS reputation checks cover at most
+five unique links, with two checks in flight; extra links remain unchecked and
+are reflected in coverage. Messages without links have local-only coverage.
 File scans also report coverage. Complete coverage only describes the selected
 checks, not exhaustive detection.
 
-The scanner does not execute files in a sandbox, validate document signatures,
-verify issuing organizations, perform OCR, or conduct full binary forensics.
+Image files up to 8 MB can be processed locally in the user's browser for English
+OCR and QR/barcode values before extracted text is submitted for scanning. Files
+are not uploaded to a sandbox or executed by Tracking Threats. When a supplied
+hash already has VirusTotal sandbox verdicts, those remote verdicts are used.
+Unknown files are not submitted for detonation. Document signature validation,
+issuing-organization verification, and full binary forensics are not provided.
 Important IDs, contracts, certificates, invoices, and payment requests must be
 verified with the issuer. Reputation data can be delayed, incomplete, or wrong.
 

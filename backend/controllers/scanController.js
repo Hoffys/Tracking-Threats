@@ -3,6 +3,9 @@ import { analyzeEmail } from '../services/emailAnalyzer.js'
 import { scanFile } from '../services/fileScanner.js'
 import { scanMessage } from '../services/messageScanner.js'
 import { sendScanReport } from '../services/mailReporter.js'
+import { enrichPageInspection, enrichPageSnapshot } from '../services/pageInspector.js'
+import { enrichEmailAuthentication } from '../services/emailAuthentication.js'
+import { extractLinks } from '../services/messageScanner.js'
 import { isMarkedSafeUrlTarget } from '../services/safeHosts.js'
 import { enrichUrlAnalysis } from '../services/threatIntel.js'
 import { enrichContentLinks } from '../services/linkReputation.js'
@@ -429,7 +432,7 @@ async function runWithSubmission(
   }
 }
 
-export async function createUrlScan(target, source = 'api', clientId = null, privacy = {}) {
+export async function createUrlScan(target, source = 'api', clientId = null, privacy = {}, pageSnapshot = null) {
   return runWithSubmission({ type: 'URL', target, source, clientId }, async (submissionId) => {
     if (await isMarkedSafeUrlTarget(target)) {
       return persistScan({
@@ -455,7 +458,8 @@ export async function createUrlScan(target, source = 'api', clientId = null, pri
     }
 
     const baseAnalysis = scanUrl(target)
-    const analysis = await enrichUrlAnalysis(target, baseAnalysis)
+    const remoteAnalysis = await enrichPageInspection(target, await enrichUrlAnalysis(target, baseAnalysis))
+    const analysis = await enrichPageSnapshot(pageSnapshot, remoteAnalysis)
     return persistScan({
       type: 'URL',
       target,
@@ -550,7 +554,7 @@ export async function createMessageScan(
 }
 
 export async function createEmailScan(
-  { sender, subject = '', body = '' },
+  { sender, subject = '', body = '', rawEmail = '', smtpClientIp = '', smtpHelo = '', envelopeFrom = '' },
   source = 'api',
   clientId = null,
   privacy = {},
@@ -560,7 +564,11 @@ export async function createEmailScan(
   return runWithSubmission(
     { type: 'Email', target, content, source, clientId },
     async (submissionId) => {
-      const analysis = await enrichContentLinks(content, analyzeEmail({ sender, subject, body }))
+      const linkAnalysis = await enrichContentLinks(content, analyzeEmail({ sender, subject, body }))
+      const analysis = await enrichEmailAuthentication(
+        { rawEmail, smtpClientIp, smtpHelo, envelopeFrom },
+        linkAnalysis,
+      )
       const storedSender = shouldStoreScanContent()
         ? sender || 'Unknown sender'
         : getEmailDomain(sender) || 'Sender redacted'
@@ -590,17 +598,22 @@ export async function createFileScan(
   const target = fileName || 'Uploaded file'
   return runWithSubmission(
     { type: 'File', target, content, source, clientId },
-    async (submissionId) =>
-      persistScan({
+    async (submissionId) => {
+      const baseAnalysis = await scanFile({ fileName, mimeType, size, content, sha256 })
+      const analysis = extractLinks(content).length > 0
+        ? await enrichContentLinks(content, baseAnalysis)
+        : baseAnalysis
+      return persistScan({
         type: 'File',
         target,
         content,
-        analysis: await scanFile({ fileName, mimeType, size, content, sha256 }),
+        analysis,
         source,
         clientId,
         privacy,
         submissionId,
-      }),
+      })
+    },
   )
 }
 
@@ -636,7 +649,7 @@ export async function scanUrlHandler(req, res, next) {
     if (privacyError) return res.status(400).json({ error: privacyError })
     res
       .status(201)
-      .json(await createUrlScan(target, source, clientId, getPrivacyContext(req.body, source)))
+      .json(await createUrlScan(target, source, clientId, getPrivacyContext(req.body, source), req.body.pageSnapshot ?? null))
   } catch (error) {
     next(error)
   }
@@ -699,6 +712,10 @@ export async function scanEmailHandler(req, res, next) {
     const sender = req.body.sender ?? req.body.target ?? ''
     const subject = req.body.subject ?? ''
     const body = req.body.body ?? req.body.content ?? ''
+    const rawEmail = req.body.rawEmail ?? ''
+    const smtpClientIp = req.body.smtpClientIp ?? ''
+    const smtpHelo = req.body.smtpHelo ?? ''
+    const envelopeFrom = req.body.envelopeFrom ?? ''
     const source = req.body.source ?? 'api'
     const clientId = req.clientId ?? req.body.clientId
     if (!body && !subject) return res.status(400).json({ error: 'email content is required' })
@@ -708,7 +725,7 @@ export async function scanEmailHandler(req, res, next) {
       .status(201)
       .json(
         await createEmailScan(
-          { sender, subject, body },
+          { sender, subject, body, rawEmail, smtpClientIp, smtpHelo, envelopeFrom },
           source,
           clientId,
           getPrivacyContext(req.body, source),

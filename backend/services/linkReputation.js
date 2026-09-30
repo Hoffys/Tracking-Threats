@@ -33,7 +33,10 @@ export async function enrichContentLinks(content, baseAnalysis, lookup = enrichU
     })))
   }
 
-  const providers = analyses.flatMap((analysis) => analysis.details?.threatIntel ?? [])
+  const providers = [
+    ...(baseAnalysis.details?.threatIntel ?? []),
+    ...analyses.flatMap((analysis) => analysis.details?.threatIntel ?? []),
+  ]
   const coverage = providerCoverage(providers, [
     ...(baseAnalysis.details?.coverage?.limitations ?? []).filter((item) => item !== 'Reputation not checked.'),
     'Links were checked using URL rules and reputation; message authenticity and linked page content were not verified.',

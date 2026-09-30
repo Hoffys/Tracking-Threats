@@ -1,17 +1,18 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { ThreatProvider } from './context/ThreatProvider'
 import { Layout } from './components/Layout'
-import { Dashboard } from './pages/Dashboard'
-import { LiveMonitor } from './pages/LiveMonitor'
-import { ManualScan } from './pages/ManualScan'
-import { ScanHistory } from './pages/ScanHistory'
-import { Alerts } from './pages/Alerts'
-import { Learn } from './pages/Learn'
-import { Settings } from './pages/Settings'
-import { About } from './pages/About'
-import { Admin } from './pages/Admin'
 import { isPublicDeployment } from './config/deployment'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
+
+const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })))
+const LiveMonitor = lazy(() => import('./pages/LiveMonitor').then((module) => ({ default: module.LiveMonitor })))
+const ManualScan = lazy(() => import('./pages/ManualScan').then((module) => ({ default: module.ManualScan })))
+const ScanHistory = lazy(() => import('./pages/ScanHistory').then((module) => ({ default: module.ScanHistory })))
+const Alerts = lazy(() => import('./pages/Alerts').then((module) => ({ default: module.Alerts })))
+const Learn = lazy(() => import('./pages/Learn').then((module) => ({ default: module.Learn })))
+const Settings = lazy(() => import('./pages/Settings').then((module) => ({ default: module.Settings })))
+const About = lazy(() => import('./pages/About').then((module) => ({ default: module.About })))
+const Admin = lazy(() => import('./pages/Admin').then((module) => ({ default: module.Admin })))
 
 const pages = {
   dashboard: Dashboard,
@@ -84,7 +85,9 @@ function AppShell() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
         >
-          <ActivePage aboutSection={aboutSection} onNavigate={handleNavigate} />
+          <Suspense fallback={<div className="rounded-lg border border-slate-200 p-5 text-sm text-slate-500 dark:border-slate-800">Loading page...</div>}>
+            <ActivePage aboutSection={aboutSection} onNavigate={handleNavigate} />
+          </Suspense>
         </motion.div>
       </AnimatePresence>
     </Layout>

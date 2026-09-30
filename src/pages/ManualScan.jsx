@@ -18,6 +18,7 @@ import { responseLabel } from '../utils/scanPresentation'
 import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
+import { inspectImageFile } from '../utils/imageInspection'
 
 export function ManualScan({ onNavigate }) {
   const { createScan } = useThreats()
@@ -27,6 +28,10 @@ export function ManualScan({ onNavigate }) {
   const [emailSender, setEmailSender] = useState('')
   const [emailSubject, setEmailSubject] = useState('')
   const [emailBody, setEmailBody] = useState('')
+  const [rawEmail, setRawEmail] = useState('')
+  const [smtpClientIp, setSmtpClientIp] = useState('')
+  const [smtpHelo, setSmtpHelo] = useState('')
+  const [envelopeFrom, setEnvelopeFrom] = useState('')
   const [selectedFiles, setSelectedFiles] = useState([])
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
@@ -46,6 +51,14 @@ export function ManualScan({ onNavigate }) {
       reader.onerror = () => reject(reader.error)
       reader.readAsText(file.slice(0, 200 * 1024))
     })
+
+  const inspectFileContent = async (file) => {
+    if (file.type.startsWith('image/')) {
+      const image = await inspectImageFile(file)
+      return image.scanText
+    }
+    return readFilePreview(file)
+  }
 
   const hashFile = async (file) => {
     const buffer = await file.arrayBuffer()
@@ -85,7 +98,7 @@ export function ManualScan({ onNavigate }) {
         const scans = await Promise.all(
           selectedFiles.map(async (selectedFile) => {
             const [content, sha256] = await Promise.all([
-              readFilePreview(selectedFile),
+              inspectFileContent(selectedFile),
               hashFile(selectedFile),
             ])
             return createScan({
@@ -110,6 +123,10 @@ export function ManualScan({ onNavigate }) {
             sender: emailSender,
             subject: emailSubject,
             body: emailBody,
+            rawEmail,
+            smtpClientIp,
+            smtpHelo,
+            envelopeFrom,
             content: `${emailSubject}\n${emailBody}`.trim(),
             privacyAccepted: true,
             privacyNoticeVersion: '2026.09',
@@ -266,6 +283,7 @@ export function ManualScan({ onNavigate }) {
       { key: 'sender', title: 'Sender risk', icon: UserRoundCheck },
       { key: 'content', title: 'Content risk', icon: TextSearch },
       { key: 'links', title: 'Link risk', icon: Link2 },
+      { key: 'authentication', title: 'Email authentication', icon: MailCheck },
     ]
 
     return (
@@ -411,6 +429,26 @@ export function ManualScan({ onNavigate }) {
                   required
                 />
               </label>
+              <details className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                <summary className="cursor-pointer text-sm font-semibold">Verify DKIM, SPF, and DMARC from raw email source</summary>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Optional. Paste the original RFC 822 message source. DKIM can be verified from the signed message; SPF also needs the original SMTP client details.
+                </p>
+                <label className="mt-3 block">
+                  <span className="text-sm font-medium">Raw email source</span>
+                  <textarea
+                    className="mt-2 min-h-36 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 font-mono text-xs outline-none focus:border-teal-500 dark:border-slate-800 dark:bg-slate-950"
+                    value={rawEmail}
+                    onChange={(event) => { setRawEmail(event.target.value); setResult(null) }}
+                    placeholder={'From: sender@example.com\nDKIM-Signature: ...\n\nMessage body'}
+                  />
+                </label>
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <input className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" value={smtpClientIp} onChange={(event) => setSmtpClientIp(event.target.value)} placeholder="SMTP client IP" />
+                  <input className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" value={smtpHelo} onChange={(event) => setSmtpHelo(event.target.value)} placeholder="SMTP HELO" />
+                  <input className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950" value={envelopeFrom} onChange={(event) => setEnvelopeFrom(event.target.value)} placeholder="Envelope From" />
+                </div>
+              </details>
             </div>
           )}
 

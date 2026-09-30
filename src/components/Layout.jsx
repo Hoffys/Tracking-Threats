@@ -65,7 +65,7 @@ export function Layout({ activePage, children, onNavigate }) {
                   ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/25'
                   : 'text-emerald-800 hover:bg-emerald-50 hover:text-emerald-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-300'
               }`
-            : `flex-col gap-1 rounded-lg px-1 py-2 text-xs font-medium ${
+            : `min-w-[4.25rem] flex-col gap-1 rounded-lg px-1 py-2 text-xs font-medium ${
                 active
                   ? 'bg-emerald-500 text-white'
                   : 'text-emerald-800 hover:bg-emerald-50 hover:text-emerald-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-emerald-300'
@@ -92,7 +92,7 @@ export function Layout({ activePage, children, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-emerald-50 text-slate-950 transition-colors dark:bg-slate-950 dark:text-slate-100">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-56 flex-col border-r border-emerald-100 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 md:w-72">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-emerald-100 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 md:flex">
         <button
           className="flex min-w-0 items-center gap-3 rounded-lg p-2 text-left transition hover:bg-emerald-50 dark:hover:bg-slate-800"
           type="button"
@@ -166,15 +166,15 @@ export function Layout({ activePage, children, onNavigate }) {
         </div>
       </aside>
 
-      <div className="pl-56 md:pl-72">
+      <div className="md:pl-72">
         <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
-          <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 py-3 lg:px-6">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-6">
           <button
-            className="hidden min-w-0 items-center gap-3 text-left"
+            className="flex min-w-0 items-center gap-2 text-left md:hidden"
             type="button"
             onClick={() => onNavigate('dashboard')}
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-950 ring-1 ring-teal-400/30">
+              <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-950 ring-1 ring-teal-400/30">
               <img
                 src="/tracking-threats-logo.png"
                 alt=""
@@ -183,10 +183,7 @@ export function Layout({ activePage, children, onNavigate }) {
               />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-base font-semibold">Tracking Threats</span>
-              <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                Real-time monitoring and protection against phishing attacks
-              </span>
+              <span className="block truncate text-sm font-semibold">Tracking Threats</span>
             </span>
           </button>
 
@@ -232,7 +229,7 @@ export function Layout({ activePage, children, onNavigate }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl px-4 pb-8 pt-5 lg:px-6">
+        <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-5 md:pb-8 lg:px-6">
           {children}
         </main>
       </div>
@@ -276,8 +273,8 @@ export function Layout({ activePage, children, onNavigate }) {
         )}
       </AnimatePresence>
 
-      <nav className="hidden">
-        <div className="mx-auto grid max-w-6xl grid-cols-6 px-2 py-2">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-emerald-100 bg-white/95 shadow-[0_-4px_18px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 md:hidden" aria-label="Mobile navigation">
+        <div className="mx-auto flex max-w-full overflow-x-auto px-2 py-1">
           {navItems.map((item) => renderNavItem(item, 'bottom'))}
         </div>
       </nav>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tracking Threats Browser Monitor",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "description": "Scans visited pages and supported webmail content with Tracking Threats.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -11,15 +11,16 @@
   },
   "permissions": [
     "alarms",
+    "activeTab",
     "storage",
     "tabs",
     "downloads",
     "webNavigation",
     "declarativeNetRequest",
-    "notifications"
+    "notifications",
+    "scripting"
   ],
   "host_permissions": [
-    "<all_urls>",
     "http://localhost:4000/*",
     "https://tracking-threats-production.up.railway.app/*"
   ],
@@ -87,10 +88,5 @@
       "128": "icons/icon-128.png"
     }
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["blocked.html", "blocked.js"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "web_accessible_resources": []
 }

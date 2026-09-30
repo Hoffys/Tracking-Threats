@@ -15,6 +15,17 @@ export const getScanRetentionDays = () =>
 export const getAuditRetentionDays = () =>
   parsePositiveInteger(process.env.AUDIT_RETENTION_DAYS, 90)
 
+export const getClientCredentialRetentionDays = () =>
+  parsePositiveInteger(process.env.CLIENT_CREDENTIAL_RETENTION_DAYS, 180)
+
+export const isClientCredentialExpired = (row, reference = new Date()) => {
+  const timestamps = [row?.created_at, row?.last_seen_at, row?.extension_seen_at]
+    .map((value) => Date.parse(value ?? '')).filter(Number.isFinite)
+  if (timestamps.length === 0) return false
+  const cutoff = reference.getTime() - getClientCredentialRetentionDays() * 24 * 60 * 60 * 1000
+  return Math.max(...timestamps) < cutoff
+}
+
 export const getScanExpiry = (createdAt = new Date()) => {
   const expiresAt = new Date(createdAt)
   expiresAt.setUTCDate(expiresAt.getUTCDate() + getScanRetentionDays())
@@ -269,5 +280,17 @@ export async function purgeExpiredData() {
     auditCutoff.toISOString(),
   )
 
-  return { deletedScans: ids.length }
+  const clientCredentials = await db.all(
+    'SELECT client_id, created_at, last_seen_at, extension_seen_at FROM client_credentials',
+  )
+  const expiredClients = clientCredentials.filter((row) => isClientCredentialExpired(row, new Date()))
+  for (const client of expiredClients) {
+    await db.transaction(async (transactionDb) => {
+      await deleteClientRows(transactionDb, client.client_id)
+      await transactionDb.run('DELETE FROM notification_settings WHERE id = ?', `client:${client.client_id}`)
+      await transactionDb.run('DELETE FROM client_credentials WHERE client_id = ?', client.client_id)
+    })
+  }
+
+  return { deletedScans: ids.length, deletedClients: expiredClients.length }
 }

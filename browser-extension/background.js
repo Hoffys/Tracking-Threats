@@ -47,6 +47,7 @@ const recentScans = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
 const notificationTargets = new Map()
+const tabRedirectChains = new Map()
 let clientToken = ''
 let credentialPromise = null
 let allowedHosts = new Set()
@@ -936,6 +937,60 @@ async function handleTabUrl(tabId, url, reason) {
   scanUrl(url, reason, tabId)
 }
 
+function collectRenderedPageSignals() {
+  const limited = (value, max = 100) => Math.min(max, Math.max(0, Number(value) || 0))
+  const pageUrl = new URL(location.href)
+  const forms = [...document.forms].slice(0, 100)
+  const passwordFields = limited(document.querySelectorAll('input[type="password"]').length)
+  let externalFormActions = 0
+  for (const form of forms) {
+    try {
+      const target = new URL(form.action || location.href, location.href)
+      if (target.hostname !== pageUrl.hostname) externalFormActions += 1
+    } catch { externalFormActions += 1 }
+  }
+  const candidates = [...document.querySelectorAll('form,iframe')].slice(0, 100)
+  const hiddenFrames = limited(candidates.filter((element) => {
+    const style = getComputedStyle(element)
+    return style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0
+  }).length)
+  const text = `${document.title} ${(document.body?.innerText ?? '').slice(0, 20000)}`
+  const scripts = [...document.scripts].slice(0, 100).map((script) => script.textContent ?? '').join('\n').slice(0, 100000)
+  return {
+    title: document.title.slice(0, 200),
+    passwordFields,
+    formCount: limited(forms.length),
+    externalFormActions: limited(externalFormActions),
+    hiddenFrames,
+    credentialLanguage: /\b(sign[ -]?in|log[ -]?in|verify|password|passcode|one[ -]?time|otp|credit card|bank account)\b/i.test(text),
+    obfuscatedScripts: /(?:eval\s*\(|atob\s*\(|fromCharCode\s*\(|document\.write\s*\()/i.test(scripts),
+  }
+}
+
+async function inspectActivePage() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id || !isTrackableUrl(tab.url)) throw new Error('Open a normal HTTP or HTTPS page to inspect it')
+  const injected = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: collectRenderedPageSignals })
+  const snapshot = injected?.[0]?.result
+  if (!snapshot) throw new Error('The page did not return inspection details')
+  snapshot.redirectChain = tabRedirectChains.get(tab.id) ?? [tab.url]
+  const response = await scanFetch(API_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: tab.url, source: 'browser-extension', reason: 'rendered-page-inspection', pageSnapshot: snapshot }),
+  })
+  if (!response.ok) throw new Error(await getScannerError(response))
+  const scan = await response.json()
+  remember(tab.url, scan)
+  await saveStatus({ ok: true, lastUrl: tab.url, lastStatus: scan.status, lastScore: scan.score,
+    coverage: scan.coverage, categories: scan.categories })
+  await notifyScanResult(tab.url, scan)
+  if (isBlockedScan(scan) && !hasBypass(getHost(tab.url))) {
+    await rememberBlockedSite(tab.url, scan)
+    openBlockedPage(tab.id, tab.url, scan)
+  }
+  return scan
+}
+
 if (chrome.downloads?.onCreated) {
   chrome.downloads.onCreated.addListener((downloadItem) => {
     scanDownload(downloadItem)
@@ -959,13 +1014,25 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 
 chrome.webNavigation.onCommitted.addListener((details) => {
   if (details.frameId === 0) {
+    const prior = tabRedirectChains.get(details.tabId) ?? []
+    const redirected = details.transitionQualifiers?.some((item) => item === 'server_redirect' || item === 'client_redirect')
+    tabRedirectChains.set(details.tabId, redirected ? [...prior, details.url].slice(-5) : [details.url])
     handleTabUrl(details.tabId, details.url, details.transitionType ?? 'navigation')
   }
 })
 
+chrome.tabs.onRemoved.addListener((tabId) => tabRedirectChains.delete(tabId))
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'scan-candidate-url' && message.url) {
     scanUrl(message.url, message.reason ?? 'content-script')
+      .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'inspect-active-page') {
+    inspectActivePage()
       .then((scan) => sendResponse({ ok: true, scan }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true

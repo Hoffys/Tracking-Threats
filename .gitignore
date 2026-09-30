@@ -15,6 +15,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.evaluation-data/
 .env
 .env.*
 !.env.example

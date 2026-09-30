@@ -1,6 +1,24 @@
 const message = document.querySelector('#message')
 const pill = document.querySelector('#pill')
 const openApp = document.querySelector('#openApp')
+const inspectPage = document.querySelector('#inspectPage')
+const inspectionNote = document.querySelector('#inspectionNote')
+
+inspectPage.addEventListener('click', () => {
+  inspectPage.disabled = true
+  inspectionNote.textContent = 'Inspecting rendered forms, redirect context, and URL reputation...'
+  chrome.runtime.sendMessage({ type: 'inspect-active-page' }, (response) => {
+    inspectPage.disabled = false
+    if (chrome.runtime.lastError || !response?.ok) {
+      inspectionNote.textContent = `Could not inspect: ${response?.error ?? chrome.runtime.lastError?.message ?? 'Unknown error'}`
+      return
+    }
+    const scan = response.scan
+    const label = scan.status === 'Safe' ? 'Appears safe' : scan.status === 'Dangerous' ? 'Risk detected' : 'Caution'
+    inspectionNote.textContent = `${label} - score ${scan.score}/100. Scan finished.`
+    pill.textContent = `${label} - ${scan.score}/100`
+  })
+})
 
 openApp.href = TRACKING_THREATS_CONFIG.APP_URL
 
