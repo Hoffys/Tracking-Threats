@@ -32,9 +32,26 @@ adminRoutes.get('/overview', async (_req, res, next) => {
         COUNT(CASE WHEN extension_seen_at IS NOT NULL THEN 1 END) AS extensions,
         COUNT(CASE WHEN extension_seen_at >= ? THEN 1 END) AS extensions_day,
         COUNT(CASE WHEN extension_seen_at >= ? THEN 1 END) AS extensions_week,
+
+        COUNT(DISTINCT device_id) AS devices,
+        COUNT(DISTINCT CASE
+          WHEN last_seen_at >= ? THEN device_id
+        END) AS devices_day,
+        COUNT(DISTINCT CASE 
+          WHEN last_seen_at >= ? THEN device_id
+        END) AS devices_week,
+
         COUNT(CASE WHEN last_seen_at >= ? THEN 1 END) AS clients_day,
         COUNT(CASE WHEN last_seen_at >= ? THEN 1 END) AS clients_week
-        FROM client_credentials`, dayAgo, weekAgo, dayAgo, weekAgo),
+
+        FROM client_credentials`,
+        dayAgo,
+        weekAgo,
+        dayAgo,
+        weekAgo,
+        dayAgo,
+        weekAgo
+      ),
       db.all(`
         SELECT
         d.device_id,
@@ -93,9 +110,15 @@ const deviceGroups = [...deviceGroupMap.values()].map((device) => ({
       usage: {
         extensionDownloads: downloads?.count ?? 0,
         trackingStartedAt: downloads?.started_at ?? null,
+
         registeredExtensions: usage.extensions,
         activeExtensions24h: usage.extensions_day,
         activeExtensions7d: usage.extensions_week,
+
+        registeredDevices: usage.devices,
+        activeDevices24h: usage.devices_day,
+        activeDevices7d: usage.devices_week,
+
         activeClients24h: usage.clients_day,
         activeClients7d: usage.clients_week,
       },

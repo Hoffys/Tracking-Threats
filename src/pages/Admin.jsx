@@ -27,11 +27,14 @@ const tabs = [
 
 const usageMetrics = [
   ['extensionDownloads', 'Extension download requests'],
-  ['registeredExtensions', 'Registered extension clients'],
+
+  ['registeredDevices', 'Registered devices'],
+  ['activeDevices24h', 'Active devices · 24 hours'],
+  ['activeDevices7d', 'Active devices · 7 days'],
+
+  ['registeredExtensions', 'Extension installations'],
   ['activeExtensions24h', 'Active extensions · 24 hours'],
   ['activeExtensions7d', 'Active extensions · 7 days'],
-  ['activeClients24h', 'Active system clients · 24 hours'],
-  ['activeClients7d', 'Active system clients · 7 days'],
 ]
 
 export function Admin() {
