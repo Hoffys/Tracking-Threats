@@ -294,15 +294,60 @@ export function Admin() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[650px] text-left text-sm">
-                <thead className="border-b border-slate-300 text-slate-500 dark:border-slate-700"><tr><th className="py-2">Client ID</th><th>Scans</th><th>Last scan</th><th>Last active</th><th>Extension</th><th>Access</th></tr></thead>
-                <tbody>{visibleClients.map((client) => (
-                  <tr key={client.clientId} className="border-b border-slate-200 dark:border-slate-800">
-                    <td className="py-2"><button type="button" onClick={() => selectClient(client.clientId)} className="font-mono text-emerald-700 hover:underline dark:text-emerald-300">{client.clientId}</button></td>
-                    <td>{client.scanCount}</td><td>{formatDate(client.lastScanAt)}</td><td>{formatDate(client.lastSeenAt)}</td>
-                    <td>{client.extensionVersion ? <><span>v{client.extensionVersion}</span><p className="text-xs text-slate-500">{formatDate(client.extensionLastSeenAt)}</p></> : 'Not reported'}</td>
-                    <td>{client.accessStatus === 'legacy' ? 'Legacy (unclaimed)' : 'Active'}</td>
+                <thead className="border-b border-slate-300 text-slate-500 dark:border-slate-700">
+                   <tr>
+                      <th className="py-2">Client ID</th>
+                      <th>Device</th>
+                      <th>Browser</th>
+                      <th>Scans</th>
+                      <th>Last scan</th>
+                      <th>Last active</th>
+                      <th>Extension</th>
+                      <th>Status</th>
                   </tr>
-                ))}</tbody>
+                </thead>
+                <tbody>{visibleClients.map((client) => (
+              <tr key={client.clientId} className="border-b border-slate-200 dark:border-slate-800">
+                <td className="py-2">
+                  <button
+                    type="button"
+                    onClick={() => selectClient(client.clientId)}
+                    className="font-mono text-emerald-700 hover:underline dark:text-emerald-300"
+                  >
+                    {client.clientId}
+                  </button>
+                </td>
+
+                <td>{client.deviceName || 'N/A'}</td>
+
+                <td>{client.browserName || 'N/A'}</td>
+
+                <td>{client.scanCount}</td>
+
+                <td>{formatDate(client.lastScanAt)}</td>
+
+                <td>{formatDate(client.lastSeenAt)}</td>
+
+                <td>
+                  {client.extensionVersion ? (
+                    <>
+                      <span>v{client.extensionVersion}</span>
+                      <p className="text-xs text-slate-500">
+                        {formatDate(client.extensionLastSeenAt)}
+                      </p>
+                    </>
+                  ) : (
+                    'N/A'
+                  )}
+                </td>
+
+                <td>
+                  {client.deviceId
+                    ? 'Linked'
+                    : 'Legacy / Unlinked'}
+                </td>
+              </tr>
+            ))}</tbody>
               </table>
               {visibleClients.length === 0 && <p className="py-4 text-sm text-slate-500">No clients found.</p>}
             </div>

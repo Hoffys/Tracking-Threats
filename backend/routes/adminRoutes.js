@@ -133,7 +133,22 @@ adminRoutes.get('/clients', async (_req, res, next) => {
   try {
     const db = await dbPromise
     const [registered, activity] = await Promise.all([
-      db.all('SELECT client_id, created_at, last_seen_at, extension_seen_at, extension_version FROM client_credentials ORDER BY COALESCE(last_seen_at, created_at) DESC LIMIT 100'),
+      db.all(`
+        SELECT
+          c.client_id,
+          c.created_at,
+          c.last_seen_at,
+          c.extension_seen_at,
+          c.extension_version,
+          c.device_id,
+          c.browser_name,
+          d.device_name
+        FROM client_credentials c
+        LEFT JOIN devices d
+          ON d.device_id = c.device_id
+        ORDER BY COALESCE(c.last_seen_at, c.created_at) DESC
+        LIMIT 100
+      `),
       db.all(`
         SELECT client_id, COUNT(*) AS scan_count, MAX(created_at) AS last_scan_at
         FROM scans WHERE client_id IS NOT NULL AND client_id != ''
@@ -147,7 +162,12 @@ adminRoutes.get('/clients', async (_req, res, next) => {
         lastSeenAt: row.last_seen_at,
         extensionLastSeenAt: row.extension_seen_at,
         extensionVersion: row.extension_version,
+
+        deviceId: row.device_id,
+        deviceName: row.device_name,
+        browserName: row.browser_name,
         scanCount: 0,
+        
         lastScanAt: null,
         accessStatus: 'active',
       }]),
