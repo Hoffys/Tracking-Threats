@@ -81,6 +81,18 @@ clientRoutes.post('/public/devices', requireClient, async (req, res, next) => {
   }
 
   const deviceName = String(req.body?.deviceName ?? '').trim()
+  const browserName = String(req.body?.browserName ?? '').trim()
+
+  const allowedBrowsers = new Set([
+    'Chrome',
+    'Edge',
+    'Brave',
+    'Other',
+  ])
+
+  const finalBrowserName = allowedBrowsers.has(browserName)
+    ? browserName
+    : 'Other'
 
   if (!deviceName || deviceName.length > 80) {
     return res.status(400).json({
@@ -123,12 +135,15 @@ clientRoutes.post('/public/devices', requireClient, async (req, res, next) => {
         )
 
         await tx.run(
-          `UPDATE client_credentials
-          SET device_id = ?
-          WHERE client_id = ?`,
-          deviceId,
-          req.clientId,
-        )
+        `UPDATE client_credentials
+        SET
+          device_id = ?,
+          browser_name = ?
+        WHERE client_id = ?`,
+        deviceId,
+        finalBrowserName,
+        req.clientId,
+      )
       })
     }
 
