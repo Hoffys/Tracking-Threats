@@ -1342,7 +1342,10 @@ async function reportExtensionUsage() {
     await scanFetch(`${API_BASE_URL}/api/public/extension/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ version: chrome.runtime.getManifest().version }),
+      body: JSON.stringify({
+        version: chrome.runtime.getManifest().version,
+        browserName: await detectBrowserName(),
+      }),
     })
   } catch {
     // Retry on the next alarm; reporting must not interrupt scans.
