@@ -28,7 +28,7 @@ export function getExtensionPackage() {
     for (const file of files) {
       const data = await readFile(new URL(`../../browser-extension/${file}`, import.meta.url))
       const compressed = deflateRawSync(data)
-      const name = Buffer.from(`tracking-threats-extension/${file}`)
+      const name = Buffer.from(file)
       const checksum = crc32(data)
       const header = Buffer.alloc(30)
       header.writeUInt32LE(0x04034b50, 0)
