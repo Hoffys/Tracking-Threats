@@ -350,57 +350,136 @@ async function checkAbuseIpDb(target) {
   const apiKey = process.env.ABUSEIPDB_API_KEY
   if (!apiKey) return null
 
+  const now = Date.now()
+
+  // Stop making requests while AbuseIPDB says we are rate limited.
+  if (abuseIpDbBlockedUntil > now) {
+    return {
+      provider: 'AbuseIPDB',
+      checked: false,
+      found: false,
+      skipped: 'AbuseIPDB rate limit reached; waiting for quota reset',
+      retryAt: new Date(abuseIpDbBlockedUntil).toISOString(),
+    }
+  }
+
   const host = getHost(target)
   const { addresses } = await resolveHostAddresses(host)
-  const publicAddress = addresses.find((address) => !isPrivateOrReservedIp(address))
+
+  const publicAddress = addresses.find(
+    (address) => !isPrivateOrReservedIp(address),
+  )
+
   if (!publicAddress) return null
 
-  const response = await withTimeout(
-    `https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(
-      publicAddress,
-    )}&maxAgeInDays=90&verbose=true`,
-    {
-      headers: {
-        accept: 'application/json',
-        key: apiKey,
+  // Reuse the result if this IP was already checked recently.
+  const cached = abuseIpDbCache.get(publicAddress)
+
+  if (cached && cached.expiresAt > now) {
+    return cached.promise
+  }
+
+  if (cached) {
+    abuseIpDbCache.delete(publicAddress)
+  }
+
+  // Keep the cache bounded.
+  if (abuseIpDbCache.size >= 500) {
+    abuseIpDbCache.delete(abuseIpDbCache.keys().next().value)
+  }
+
+  const promise = (async () => {
+    const response = await withTimeout(
+      `https://api.abuseipdb.com/api/v2/check?ipAddress=${encodeURIComponent(
+        publicAddress,
+      )}&maxAgeInDays=90&verbose=true`,
+      {
+        headers: {
+          accept: 'application/json',
+          key: apiKey,
+        },
       },
-    },
-  )
-  
-  console.log('AbuseIPDB status:', response.status)
-console.log(
-  'AbuseIPDB remaining:',
-  response.headers.get('x-ratelimit-remaining')
-)
-console.log(
-  'AbuseIPDB reset:',
-  response.headers.get('x-ratelimit-reset')
-)
-console.log(
-  'AbuseIPDB retry after:',
-  response.headers.get('retry-after')
-)
-  
+    )
 
-  if (!response.ok) throw new Error(`AbuseIPDB returned ${response.status}`)
+    // Respect AbuseIPDB rate-limit information.
+    if (response.status === 429) {
+      const retryAfterSeconds = Number(
+        response.headers.get('retry-after') ?? 0,
+      )
 
-  const payload = await response.json()
-  const data = payload.data ?? {}
-  const confidence = Number(data.abuseConfidenceScore ?? 0)
+      const resetTimestampSeconds = Number(
+        response.headers.get('x-ratelimit-reset') ?? 0,
+      )
 
-  return {
-    provider: 'AbuseIPDB',
-    checked: true,
-    found: confidence > 0,
-    ipAddress: publicAddress,
-    abuseConfidenceScore: confidence,
-    totalReports: data.totalReports,
-    countryCode: data.countryCode,
-    warning:
-      confidence > 0
-        ? `AbuseIPDB reports ${confidence}% abuse confidence for host IP ${publicAddress}`
-        : null,
-    deduction: confidence >= 80 ? 20 : confidence >= 25 ? 10 : confidence > 0 ? 5 : 0,
+      const retryAfterTime =
+        Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? Date.now() + retryAfterSeconds * 1000
+          : 0
+
+      const resetTime =
+        Number.isFinite(resetTimestampSeconds) &&
+        resetTimestampSeconds > 0
+          ? resetTimestampSeconds * 1000
+          : 0
+
+      abuseIpDbBlockedUntil = Math.max(
+        retryAfterTime,
+        resetTime,
+        Date.now() + 60 * 60 * 1000,
+      )
+
+      abuseIpDbCache.delete(publicAddress)
+
+      return {
+        provider: 'AbuseIPDB',
+        checked: false,
+        found: false,
+        skipped: 'AbuseIPDB rate limit reached; waiting for quota reset',
+        retryAt: new Date(abuseIpDbBlockedUntil).toISOString(),
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(`AbuseIPDB returned ${response.status}`)
+    }
+
+    const payload = await response.json()
+    const data = payload.data ?? {}
+    const confidence = Number(data.abuseConfidenceScore ?? 0)
+
+    return {
+      provider: 'AbuseIPDB',
+      checked: true,
+      found: confidence > 0,
+      ipAddress: publicAddress,
+      abuseConfidenceScore: confidence,
+      totalReports: data.totalReports,
+      countryCode: data.countryCode,
+      warning:
+        confidence > 0
+          ? `AbuseIPDB reports ${confidence}% abuse confidence for host IP ${publicAddress}`
+          : null,
+      deduction:
+        confidence >= 80
+          ? 20
+          : confidence >= 25
+            ? 10
+            : confidence > 0
+              ? 5
+              : 0,
+    }
+  })()
+
+  abuseIpDbCache.set(publicAddress, {
+    expiresAt: now + abuseIpDbCacheTtlMs,
+    promise,
+  })
+
+  try {
+    return await promise
+  } catch (error) {
+    abuseIpDbCache.delete(publicAddress)
+    throw error
   }
 }
 
