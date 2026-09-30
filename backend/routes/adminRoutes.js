@@ -21,7 +21,7 @@ adminRoutes.get('/overview', async (_req, res, next) => {
     const db = await dbPromise
     const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const [clients, scans, recentScans, byType, byStatus, downloads, usage] = await Promise.all([
+    const [clients, scans, recentScans, byType, byStatus, downloads, usage, deviceGroups] = await Promise.all([
       db.get('SELECT COUNT(*) AS count FROM client_credentials'),
       db.get('SELECT COUNT(*) AS count FROM scans'),
       db.get("SELECT COUNT(*) AS count FROM scans WHERE created_at >= ?", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
@@ -35,6 +35,24 @@ adminRoutes.get('/overview', async (_req, res, next) => {
         COUNT(CASE WHEN last_seen_at >= ? THEN 1 END) AS clients_day,
         COUNT(CASE WHEN last_seen_at >= ? THEN 1 END) AS clients_week
         FROM client_credentials`, dayAgo, weekAgo, dayAgo, weekAgo),
+      db.all(`
+        SELECT
+        d.device_id,
+        d.device_name,
+        d.created_at,
+        d.last_seen_at,
+        COUNT(c.client_id) AS extension_count,
+        GROUP_CONCAT(DISTINCT c.browser_name) AS browsers
+        FROM devices d
+        LEFT JOIN client_credentials c
+        ON c.device_id = d.device_id
+        GROUP BY
+        d.device_id,
+        d.device_name,
+        d.created_at,
+        d.last_seen_at
+        ORDER BY d.created_at DESC
+        `),
     ])
     res.json({
       clients: clients.count,
@@ -51,6 +69,7 @@ adminRoutes.get('/overview', async (_req, res, next) => {
         activeClients24h: usage.clients_day,
         activeClients7d: usage.clients_week,
       },
+      deviceGroups,
     })
   } catch (error) {
     next(error)
