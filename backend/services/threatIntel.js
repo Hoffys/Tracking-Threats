@@ -1,4 +1,4 @@
-7import dns from 'node:dns/promises'
+import dns from 'node:dns/promises'
 import net from 'node:net'
 import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
 import { providerCoverage } from './coverage.js'
