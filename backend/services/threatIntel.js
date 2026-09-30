@@ -7,6 +7,10 @@ import { providerRequest } from './providerRequest.js'
 const dnsTimeoutMs = 2500
 const phishTankUserAgent = 'phishtank/tracking-threats'
 
+const abuseIpDbCacheTtlMs = 6 * 60 * 60 * 1000 // 6 hours
+const abuseIpDbCache = new Map()
+let abuseIpDbBlockedUntil = 0
+
 export const parseProviderFlag = (value) => {
   if (value === true || value === 1) return true
   if (value === false || value === 0 || value == null) return false
