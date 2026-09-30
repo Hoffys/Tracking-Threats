@@ -67,8 +67,19 @@ clientRoutes.post('/public/extension/heartbeat', requireClient, async (req, res,
   }
   try {
     const db = await dbPromise
-    await db.run('UPDATE client_credentials SET extension_seen_at = ?, extension_version = ? WHERE client_id = ?',
-      new Date().toISOString(), version, req.clientId)
+    
+    const browserName = String(req.body?.browserName ?? '').trim()
+    await db.run(
+      `UPDATE client_credentials 
+      SET extension_seen_at = ?, 
+          extension_version = ?,
+          browser_name = COALESCE(NULLIF(?, ''), browser_name)
+      WHERE client_id = ?`,
+      new Date().toISOString(),
+      version,
+      browserName,
+      req.clientId
+    )
     res.json({ ok: true })
   } catch (error) { next(error) }
 })
