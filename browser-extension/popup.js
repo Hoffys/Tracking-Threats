@@ -71,15 +71,65 @@ const deviceNameInput = document.getElementById('deviceNameInput')
 const createDeviceButton = document.getElementById('createDeviceButton')
 const createDeviceStatus = document.getElementById('createDeviceStatus')
 const generatedPairCode = document.getElementById('generatedPairCode')
+const generatePairCodeButton = document.getElementById('generatePairCodeButton')
+const newPairCodeDisplay = document.getElementById('newPairCodeDisplay')
+
+if (generatePairCodeButton) {
+  generatePairCodeButton.addEventListener('click', async () => {
+    generatePairCodeButton.disabled = true
+
+    if (newPairCodeDisplay) {
+      newPairCodeDisplay.style.display = 'block'
+      newPairCodeDisplay.textContent = 'Generating pairing code...'
+    }
+
+    try {
+      const result = await chrome.runtime.sendMessage({
+        type: 'GENERATE_PAIR_CODE',
+      })
+
+      if (!result?.ok) {
+        if (newPairCodeDisplay) {
+          newPairCodeDisplay.textContent =
+            result?.error || 'Unable to generate pairing code.'
+        }
+
+        return
+      }
+
+      if (newPairCodeDisplay) {
+        newPairCodeDisplay.textContent =
+          `Pairing code: ${result.pairCode} — valid for 10 minutes`
+      }
+    } catch (error) {
+      console.error('Generate pairing code popup error:', error)
+
+      if (newPairCodeDisplay) {
+        newPairCodeDisplay.textContent =
+          'Unable to communicate with the extension.'
+      }
+    } finally {
+      generatePairCodeButton.disabled = false
+    }
+  })
+}
 
 async function loadLinkedDeviceInfo() {
+  const createDeviceSection =
+    document.getElementById('createDeviceSection')
+
   const stored = await chrome.storage.local.get([
     'linkedDeviceId',
     'linkedDeviceName',
     'linkedBrowserName',
   ])
 
+  // NOT LINKED YET
   if (!stored.linkedDeviceId) {
+    if (createDeviceSection) {
+      createDeviceSection.style.display = 'block'
+    }
+
     if (linkedDeviceInfo) {
       linkedDeviceInfo.style.display = 'none'
     }
@@ -88,7 +138,16 @@ async function loadLinkedDeviceInfo() {
       devicePairForm.style.display = 'block'
     }
 
+    if (generatePairCodeButton) {
+      generatePairCodeButton.style.display = 'none'
+    }
+
     return
+  }
+
+  // ALREADY LINKED
+  if (createDeviceSection) {
+    createDeviceSection.style.display = 'none'
   }
 
   if (linkedDeviceInfo) {
@@ -99,6 +158,10 @@ async function loadLinkedDeviceInfo() {
 
   if (devicePairForm) {
     devicePairForm.style.display = 'none'
+  }
+
+  if (generatePairCodeButton) {
+    generatePairCodeButton.style.display = 'block'
   }
 }
 

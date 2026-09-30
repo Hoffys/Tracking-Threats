@@ -254,6 +254,53 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true
 })
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== 'GENERATE_PAIR_CODE') {
+    return
+  }
+
+  ;(async () => {
+    try {
+      const response = await scanFetch(
+        `${API_BASE_URL}/api/public/devices/pair-code`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        },
+      )
+
+      const result = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        sendResponse({
+          ok: false,
+          error: result.error || 'Unable to generate pairing code.',
+        })
+        return
+      }
+
+      sendResponse({
+        ok: true,
+        pairCode: result.pairCode,
+        expiresAt: result.expiresAt,
+        deviceId: result.deviceId,
+      })
+    } catch (error) {
+      console.error('Generate pairing code failed:', error)
+
+      sendResponse({
+        ok: false,
+        error: error?.message || 'Unable to generate pairing code.',
+      })
+    }
+  })()
+
+  return true
+})
+
 
 async function scanFetch(url, options) {
   const send = (credential) => fetch(url, {
