@@ -160,11 +160,12 @@ export function ScanHistory() {
                   <p className="break-all font-medium">{searchPreview.target}</p>
                   <p className="mt-1 text-sm">Safety score {searchPreview.score}/100</p>
                 </div>
-                <RiskBadge risk={searchPreview.status} />
+                <RiskBadge risk={searchPreview.status} coverage={searchPreview.coverage} />
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 This is the result shown by your extension before opening the link. It has not been saved to scan history. Saved scans are listed below.
               </p>
+              <ScanExplanation scan={searchPreview} manual />
               {searchPreview.summary && <p className="text-sm">{searchPreview.summary}</p>}
               {searchPreview.warningSigns.length > 0 && (
                 <div>
@@ -202,7 +203,7 @@ export function ScanHistory() {
                     : 'text-emerald-600 dark:text-emerald-300'
                 }`}
               >
-                {focusedScanIsDangerous ? 'Blocked site review' : 'Scan result review'}
+                {focusedScanIsDangerous ? 'Risk result review' : 'Scan result review'}
               </p>
               <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-300">
                 {focusedScan
@@ -210,7 +211,7 @@ export function ScanHistory() {
                   : 'No matching saved scan is available. Search result previews are not saved until you visit the site. To see a preview, open it again from the updated extension.'}
               </p>
             </div>
-            {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} />}
+            {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} coverage={focusedScan.coverage} />}
           </div>
         </Panel>
       )}
@@ -310,7 +311,7 @@ export function ScanHistory() {
                       </p>
                     )}
                   </div>
-                  <RiskBadge risk={scan.status ?? scan.risk} />
+                  <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} />
                 </div>
                 <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                   {scan.summary}

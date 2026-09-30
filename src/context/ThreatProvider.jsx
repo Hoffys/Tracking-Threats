@@ -107,6 +107,9 @@ const toPublicScanRecord = (scan) => ({
   recommendations: scan.recommendations ?? (scan.recommendation ? [scan.recommendation] : []),
   recommendation: scan.recommendation,
   threatIntel: scan.threatIntel,
+  coverage: scan.coverage,
+  categories: scan.categories,
+  categoryWarnings: scan.categoryWarnings,
   emailBreakdown: scan.emailBreakdown,
   fileDetails: scan.fileDetails
     ? {
@@ -137,8 +140,11 @@ const toPublicLiveEvent = (scan) => ({
   title: `${scan.type} scan`,
   detail: scan.summary || scan.target,
   score: scan.score,
-  status: scan.status === 'Dangerous' ? 'Blocked' : scan.status,
+  status: scan.status,
   riskStatus: scan.status,
+  coverage: scan.coverage,
+  categories: scan.categories,
+  categoryWarnings: scan.categoryWarnings,
   timestamp: scan.date,
   warningSigns: scan.warningSigns ?? [],
 })

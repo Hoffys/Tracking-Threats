@@ -554,21 +554,21 @@ function getScanNotification(scan, rawUrl) {
 
   if (status === 'Blocked') {
     return {
-      title: 'Tracking Threats blocked a risky site',
-      message: `${host} was marked Dangerous. Safety score ${score}/100.`,
+      title: 'Tracking Threats risk detected',
+      message: `${host} has risk indicators. Rule-based score ${score}/100; not a probability.`,
     }
   }
 
   if (status === 'Suspicious') {
     return {
       title: 'Tracking Threats caution',
-      message: `${host} has warning signs. Safety score ${score}/100.`,
+      message: `${host} has warning signs. Rule-based score ${score}/100; not a probability.`,
     }
   }
 
   return {
-    title: 'Tracking Threats scan complete',
-    message: `${host} looks safe. Safety score ${score}/100.`,
+    title: scan?.coverage?.status === 'complete' ? 'Tracking Threats result' : 'Tracking Threats incomplete checks',
+    message: `${host}: ${scan?.coverage?.status === 'complete' ? 'no strong indicators in completed checks' : 'checks incomplete or coverage unknown'}. Rule-based score ${score}/100; not a safety guarantee.`,
   }
 }
 
@@ -626,7 +626,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   const host = getHost(rawUrl)
   if (isAllowedHost(host)) {
     await unblockSite({ rawUrl, host })
-    return { status: 'Allowed', score: 100, blocked: false }
+    return { status: 'Allowed', score: 100, blocked: false, coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [] }
   }
   if (isMarkedSafeHost(host)) {
     const safeScan = {
@@ -634,6 +634,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       target: rawUrl,
       score: 100,
       status: 'Safe',
+      coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [],
       action: 'Allowed',
       blocked: false,
       warningSigns: [],
@@ -715,6 +716,7 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
       target: rawUrl,
       score: 100,
       status: 'Safe',
+      coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [],
       action: 'Allowed',
       blocked: false,
       warningSigns: [],
@@ -743,12 +745,12 @@ async function recordBlockedVisit(rawUrl) {
   const host = getHost(rawUrl)
   if (isAllowedHost(host)) {
     await unblockSite({ rawUrl, host })
-    return { status: 'Allowed', score: 100, blocked: false }
+    return { status: 'Allowed', score: 100, blocked: false, coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [] }
   }
-  if (hasBypass(host)) return { status: 'Allowed', score: 100, blocked: false }
+  if (hasBypass(host)) return { status: 'Allowed', score: 100, blocked: false, coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [] }
   if (isMarkedSafeHost(host)) {
     await unblockSite({ rawUrl, host })
-    return { status: 'Safe', score: 100, blocked: false }
+    return { status: 'Safe', score: 100, blocked: false, coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [] }
   }
 
   const cooldownKey = `blocked-visit:${rawUrl}`

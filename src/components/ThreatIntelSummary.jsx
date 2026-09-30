@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react'
+import { providerState } from '../utils/scanPresentation'
 
 export function ThreatIntelSummary({ providers = [] }) {
   const checkedProviders = providers.filter(Boolean)
@@ -13,11 +14,7 @@ export function ThreatIntelSummary({ providers = [] }) {
       </div>
       <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
         {checkedProviders.map((provider) => {
-          const state = provider.error
-            ? `Lookup unavailable - ${provider.error}`
-            : provider.found
-              ? 'Matched'
-              : 'No match'
+          const state = providerState(provider)
 
           return (
             <li key={`${provider.provider}-${provider.ipAddress ?? provider.host ?? state}`}>

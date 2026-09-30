@@ -1,8 +1,9 @@
 import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
 import { scanMessage } from './messageScanner.js'
 import { hasVirusTotalDetections } from './threatIntel.js'
+import { providerRequest } from './providerRequest.js'
+import { providerCoverage } from './coverage.js'
 
-const requestTimeoutMs = 4500
 
 const dangerousExtensions = new Set([
   'bat',
@@ -24,16 +25,7 @@ const macroEnabledExtensions = new Set(['docm', 'xlsm', 'pptm'])
 const doubleExtensionPattern = /\.(pdf|docx?|xlsx?|pptx?|txt|jpg|png)\.(exe|scr|bat|cmd|js|vbs|ps1)$/i
 const sha256Pattern = /^[a-f0-9]{64}$/i
 
-const withTimeout = async (url, options) => {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs)
-
-  try {
-    return await fetch(url, { ...options, signal: controller.signal })
-  } finally {
-    clearTimeout(timeout)
-  }
-}
+const withTimeout = providerRequest
 
 const formatProviderError = (error) => {
   const code = error?.cause?.code ?? error?.code
@@ -58,7 +50,7 @@ const getExtension = (fileName = '') => {
 
 async function checkVirusTotalFileHash(sha256) {
   const apiKey = process.env.VIRUSTOTAL_API_KEY
-  if (!apiKey || !sha256Pattern.test(sha256 ?? '')) return null
+  if (process.env.REPUTATION_ENABLED === 'false' || !apiKey || !sha256Pattern.test(sha256 ?? '')) return null
 
   const response = await withTimeout(
     `https://www.virustotal.com/api/v3/files/${encodeURIComponent(sha256)}`,
@@ -73,7 +65,8 @@ async function checkVirusTotalFileHash(sha256) {
   if (response.status === 404) {
     return {
       provider: 'VirusTotal File',
-      checked: true,
+      checked: false,
+      skipped: 'File hash is not in the provider database',
       found: false,
       warning: null,
       deduction: 0,
@@ -128,6 +121,11 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
         error: formatProviderError(error),
       })
     }
+  }
+
+  if (threatIntel.length === 0) {
+    threatIntel.push({ provider: 'VirusTotal File', checked: false, found: false,
+      skipped: sha256 ? 'File reputation is not configured' : 'No file hash was supplied' })
   }
 
   addWarning(warnings, !extension, 'File has no visible extension', 12)
@@ -187,6 +185,10 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
         textBytesScanned: text.length,
       },
       threatIntel,
+      coverage: providerCoverage(threatIntel, [
+        'File metadata and limited text only; no full binary parsing, OCR, signature verification or sandbox execution.',
+      ]),
+      categories: warnings.length ? ['file-risk'] : [],
     },
   }
 }

@@ -1,3 +1,32 @@
+function hasIncompleteChecks(scan) {
+  const coverage = scan?.coverage
+  return coverage?.status !== 'complete' || coverage.checkedProviders < coverage.totalProviders ||
+    coverage.linksChecked < coverage.totalLinks
+}
+
+function getCoverageText(scan) {
+  const coverage = scan?.coverage
+  if (!coverage) return 'Coverage not recorded; checks cannot be verified.'
+  const labels = { complete: 'Complete checks', partial: 'Incomplete checks', unavailable: 'Checks unavailable', 'local-only': 'Local checks only' }
+  const links = Number.isInteger(coverage.totalLinks) ? `; ${coverage.linksChecked}/${coverage.totalLinks} links checked` : ''
+  return `${labels[coverage.status] ?? 'Coverage unknown'}: ${coverage.checkedProviders}/${coverage.totalProviders} providers checked${links}. ${(coverage.limitations ?? []).join(' ')}`
+}
+
+function getCategoryText(scan) {
+  const labels = { 'phishing-indicators': 'Phishing indicators', 'malware-reputation': 'Malware reputation', 'ip-reputation': 'IP reputation', 'file-risk': 'File risk', 'gambling-content': 'Gambling content', 'piracy-content': 'Piracy content' }
+  const categories = (scan?.categories ?? []).filter((category) => Object.hasOwn(labels, category))
+  const content = categories.filter((category) => category.endsWith('-content'))
+  const risk = categories.filter((category) => !category.endsWith('-content'))
+  return [(scan?.categoryWarnings?.length ? 'Content category warnings (not phishing proof): ' + scan.categoryWarnings.join(' ') : ''), risk.length ? 'Risk categories: ' + risk.map((category) => labels[category]).join(', ') + '.' : '', content.length ? 'Content warnings: ' + content.map((category) => labels[category]).join(', ') + '. These do not establish phishing.' : ''].filter(Boolean).join(' ')
+}
+
+function appendScanContext(parent, scan) {
+  const detail = document.createElement('p')
+  detail.textContent = [getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
+  detail.style.cssText = `margin:10px 0 0;color:${hasIncompleteChecks(scan) ? '#fde68a' : '#cbd5e1'}`
+  parent.appendChild(detail)
+}
+
 const MIN_EMAIL_TEXT_LENGTH = 40
 const SCAN_DEBOUNCE_MS = 1400
 const INBOX_SCAN_DEBOUNCE_MS = 2200
@@ -25,6 +54,7 @@ const inboxResults = []
 const inboxStats = {
   checked: 0,
   safe: 0,
+  incomplete: 0,
   caution: 0,
   dangerous: 0,
   failed: 0,
@@ -465,9 +495,9 @@ function getInboxBadgeStyle(scan) {
       rowBackground: 'rgba(225,29,72,.12)',
     }
   }
-  if (level === 'caution') {
+  if (level === 'caution' || level === 'incomplete') {
     return {
-      text: 'CAUTION',
+      text: level === 'incomplete' ? 'INCOMPLETE CHECKS' : 'CAUTION',
       border: 'rgba(245,158,11,.7)',
       background: '#fef3c7',
       color: '#92400e',
@@ -475,7 +505,7 @@ function getInboxBadgeStyle(scan) {
     }
   }
   return {
-    text: 'SAFE',
+    text: 'NO STRONG INDICATORS',
     border: 'rgba(16,185,129,.55)',
     background: '#ccfbf1',
     color: '#065f46',
@@ -493,7 +523,7 @@ function markGmailInboxRow(row, scan) {
   const label = existing ?? document.createElement('span')
   label.className = 'threattrack-inbox-label'
   label.textContent = `${style.text} ${scan.score}/100`
-  label.title = 'Tracking Threats detected phishing indicators in this email.'
+  label.title = [getStatusLabel(scan.status, scan.coverage), getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a probability.'].filter(Boolean).join(' ')
   label.style.cssText = [
     'all:initial',
     'box-sizing:border-box',
@@ -542,12 +572,13 @@ function showInboxStatus() {
   const banner = existing ?? document.createElement('aside')
   const riskyCount = inboxStats.caution + inboxStats.dangerous
   const hasRisk = riskyCount > 0
+  const hasGaps = inboxStats.incomplete > 0 || inboxStats.failed > 0
   const batchProgress = inboxAttempts - inboxBatchStart
-  const accentColor = inboxStats.dangerous > 0 ? '#fecdd3' : hasRisk ? '#fde68a' : '#6ee7b7'
+  const accentColor = inboxStats.dangerous > 0 ? '#fecdd3' : hasRisk || hasGaps ? '#fde68a' : '#6ee7b7'
   const borderColor =
     inboxStats.dangerous > 0
       ? 'rgba(225,29,72,.45)'
-      : hasRisk
+      : hasRisk || hasGaps
         ? 'rgba(245,158,11,.45)'
         : 'rgba(16,185,129,.45)'
   let statusText = 'Scanning visible Gmail messages...'
@@ -557,13 +588,14 @@ function showInboxStatus() {
     statusText = 'No new visible messages. Open another Gmail page to continue.'
   } else if (inboxPending === 0 && hasRisk) {
     statusText = `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
-  } else if (inboxPending === 0 && inboxStats.failed > 0) {
-    statusText = 'Some messages could not be checked.'
+  } else if (inboxPending === 0 && hasGaps) {
+    statusText = 'Some message checks are incomplete or unavailable.'
   } else if (inboxPending === 0 && inboxStats.checked > 0) {
-    statusText = 'No risky email found in checked messages.'
+    statusText = 'No strong indicators in checked messages.'
   }
 
   banner.id = 'threattrack-inbox-status'
+  banner.setAttribute('role', 'status')
   banner.style.cssText = [
     'position:fixed',
     'right:20px',
@@ -595,7 +627,7 @@ function showInboxStatus() {
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   const totals = document.createElement('p')
-  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} safe - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
+  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} no strong indicators - ${inboxStats.incomplete} incomplete - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
   totals.style.cssText = 'margin:3px 0 0;color:#cbd5e1;font-size:11px'
 
   const header = document.createElement('div')
@@ -693,8 +725,12 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
     sender.style.cssText = 'display:block;margin-top:2px;color:#94a3b8;font:12px/1.4 Arial,sans-serif'
     identity.append(subject, sender)
     const status = document.createElement('span')
-    status.textContent = result.pending ? 'Scanning' : result.failed ? 'Failed' : `${getStatusLabel(result.status)} ${result.score}/100`
-    status.style.cssText = `flex:none;align-self:center;color:${result.failed ? '#fca5a5' : result.pending ? '#cbd5e1' : result.level === 'dangerous' ? '#fecdd3' : result.level === 'caution' ? '#fde68a' : '#6ee7b7'};font:700 11px/1.4 Arial,sans-serif`
+    status.textContent = result.pending ? 'Scanning' : result.failed ? 'Failed' : `${getStatusLabel(result.status, result.coverage)} ${result.score}/100`
+    status.style.cssText = `flex:none;align-self:center;color:${result.failed ? '#fca5a5' : result.pending ? '#cbd5e1' : result.level === 'dangerous' ? '#fecdd3' : (result.level === 'caution' || result.level === 'incomplete') ? '#fde68a' : '#6ee7b7'};font:700 11px/1.4 Arial,sans-serif`
+    const context = document.createElement('span')
+    context.textContent = result.pending || result.failed ? '' : [getCoverageText(result), getCategoryText(result)].filter(Boolean).join(' ')
+    context.style.cssText = 'display:block;margin-top:4px;color:#cbd5e1;font:12px/1.4 Arial,sans-serif'
+    identity.appendChild(context)
     item.append(identity, status)
     list.appendChild(item)
   })
@@ -869,10 +905,13 @@ function isRiskyScan(scan) {
 function getScanLevel(scan) {
   if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
   if (scan?.status === 'Suspicious') return 'caution'
+  if (hasIncompleteChecks(scan)) return 'incomplete'
   return 'safe'
 }
 
-function getStatusLabel(status) {
+function getStatusLabel(status, coverage) {
+  if (status === 'Safe') return hasIncompleteChecks({ coverage }) ? 'Incomplete checks' : 'No strong indicators'
+  if (status === 'Dangerous') return 'Risk detected'
   return status === 'Suspicious' ? 'Caution' : status
 }
 
@@ -896,9 +935,10 @@ function showEmailWarning(scan, email) {
   const banner = existing ?? document.createElement('aside')
   const warnings = scan.warningSigns?.slice(0, 4) ?? []
   const recommendations = scan.recommendations?.slice(0, 2) ?? []
-  const isSafe = scan.status === 'Safe'
-  const borderColor = isSafe ? 'rgba(16,185,129,.45)' : 'rgba(225,29,72,.45)'
-  const accentColor = isSafe ? '#6ee7b7' : '#fecdd3'
+  const isSafe = scan.status === 'Safe' && !hasIncompleteChecks(scan)
+  const isDangerous = scan.status === 'Dangerous' || scan.blocked
+  const borderColor = isDangerous ? 'rgba(225,29,72,.45)' : isSafe ? 'rgba(16,185,129,.45)' : 'rgba(245,158,11,.45)'
+  const accentColor = isDangerous ? '#fecdd3' : isSafe ? '#6ee7b7' : '#fde68a'
   const buttonColor = isSafe ? '#065f46' : '#9f1239'
   const titleText = isSafe ? 'Tracking Threats Email Scan' : 'Tracking Threats Email Warning'
   const scanTarget = scan.target || email.sender || email.subject || 'Opened email'
@@ -953,9 +993,10 @@ function showEmailWarning(scan, email) {
   banner.appendChild(target)
 
   const score = document.createElement('p')
-  score.textContent = `Status: ${getStatusLabel(scan.status)} - Safety score ${scan.score}/100`
+  score.textContent = `Status: ${getStatusLabel(scan.status, scan.coverage)} - Rule-based score ${scan.score}/100`
   score.style.cssText = `margin:8px 0 0;color:${accentColor};font-weight:700`
   banner.appendChild(score)
+  appendScanContext(banner, scan)
 
   if (isSafe) {
     const safeText = document.createElement('p')
@@ -1060,6 +1101,9 @@ function scanGmailInboxRow(row) {
         result.level = nextLevel
         result.status = response.scan.status
         result.score = response.scan.score
+        result.coverage = response.scan.coverage
+        result.categories = response.scan.categories
+        result.categoryWarnings = response.scan.categoryWarnings
         row.dataset.threattrackLevel = nextLevel
         markGmailInboxRow(row, response.scan)
         if (isRiskyScan(response.scan)) showInboxRiskWarning(response.scan, email)

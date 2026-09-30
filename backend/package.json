@@ -16,7 +16,8 @@
     "nodemailer": "^9.0.5",
     "pg": "^8.16.3",
     "sqlite": "^5.1.1",
-    "sqlite3": "^6.0.1"
+    "sqlite3": "^6.0.1",
+    "tldts": "^7.4.16"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

@@ -1,23 +1,11 @@
 import dns from 'node:dns/promises'
 import net from 'node:net'
 import { addWarning, getRiskFromScore, recommendationsFor, scoreWarnings } from './riskScorer.js'
+import { providerCoverage } from './coverage.js'
+import { providerRequest } from './providerRequest.js'
 
-const requestTimeoutMs = 4500
 const dnsTimeoutMs = 2500
 const phishTankUserAgent = 'phishtank/tracking-threats'
-const phishTankPassThroughHosts = new Set([
-  'bing.com',
-  'duckduckgo.com',
-  'github.com',
-  'google.com',
-  'search.yahoo.com',
-  'tracking-threats-production.up.railway.app',
-  'www.bing.com',
-  'www.github.com',
-  'www.google.com',
-  'www.youtube.com',
-  'youtube.com',
-])
 
 export const parseProviderFlag = (value) => {
   if (value === true || value === 1) return true
@@ -28,16 +16,7 @@ export const parseProviderFlag = (value) => {
 export const hasVirusTotalDetections = (stats = {}) =>
   Number(stats.malicious ?? 0) > 0 || Number(stats.suspicious ?? 0) > 0
 
-const withTimeout = async (url, options) => {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs)
-
-  try {
-    return await fetch(url, { ...options, signal: controller.signal })
-  } finally {
-    clearTimeout(timeout)
-  }
-}
+const withTimeout = providerRequest
 
 const formatProviderError = (error) => {
   const code = error?.cause?.code ?? error?.code
@@ -146,7 +125,8 @@ async function checkVirusTotal(target) {
   if (response.status === 404) {
     return {
       provider: 'VirusTotal',
-      checked: true,
+      checked: false,
+      skipped: 'URL is not in the provider database',
       found: false,
       warning: null,
       deduction: 0,
@@ -213,6 +193,7 @@ async function checkGoogleSafeBrowsing(target) {
 
   return {
     provider: 'Google Safe Browsing',
+    threatTypes,
     checked: true,
     found: matches.length > 0,
     matches,
@@ -286,8 +267,6 @@ async function checkUrlhausHost(target) {
 }
 
 async function checkPhishTank(target) {
-  if (phishTankPassThroughHosts.has(parseTarget(target)?.hostname.toLowerCase())) return null
-
   const appKey = process.env.PHISHTANK_APP_KEY
   const response = await postForm('https://checkurl.phishtank.com/checkurl/', {
     format: 'json',
@@ -402,11 +381,11 @@ async function checkAbuseIpDb(target) {
       confidence > 0
         ? `AbuseIPDB reports ${confidence}% abuse confidence for host IP ${publicAddress}`
         : null,
-    deduction: confidence >= 80 ? 50 : confidence >= 25 ? 25 : confidence > 0 ? 10 : 0,
+    deduction: confidence >= 80 ? 20 : confidence >= 25 ? 10 : confidence > 0 ? 5 : 0,
   }
 }
 
-export async function enrichUrlAnalysis(target, baseAnalysis) {
+async function lookupUrlReputation(target) {
   const checks = [
     { provider: 'VirusTotal', run: () => checkVirusTotal(target) },
     { provider: 'Google Safe Browsing', run: () => checkGoogleSafeBrowsing(target) },
@@ -417,21 +396,34 @@ export async function enrichUrlAnalysis(target, baseAnalysis) {
     { provider: 'AbuseIPDB', run: () => checkAbuseIpDb(target) },
   ]
 
-  const results = await Promise.allSettled(checks.map((check) => check.run()))
+  return runProviderChecks(checks)
+}
+
+export async function runProviderChecks(checks) {
+  const results = await Promise.allSettled(checks.map((check) => Promise.resolve().then(check.run)))
 
   const providerResults = results.map((result, index) => {
-    if (result.status === 'fulfilled') return result.value
+    if (result.status === 'fulfilled') return result.value ?? {
+      provider: checks[index].provider,
+      checked: false,
+      found: false,
+      skipped: 'Not configured or not applicable to this URL',
+    }
     return {
       provider: checks[index].provider,
-      checked: true,
+      checked: false,
       error: formatProviderError(result.reason),
     }
   })
 
+  return providerResults
+}
+
+export function combineUrlReputation(baseAnalysis, providerResults) {
   const activeResults = providerResults.filter(Boolean)
   const externalWarnings = []
   for (const result of activeResults) {
-    addWarning(externalWarnings, Boolean(result.warning), result.warning, result.deduction ?? 0)
+    addWarning(externalWarnings, result.checked === true && !result.error && !result.skipped && Boolean(result.warning), result.warning, result.deduction ?? 0)
   }
 
   const score = scoreWarnings([
@@ -460,6 +452,41 @@ export async function enrichUrlAnalysis(target, baseAnalysis) {
     details: {
       ...(baseAnalysis.details ?? {}),
       threatIntel: activeResults,
+      coverage: providerCoverage(activeResults, ['URL reputation and local rules only; page content and redirects were not inspected.']),
+      categories: [...new Set([
+        ...(baseAnalysis.details?.categories ?? []),
+        ...activeResults.filter((result) => result.checked && !result.error && !result.skipped && result.found).flatMap((result) =>
+          result.provider === 'PhishTank' ? ['phishing-indicators']
+            : result.provider.startsWith('URLhaus') ? ['malware-reputation']
+              : result.provider === 'Google Safe Browsing' ? (result.threatTypes ?? []).map((type) => type === 'SOCIAL_ENGINEERING' ? 'phishing-indicators' : 'malware-reputation')
+                : result.provider === 'AbuseIPDB' ? ['ip-reputation']
+                  : result.provider === 'VirusTotal' ? ['malware-reputation'] : []),
+      ])],
     },
   }
+}
+
+// Bounded, short-lived, in-memory cache; raw targets are never written to disk.
+const reputationCache = new Map()
+export async function enrichUrlAnalysis(target, baseAnalysis) {
+  if (process.env.REPUTATION_ENABLED === 'false') {
+    return combineUrlReputation(baseAnalysis, [{
+      provider: 'URL reputation', checked: false, found: false,
+      skipped: 'External reputation checks are disabled',
+    }])
+  }
+  const parsed = parseTarget(target)
+  if (!parsed || !['http:', 'https:'].includes(parsed.protocol)) {
+    return combineUrlReputation(baseAnalysis, [{
+      provider: 'URL reputation', checked: false, error: 'Only valid HTTP/HTTPS URLs can be assessed',
+    }])
+  }
+  const normalized = parsed.href
+  let entry = reputationCache.get(normalized)
+  if (!entry || entry.expiresAt <= Date.now()) {
+    if (reputationCache.size >= 300) reputationCache.delete(reputationCache.keys().next().value)
+    entry = { expiresAt: Date.now() + 60000, promise: lookupUrlReputation(normalized) }
+    reputationCache.set(normalized, entry)
+  }
+  return combineUrlReputation(baseAnalysis, await entry.promise)
 }

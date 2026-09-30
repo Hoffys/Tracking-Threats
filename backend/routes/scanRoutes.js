@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { requireClientForScan } from '../middleware/clientAuth.js'
+import { validateScanInput } from '../middleware/scanInput.js'
 import {
   scanEmailHandler,
   scanFileHandler,
@@ -9,7 +10,7 @@ import {
 
 export const scanRoutes = Router()
 
-scanRoutes.post('/scan/url', requireClientForScan, scanUrlHandler)
-scanRoutes.post('/scan/email', requireClientForScan, scanEmailHandler)
-scanRoutes.post('/scan/message', requireClientForScan, scanMessageHandler)
-scanRoutes.post('/scan/file', requireClientForScan, scanFileHandler)
+scanRoutes.post('/scan/url', requireClientForScan, validateScanInput, scanUrlHandler)
+scanRoutes.post('/scan/email', requireClientForScan, validateScanInput, scanEmailHandler)
+scanRoutes.post('/scan/message', requireClientForScan, validateScanInput, scanMessageHandler)
+scanRoutes.post('/scan/file', requireClientForScan, validateScanInput, scanFileHandler)

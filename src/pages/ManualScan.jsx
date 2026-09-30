@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
+import { hasIncompleteChecks, responseLabel } from '../utils/scanPresentation'
 import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
@@ -152,9 +153,9 @@ export function ManualScan({ onNavigate }) {
               <ShieldX size={21} />
             </span>
             <div>
-              <p className="font-semibold">Threat Blocked Automatically</p>
+              <p className="font-semibold">Risk detected</p>
               <p className="mt-1 text-sm text-rose-50">
-                This Dangerous scan was marked as Blocked and saved to flagged threats.
+                This result was flagged for review. A manual scan does not itself block access.
               </p>
             </div>
           </div>
@@ -170,11 +171,11 @@ export function ManualScan({ onNavigate }) {
             </p>
             {scanResult.responseStatus && (
               <p className="mt-1 text-sm font-semibold text-rose-600 dark:text-rose-300">
-                Response: {scanResult.responseStatus}
+                Response: {responseLabel(scanResult, true)}
               </p>
             )}
           </div>
-          <RiskBadge risk={scanResult.status ?? scanResult.risk} />
+          <RiskBadge risk={scanResult.status ?? scanResult.risk} coverage={scanResult.coverage} />
         </div>
 
         <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -195,7 +196,7 @@ export function ManualScan({ onNavigate }) {
             className={`h-3 rounded-full ${
               scanResult.status === 'Dangerous'
                 ? 'bg-rose-500'
-                : scanResult.status === 'Suspicious'
+                : scanResult.status === 'Suspicious' || hasIncompleteChecks(scanResult.coverage)
                   ? 'bg-amber-500'
                   : 'bg-emerald-500'
             }`}
@@ -205,7 +206,7 @@ export function ManualScan({ onNavigate }) {
         <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
           {scanResult.summary}
         </p>
-        <ScanExplanation scan={scanResult} />
+        <ScanExplanation scan={scanResult} manual />
         <ThreatIntelSummary providers={scanResult.threatIntel} />
 
         {scanResult.fileDetails?.sha256 && (
@@ -288,7 +289,7 @@ export function ManualScan({ onNavigate }) {
                     </p>
                   </div>
                 </div>
-                <RiskBadge risk={analysis.status} />
+                <RiskBadge risk={analysis.status} coverage={analysis.coverage} />
               </div>
               {key === 'links' && analysis.extracted?.length > 0 && (
                 <div className="mb-2 space-y-1">

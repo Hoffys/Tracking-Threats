@@ -1,3 +1,32 @@
+function hasIncompleteChecks(scan) {
+  const coverage = scan?.coverage
+  return coverage?.status !== 'complete' || coverage.checkedProviders < coverage.totalProviders ||
+    coverage.linksChecked < coverage.totalLinks
+}
+
+function getCoverageText(scan) {
+  const coverage = scan?.coverage
+  if (!coverage) return 'Coverage not recorded; checks cannot be verified.'
+  const labels = { complete: 'Complete checks', partial: 'Incomplete checks', unavailable: 'Checks unavailable', 'local-only': 'Local checks only' }
+  const links = Number.isInteger(coverage.totalLinks) ? `; ${coverage.linksChecked}/${coverage.totalLinks} links checked` : ''
+  return `${labels[coverage.status] ?? 'Coverage unknown'}: ${coverage.checkedProviders}/${coverage.totalProviders} providers checked${links}. ${(coverage.limitations ?? []).join(' ')}`
+}
+
+function getCategoryText(scan) {
+  const labels = { 'phishing-indicators': 'Phishing indicators', 'malware-reputation': 'Malware reputation', 'ip-reputation': 'IP reputation', 'file-risk': 'File risk', 'gambling-content': 'Gambling content', 'piracy-content': 'Piracy content' }
+  const categories = (scan?.categories ?? []).filter((category) => Object.hasOwn(labels, category))
+  const content = categories.filter((category) => category.endsWith('-content'))
+  const risk = categories.filter((category) => !category.endsWith('-content'))
+  return [(scan?.categoryWarnings?.length ? 'Content category warnings (not phishing proof): ' + scan.categoryWarnings.join(' ') : ''), risk.length ? 'Risk categories: ' + risk.map((category) => labels[category]).join(', ') + '.' : '', content.length ? 'Content warnings: ' + content.map((category) => labels[category]).join(', ') + '. These do not establish phishing.' : ''].filter(Boolean).join(' ')
+}
+
+function appendScanContext(parent, scan) {
+  const detail = document.createElement('p')
+  detail.textContent = [getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
+  detail.style.cssText = `margin:10px 0 0;color:${hasIncompleteChecks(scan) ? '#fde68a' : '#cbd5e1'}`
+  parent.appendChild(detail)
+}
+
 const MAX_RESULTS_TO_SCAN = 50
 const GOOGLE_REDIRECT_PATHS = new Set(['/url', '/interstitial'])
 const SEARCH_ENGINE_HOSTS = [
@@ -36,6 +65,8 @@ const latestResults = new Map()
 const scanStats = {
   checked: 0,
   safe: 0,
+  incomplete: 0,
+  failed: 0,
   caution: 0,
   dangerous: 0,
 }
@@ -90,6 +121,7 @@ function isRiskyScan(scan) {
 function getScanLevel(scan) {
   if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
   if (scan?.status === 'Suspicious') return 'caution'
+  if (hasIncompleteChecks(scan)) return 'incomplete'
   return 'safe'
 }
 
@@ -97,16 +129,16 @@ function getResultStyle(scan) {
   const level = getScanLevel(scan)
   if (level === 'dangerous') {
     return {
-      label: 'DANGER',
+      label: 'RISK DETECTED',
       border: 'rgba(225,29,72,.5)',
       background: '#ffe4e6',
       color: '#9f1239',
       rowBackground: 'rgba(225,29,72,.12)',
     }
   }
-  if (level === 'caution') {
+  if (level === 'caution' || level === 'incomplete') {
     return {
-      label: 'CAUTION',
+      label: level === 'incomplete' ? 'INCOMPLETE CHECKS' : 'CAUTION',
       border: 'rgba(245,158,11,.55)',
       background: '#fef3c7',
       color: '#92400e',
@@ -114,7 +146,7 @@ function getResultStyle(scan) {
     }
   }
   return {
-    label: 'SAFE',
+    label: 'NO STRONG INDICATORS',
     border: 'rgba(16,185,129,.45)',
     background: '#ccfbf1',
     color: '#115e59',
@@ -141,6 +173,9 @@ function getDetailsUrl(url, appUrl = APP_URL, scan = null) {
       summary: scan.summary,
       warningSigns: scan.warningSigns ?? [],
       recommendations: scan.recommendations ?? [],
+      coverage: scan.coverage,
+      categories: scan.categories,
+      categoryWarnings: scan.categoryWarnings,
     }) }).toString()
   } else {
     detailsUrl.searchParams.set('blocked', url)
@@ -255,21 +290,23 @@ function showSearchStatus() {
   const banner = existing ?? document.createElement('aside')
   const riskyCount = scanStats.caution + scanStats.dangerous
   const hasRisk = riskyCount > 0
-  const accentColor = scanStats.dangerous > 0 ? '#fecdd3' : hasRisk ? '#fde68a' : '#6ee7b7'
+  const hasGaps = scanStats.incomplete > 0 || scanStats.failed > 0
+  const accentColor = scanStats.dangerous > 0 ? '#fecdd3' : hasRisk || hasGaps ? '#fde68a' : '#6ee7b7'
   const borderColor =
     scanStats.dangerous > 0
       ? 'rgba(225,29,72,.45)'
-      : hasRisk
+      : hasRisk || hasGaps
         ? 'rgba(245,158,11,.45)'
         : 'rgba(16,185,129,.45)'
   const statusText =
-    scanStats.checked === 0
+    scanStats.checked === 0 && scanStats.failed === 0
       ? 'Scanning visible search results...'
       : hasRisk
         ? `${riskyCount} risky search result${riskyCount === 1 ? '' : 's'} found`
-        : 'No risky result found in visible search results'
+        : hasGaps ? 'Some checks are incomplete or unavailable.' : 'No strong indicators in checked visible results'
 
   banner.id = 'threattrack-search-status'
+  banner.setAttribute('role', 'status')
   banner.style.cssText = [
     'position:fixed',
     'right:20px',
@@ -297,7 +334,7 @@ function showSearchStatus() {
   body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
 
   const counts = document.createElement('p')
-  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe} safe - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
+  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe} no strong indicators - ${scanStats.incomplete} incomplete - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   banner.append(title, body, counts)
@@ -314,7 +351,7 @@ function showResultPopup(url, scan) {
   const warningSigns = topScan.warningSigns?.slice(0, 3) ?? []
   const recommendations = topScan.recommendations?.slice(0, 2) ?? []
   const popup = existing ?? document.createElement('aside')
-  const isSafe = topScan.status === 'Safe'
+  const isSafe = topScan.status === 'Safe' && !hasIncompleteChecks(topScan)
   const isDangerous = topScan.status === 'Dangerous' || topScan.blocked
   const borderColor = isDangerous
     ? 'rgba(225,29,72,.45)'
@@ -323,7 +360,7 @@ function showResultPopup(url, scan) {
       : 'rgba(245,158,11,.45)'
   const accentColor = isDangerous ? '#fecdd3' : isSafe ? '#6ee7b7' : '#fde68a'
   const buttonColor = isDangerous ? '#9f1239' : isSafe ? '#065f46' : '#92400e'
-  const statusText = isDangerous ? 'Danger risk' : isSafe ? 'Safe result' : 'Caution'
+  const statusText = getResultStyle(topScan).label
 
   popup.id = 'threattrack-google-warning'
   popup.style.cssText = [
@@ -348,7 +385,7 @@ function showResultPopup(url, scan) {
   header.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:12px'
 
   const title = document.createElement('div')
-  title.innerHTML = `<strong style="display:block;font-size:14px;color:${accentColor}">Tracking Threats Result</strong><span style="color:#cbd5e1">${statusText} detected before opening this result.</span>`
+  title.innerHTML = `<strong style="display:block;font-size:14px;color:${accentColor}">Tracking Threats Result</strong><span style="color:#cbd5e1">${statusText} ? preview before opening this result.</span>`
 
   const close = document.createElement('button')
   close.type = 'button'
@@ -375,9 +412,10 @@ function showResultPopup(url, scan) {
   popup.appendChild(urlText)
 
   const score = document.createElement('p')
-  score.textContent = `Status: ${topScan.status} - Safety score ${topScan.score}/100`
+  score.textContent = `Status: ${statusText} - Rule-based score ${topScan.score}/100`
   score.style.cssText = `margin:8px 0 0;color:${accentColor};font-weight:700`
   popup.appendChild(score)
+  appendScanContext(popup, topScan)
 
   if (isSafe) {
     const safeText = document.createElement('p')
@@ -457,7 +495,7 @@ function showClickPreview(url, scan, anchor) {
   const accentColor =
     level === 'dangerous'
       ? '#fecdd3'
-      : level === 'caution'
+      : (level === 'caution' || level === 'incomplete')
         ? '#fde68a'
         : '#6ee7b7'
   const warnings = scan.warningSigns?.slice(0, 4) ?? []
@@ -510,9 +548,10 @@ function showClickPreview(url, scan, anchor) {
   card.appendChild(urlText)
 
   const score = document.createElement('p')
-  score.textContent = `Status: ${scan.status} - Safety score ${scan.score}/100`
+  score.textContent = `Status: ${style.label} - Rule-based score ${scan.score}/100`
   score.style.cssText = `margin:10px 0 0;color:${accentColor};font-weight:700`
   card.appendChild(score)
+  appendScanContext(card, scan)
 
   if (warnings.length > 0) {
     const list = document.createElement('ul')
@@ -572,8 +611,12 @@ function scanGoogleResults() {
       url,
       reason: 'search-result-preview',
     }, (response) => {
-      scannedResults.set(url, response.scan)
-      if (!response?.ok || !response.scan) return
+      scannedResults.set(url, response?.scan ?? null)
+      if (chrome.runtime.lastError || !response?.ok || !response.scan || response.scan.ok === false) {
+        scanStats.failed += 1
+        showSearchStatus()
+        return
+      }
       latestResults.set(url, response.scan)
       const level = getScanLevel(response.scan)
       scanStats.checked += 1

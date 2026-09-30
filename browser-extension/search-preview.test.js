@@ -69,3 +69,63 @@ test('invalid or missing preview data cannot masquerade as a saved history resul
   assert.deepEqual(result.warningSigns, ['Valid warning'])
   assert.deepEqual(result.recommendations, [])
 })
+
+test('coverage, categories and content warnings survive linked-app preview roundtrips', () => {
+  const app = extension()
+  for (const status of ['complete', 'partial', 'unavailable', 'local-only']) {
+    const expected = {
+      ...scan,
+      coverage: { status, checkedProviders: status === 'complete' ? 6 : 0, totalProviders: 6,
+        linksChecked: status === 'complete' ? 2 : 0, totalLinks: 2,
+        limitations: ['Provider unavailable: <script> & # + %', 'Only static URL analysis.'] },
+      categories: ['gambling-content', 'ip-reputation'],
+      categoryWarnings: ['Gambling category does not establish phishing.'],
+    }
+    const anchor = {}
+    app.setDetailsHref(anchor, target, expected)
+    app.reply({ ok: true, appUrl: `${appUrl}?client=cl_example` })
+    assert.deepEqual(readSearchPreview(anchor.href), { target, ...expected })
+    assert.equal(new URL(anchor.href).search.includes('Provider'), false)
+    const style = app.getResultStyle(expected)
+    assert.equal(style.label, status === 'complete' ? 'NO STRONG INDICATORS' : 'INCOMPLETE CHECKS')
+    if (status !== 'complete') assert.equal(style.background, '#fef3c7')
+  }
+})
+
+test('malformed coverage and forged category values cannot advertise complete checks', () => {
+  const app = extension()
+  const result = readSearchPreview(app.getDetailsUrl(target, appUrl, {
+    ...scan, coverage: { status: 'complete', checkedProviders: -1, totalProviders: 6 },
+    categories: ['gambling-content', {}, '__proto__', 'gambling-content'],
+    categoryWarnings: [{ unexpected: true }, 'Content warning'],
+  }))
+  assert.equal(result.coverage, undefined)
+  assert.deepEqual(result.categories, ['gambling-content'])
+  assert.deepEqual(result.categoryWarnings, ['Content warning'])
+  assert.equal(app.getResultStyle(result).label, 'INCOMPLETE CHECKS')
+  assert.equal(app.getResultStyle({ ...scan, status: 'Dangerous' }).label, 'RISK DETECTED')
+})
+
+test('missing and failed preview replies produce an amber unavailable message', () => {
+  const elements = new Map()
+  const element = () => ({
+    children: [], style: {}, textContent: '', setAttribute() {},
+    append(...items) { this.children.push(...items) },
+    appendChild(item) { this.children.push(item); if (item.id) elements.set(item.id, item) },
+  })
+  const callbacks = []
+  const sandbox = {
+    URL, URLSearchParams,
+    TRACKING_THREATS_CONFIG: { APP_URL: appUrl },
+    document: { getElementById: (id) => elements.get(id), createElement: element, body: element() },
+    chrome: { runtime: { sendMessage: (_message, callback) => callbacks.push(callback) } },
+  }
+  vm.runInNewContext(source.slice(0, source.lastIndexOf('document.addEventListener(')), sandbox)
+  vm.runInNewContext(`collectResultLinks = () => ['https://one.example/', 'https://two.example/']; scanGoogleResults()`, sandbox)
+  assert.doesNotThrow(() => callbacks[0](undefined))
+  callbacks[1]({ ok: false, error: 'Scanner offline' })
+  const banner = elements.get('threattrack-search-status')
+  assert.match(banner.style.cssText, /rgba\(245,158,11/)
+  assert.match(banner.children.map((child) => child.textContent).join(' '), /2 unavailable/)
+  assert.doesNotMatch(banner.children.map((child) => child.textContent).join(' '), /looks safe/)
+})

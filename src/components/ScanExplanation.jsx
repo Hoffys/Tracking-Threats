@@ -1,14 +1,9 @@
 import { AlertTriangle, CheckCircle2, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 
-const getStatusLabel = (scan) => {
-  if (scan?.responseStatus === 'Blocked' || scan?.blocked) return 'Blocked'
-  if (scan?.status === 'Dangerous') return 'Blocked'
-  if (scan?.status === 'Suspicious') return 'Review'
-  return 'Allowed'
-}
+import { categoryLabels, coverageLabel, hasIncompleteChecks, normalizeCategories, responseLabel } from '../utils/scanPresentation'
 
 const getScoreBand = (score = 100) => {
-  if (score >= 80) return 'Safe range: 80-100'
+  if (score >= 80) return 'Low indicator range: 80-100'
   if (score > 50) return 'Caution range: 51-79'
   return 'Danger range: 0-50'
 }
@@ -16,18 +11,18 @@ const getScoreBand = (score = 100) => {
 const getExplanation = (scan) => {
   const warnings = scan?.warningSigns ?? []
   const status = scan?.status
-  const mainSignal = warnings[0] ?? 'No strong phishing indicator'
+  const mainSignal = warnings[0] ?? 'No strong indicator reported'
   const intel = scan?.threatIntel ?? []
   const matchedIntel = intel.filter((provider) => provider?.found).length
-  const unavailableIntel = intel.filter((provider) => provider?.error).length
+  const unavailableIntel = intel.filter((provider) => provider?.error || provider?.checked === false || provider?.skipped).length
 
   if (status === 'Dangerous' || scan?.blocked || scan?.responseStatus === 'Blocked') {
     return {
-      title: 'Why this was blocked',
+      title: 'Why risk was detected',
       icon: AlertTriangle,
       tone: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300',
       summary:
-        'The safety score reached the danger range because one or more high-risk indicators were found.',
+        'The rules or reputation checks found risk indicators. This result alone does not confirm phishing or prove that access was blocked.',
       mainSignal,
       matchedIntel,
       unavailableIntel,
@@ -40,32 +35,37 @@ const getExplanation = (scan) => {
       icon: SlidersHorizontal,
       tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
       summary:
-        'The scan found warning signs, but the score did not reach the automatic block threshold.',
+        'The scan found warning signs that need review. Indicators are not proof of malicious intent.',
       mainSignal,
       matchedIntel,
       unavailableIntel,
     }
   }
 
+  const incomplete = hasIncompleteChecks(scan?.coverage)
   return {
-    title: 'Why this was marked safe',
-    icon: CheckCircle2,
-    tone: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
-    summary:
-      'The scan did not find strong phishing indicators in the checked rules and reputation signals.',
+    title: incomplete ? 'Incomplete checks' : 'No strong indicators',
+    icon: incomplete ? SlidersHorizontal : CheckCircle2,
+    tone: incomplete ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300' : 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
+    summary: incomplete
+      ? 'The available checks did not find strong indicators, but coverage is incomplete or unknown. This is not a verified safe result.'
+      : 'No strong indicators were found in the completed checks. This does not guarantee safety or authenticity.',
     mainSignal,
     matchedIntel,
     unavailableIntel,
   }
 }
 
-export function ScanExplanation({ scan }) {
+export function ScanExplanation({ scan, manual = false }) {
   if (!scan) return null
 
   const explanation = getExplanation(scan)
   const Icon = explanation.icon
   const warningCount = scan.warningSigns?.length ?? 0
-  const providerCount = scan.threatIntel?.length ?? 0
+  const providerCount = scan.coverage?.checkedProviders ?? scan.threatIntel?.filter((provider) => provider?.checked === true && !provider.error && !provider.skipped).length ?? 0
+  const categories = normalizeCategories(scan.categories)
+  const contentCategories = categories.filter((category) => category.endsWith('-content'))
+  const riskCategories = categories.filter((category) => !category.endsWith('-content'))
 
   return (
     <div className="mt-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-950/60">
@@ -83,6 +83,32 @@ export function ScanExplanation({ scan }) {
         </div>
       </div>
 
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+        Rule-based score: {scan.score}/100. This is not a calibrated probability.
+      </p>
+      <p className={`mt-2 text-sm ${hasIncompleteChecks(scan.coverage) ? 'text-amber-700 dark:text-amber-300' : 'text-slate-600 dark:text-slate-300'}`}>
+        {coverageLabel(scan.coverage)}
+      </p>
+      {scan.coverage?.limitations?.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-sm text-slate-600 dark:text-slate-300">
+          {scan.coverage.limitations.map((item, index) => <li key={index}>{item}</li>)}
+        </ul>
+      )}
+      {riskCategories.length > 0 && <p className="mt-3 text-sm">Risk categories: {riskCategories.map((category) => categoryLabels[category]).join(', ')}.</p>}
+      {contentCategories.length > 0 && (
+        <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
+          Content warnings: {contentCategories.map((category) => categoryLabels[category]).join(', ')}.
+          {' '}These content categories do not establish phishing.
+        </p>
+      )}
+      {scan.categoryWarnings?.length > 0 && (
+        <div className="mt-3 text-sm text-amber-700 dark:text-amber-300">
+          <p>Content category warnings (separate from phishing evidence):</p>
+          <ul className="mt-1 list-disc pl-5">
+            {scan.categoryWarnings.map((warning, index) => <li key={index}>{warning}</li>)}
+          </ul>
+        </div>
+      )}
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">Score band</p>
@@ -99,14 +125,14 @@ export function ScanExplanation({ scan }) {
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">Signals found</p>
           <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {warningCount} warning{warningCount === 1 ? '' : 's'}, {providerCount} provider
+            {warningCount} warning{warningCount === 1 ? '' : 's'}, {providerCount} checked provider
             {providerCount === 1 ? '' : 's'}
           </p>
         </div>
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">System response</p>
           <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {getStatusLabel(scan)}
+            {responseLabel(scan, manual)}
           </p>
         </div>
       </div>

@@ -1,15 +1,13 @@
 import { riskStyles } from '../utils/detection'
+import { hasIncompleteChecks, riskLabel } from '../utils/scanPresentation'
 
-const riskLabels = {
-  Suspicious: 'Caution',
-}
-
-export function RiskBadge({ risk }) {
+export function RiskBadge({ risk, coverage }) {
+  const tone = risk === 'Safe' && hasIncompleteChecks(coverage) ? 'Suspicious' : risk
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ring-1 ${riskStyles[risk]}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ring-1 ${riskStyles[tone]}`}
     >
-      {riskLabels[risk] ?? risk}
+      {riskLabel(risk, coverage)}
     </span>
   )
 }

@@ -1,0 +1,3213 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-30T05:40:06.435Z",
+  "nodeVersion": "v24.21.0",
+  "scanner": "current",
+  "source": {
+    "files": [
+      {
+        "path": "backend/services/emailAnalyzer.js",
+        "sha256": "5813c313a8e90f829459692e00eeeeca92fe69a4cc1543f594dbe7ae6139c0e7"
+      },
+      {
+        "path": "backend/services/messageScanner.js",
+        "sha256": "97ded1a3e40855086401fa4e5a4ed2539c5d1fb2964c19be4c0f8b3bd0c4d2ff"
+      },
+      {
+        "path": "backend/services/riskScorer.js",
+        "sha256": "3060d625d9192a3b2691ef0f652a783f05fe366c5e6ba7cc1effe7609c02cfc5"
+      },
+      {
+        "path": "backend/services/urlScanner.js",
+        "sha256": "ec4aa1ee010dc95d62eb15b5e2368605987d96c1df0f802a94838e0d0b4f2ff4"
+      },
+      {
+        "path": "node_modules/tldts/dist/cjs/index.js",
+        "sha256": "dcbb58d1c1903cde0bf3086a1ffe107b3ded61e0496fa8e1704727c603132dea"
+      },
+      {
+        "path": "node_modules/tldts/package.json",
+        "sha256": "ee6f509afc31ee935e7b68bb6d50c80a64cbeb31b0c8ad6bf38922f984c891da"
+      }
+    ]
+  },
+  "datasetHash": "49f78d2c9a91c1063477e439f49f5576590b5b5a3eb2e50813c093ec6d2e28d4",
+  "selectedSplit": "all",
+  "evidence": {
+    "syntheticRows": 60,
+    "externallyLabeledRows": 0,
+    "statement": "SYNTHETIC regression fixtures only. These metrics are not real-world accuracy estimates. Independent real-world evaluation is outstanding."
+  },
+  "thresholds": {
+    "warningBelow": 80,
+    "blockAtMost": 50
+  },
+  "policy": "Scores are safety scores: warning = score < warningBelow (includes blocks); block = score <= blockAtMost. Thresholds are evaluator policies, not production configuration changes.",
+  "latencyMethod": "One serial call per case using performance.now(), in milliseconds; imports, validation and reporting excluded. No warmup; order, JIT, host load and instrumentation affect timings. Not endpoint/network or throughput latency.",
+  "metrics": {
+    "overall": {
+      "count": 60,
+      "warning": {
+        "tp": 20,
+        "fp": 0,
+        "tn": 30,
+        "fn": 10,
+        "precision": 1,
+        "recall": 0.6666666666666666,
+        "fpr": 0,
+        "falsePositiveIds": [],
+        "falseNegativeIds": [
+          "T-url-10",
+          "T-message-09",
+          "T-email-08",
+          "H-url-09",
+          "H-url-10",
+          "H-message-08",
+          "H-message-09",
+          "H-message-10",
+          "H-email-09",
+          "H-email-10"
+        ]
+      },
+      "block": {
+        "tp": 19,
+        "fp": 0,
+        "tn": 30,
+        "fn": 11,
+        "precision": 1,
+        "recall": 0.6333333333333333,
+        "fpr": 0,
+        "falsePositiveIds": [],
+        "falseNegativeIds": [
+          "T-url-09",
+          "T-url-10",
+          "T-message-09",
+          "T-email-08",
+          "H-url-09",
+          "H-url-10",
+          "H-message-08",
+          "H-message-09",
+          "H-message-10",
+          "H-email-09",
+          "H-email-10"
+        ]
+      },
+      "latency": {
+        "count": 60,
+        "meanMs": 0.15488166666666672,
+        "p50Ms": 0.07429999999999382,
+        "p95Ms": 0.33849999999999625,
+        "maxMs": 1.8560000000000088
+      }
+    },
+    "bySplit": {
+      "tuning": {
+        "count": 30,
+        "warning": {
+          "tp": 12,
+          "fp": 0,
+          "tn": 15,
+          "fn": 3,
+          "precision": 1,
+          "recall": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-10",
+            "T-message-09",
+            "T-email-08"
+          ]
+        },
+        "block": {
+          "tp": 11,
+          "fp": 0,
+          "tn": 15,
+          "fn": 4,
+          "precision": 1,
+          "recall": 0.7333333333333333,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-09",
+            "T-url-10",
+            "T-message-09",
+            "T-email-08"
+          ]
+        },
+        "latency": {
+          "count": 30,
+          "meanMs": 0.251500000000001,
+          "p50Ms": 0.12460000000000093,
+          "p95Ms": 1.6440999999999946,
+          "maxMs": 1.8560000000000088
+        }
+      },
+      "held-out": {
+        "count": 30,
+        "warning": {
+          "tp": 8,
+          "fp": 0,
+          "tn": 15,
+          "fn": 7,
+          "precision": 1,
+          "recall": 0.5333333333333333,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-09",
+            "H-url-10",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "block": {
+          "tp": 8,
+          "fp": 0,
+          "tn": 15,
+          "fn": 7,
+          "precision": 1,
+          "recall": 0.5333333333333333,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-09",
+            "H-url-10",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "latency": {
+          "count": 30,
+          "meanMs": 0.05826333333333243,
+          "p50Ms": 0.048799999999999955,
+          "p95Ms": 0.12770000000000437,
+          "maxMs": 0.16870000000000118
+        }
+      }
+    },
+    "byKind": {
+      "url": {
+        "count": 20,
+        "warning": {
+          "tp": 7,
+          "fp": 0,
+          "tn": 10,
+          "fn": 3,
+          "precision": 1,
+          "recall": 0.7,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-10",
+            "H-url-09",
+            "H-url-10"
+          ]
+        },
+        "block": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-09",
+            "T-url-10",
+            "H-url-09",
+            "H-url-10"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 0.16037500000000052,
+          "p50Ms": 0.057699999999996976,
+          "p95Ms": 0.2931000000000097,
+          "maxMs": 1.6440999999999946
+        }
+      },
+      "message": {
+        "count": 20,
+        "warning": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10"
+          ]
+        },
+        "block": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 0.16970999999999847,
+          "p50Ms": 0.0478999999999985,
+          "p95Ms": 0.33849999999999625,
+          "maxMs": 1.8560000000000088
+        }
+      },
+      "email": {
+        "count": 20,
+        "warning": {
+          "tp": 7,
+          "fp": 0,
+          "tn": 10,
+          "fn": 3,
+          "precision": 1,
+          "recall": 0.7,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-email-08",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "block": {
+          "tp": 7,
+          "fp": 0,
+          "tn": 10,
+          "fn": 3,
+          "precision": 1,
+          "recall": 0.7,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-email-08",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 0.13456000000000118,
+          "p50Ms": 0.09399999999999409,
+          "p95Ms": 0.2826000000000022,
+          "maxMs": 0.39270000000000493
+        }
+      }
+    },
+    "bySplitAndKind": {
+      "tuning/url": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "precision": 1,
+          "recall": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-10"
+          ]
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-09",
+            "T-url-10"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.28333000000000086,
+          "p50Ms": 0.09369999999999834,
+          "p95Ms": 1.6440999999999946,
+          "maxMs": 1.6440999999999946
+        }
+      },
+      "tuning/message": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "precision": 1,
+          "recall": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09"
+          ]
+        },
+        "block": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "precision": 1,
+          "recall": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.29780999999999835,
+          "p50Ms": 0.05349999999999966,
+          "p95Ms": 1.8560000000000088,
+          "maxMs": 1.8560000000000088
+        }
+      },
+      "tuning/email": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "precision": 1,
+          "recall": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-email-08"
+          ]
+        },
+        "block": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "precision": 1,
+          "recall": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-email-08"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.17336000000000382,
+          "p50Ms": 0.15780000000000882,
+          "p95Ms": 0.39270000000000493,
+          "maxMs": 0.39270000000000493
+        }
+      },
+      "held-out/url": {
+        "count": 10,
+        "warning": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-09",
+            "H-url-10"
+          ]
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-09",
+            "H-url-10"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.03742000000000019,
+          "p50Ms": 0.03280000000000882,
+          "p95Ms": 0.05939999999999657,
+          "maxMs": 0.05939999999999657
+        }
+      },
+      "held-out/message": {
+        "count": 10,
+        "warning": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 5,
+          "fn": 3,
+          "precision": 1,
+          "recall": 0.4,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09",
+            "H-message-10"
+          ]
+        },
+        "block": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 5,
+          "fn": 3,
+          "precision": 1,
+          "recall": 0.4,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09",
+            "H-message-10"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.04160999999999859,
+          "p50Ms": 0.028099999999994907,
+          "p95Ms": 0.07689999999999486,
+          "maxMs": 0.07689999999999486
+        }
+      },
+      "held-out/email": {
+        "count": 10,
+        "warning": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "precision": 1,
+          "recall": 0.6,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.09575999999999851,
+          "p50Ms": 0.08429999999999893,
+          "p95Ms": 0.16870000000000118,
+          "maxMs": 0.16870000000000118
+        }
+      }
+    }
+  },
+  "predictions": [
+    {
+      "id": "T-url-01",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1.6440999999999946
+    },
+    {
+      "id": "T-url-02",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.2931000000000097
+    },
+    {
+      "id": "T-url-03",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.2647000000000048
+    },
+    {
+      "id": "T-url-04",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.09369999999999834
+    },
+    {
+      "id": "T-url-05",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.12399999999999523
+    },
+    {
+      "id": "T-url-06",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.1554000000000002
+    },
+    {
+      "id": "T-url-07",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 50,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.06570000000000675
+    },
+    {
+      "id": "T-url-08",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 40,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.057699999999996976
+    },
+    {
+      "id": "T-url-09",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 65,
+      "status": "Suspicious",
+      "warning": true,
+      "block": false,
+      "latencyMs": 0.06510000000000105
+    },
+    {
+      "id": "T-url-10",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.06980000000000075
+    },
+    {
+      "id": "T-message-01",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1.8560000000000088
+    },
+    {
+      "id": "T-message-02",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.05349999999999966
+    },
+    {
+      "id": "T-message-03",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.029599999999987858
+    },
+    {
+      "id": "T-message-04",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.024199999999993338
+    },
+    {
+      "id": "T-message-05",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.2214000000000027
+    },
+    {
+      "id": "T-message-06",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 18,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.33849999999999625
+    },
+    {
+      "id": "T-message-07",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 0,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.154200000000003
+    },
+    {
+      "id": "T-message-08",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.20839999999999748
+    },
+    {
+      "id": "T-message-09",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.0478999999999985
+    },
+    {
+      "id": "T-message-10",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.044399999999996
+    },
+    {
+      "id": "T-email-01",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.39270000000000493
+    },
+    {
+      "id": "T-email-02",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.15780000000000882
+    },
+    {
+      "id": "T-email-03",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.08050000000000068
+    },
+    {
+      "id": "T-email-04",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.08780000000000143
+    },
+    {
+      "id": "T-email-05",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.16859999999999786
+    },
+    {
+      "id": "T-email-06",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.2826000000000022
+    },
+    {
+      "id": "T-email-07",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.1893000000000029
+    },
+    {
+      "id": "T-email-08",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.12460000000000093
+    },
+    {
+      "id": "T-email-09",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 15,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.16680000000000916
+    },
+    {
+      "id": "T-email-10",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.0829000000000093
+    },
+    {
+      "id": "H-url-01",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.048799999999999955
+    },
+    {
+      "id": "H-url-02",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.025199999999998113
+    },
+    {
+      "id": "H-url-03",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.032200000000003115
+    },
+    {
+      "id": "H-url-04",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.027999999999991587
+    },
+    {
+      "id": "H-url-05",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.02599999999999625
+    },
+    {
+      "id": "H-url-06",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 25,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.05939999999999657
+    },
+    {
+      "id": "H-url-07",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 50,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.03280000000000882
+    },
+    {
+      "id": "H-url-08",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.041299999999992565
+    },
+    {
+      "id": "H-url-09",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.039700000000010505
+    },
+    {
+      "id": "H-url-10",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.04080000000000439
+    },
+    {
+      "id": "H-message-01",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.03109999999999502
+    },
+    {
+      "id": "H-message-02",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.018699999999995498
+    },
+    {
+      "id": "H-message-03",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.02209999999999468
+    },
+    {
+      "id": "H-message-04",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.019100000000008777
+    },
+    {
+      "id": "H-message-05",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.05930000000000746
+    },
+    {
+      "id": "H-message-06",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.07689999999999486
+    },
+    {
+      "id": "H-message-07",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.07429999999999382
+    },
+    {
+      "id": "H-message-08",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.0648999999999944
+    },
+    {
+      "id": "H-message-09",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.028099999999994907
+    },
+    {
+      "id": "H-message-10",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.021600000000006503
+    },
+    {
+      "id": "H-email-01",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.12249999999998806
+    },
+    {
+      "id": "H-email-02",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.06400000000000716
+    },
+    {
+      "id": "H-email-03",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.055799999999990746
+    },
+    {
+      "id": "H-email-04",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.084699999999998
+    },
+    {
+      "id": "H-email-05",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.07550000000000523
+    },
+    {
+      "id": "H-email-06",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.16870000000000118
+    },
+    {
+      "id": "H-email-07",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.08039999999999736
+    },
+    {
+      "id": "H-email-08",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.12770000000000437
+    },
+    {
+      "id": "H-email-09",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.08429999999999893
+    },
+    {
+      "id": "H-email-10",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.09399999999999409
+    }
+  ],
+  "comparison": {
+    "direction": "current minus baseline; lower FPR is better, higher recall/precision is better; null means undefined",
+    "baselineCapturedAt": "2026-09-30T05:29:56.942Z",
+    "baseline": {
+      "overall": {
+        "count": 60,
+        "warning": {
+          "tp": 18,
+          "fp": 12,
+          "tn": 18,
+          "fn": 12,
+          "precision": 0.6,
+          "recall": 0.6,
+          "fpr": 0.4,
+          "falsePositiveIds": [
+            "T-url-01",
+            "T-url-02",
+            "T-url-05",
+            "T-message-01",
+            "T-email-04",
+            "H-url-03",
+            "H-url-04",
+            "H-url-05",
+            "H-message-01",
+            "H-message-02",
+            "H-message-03",
+            "H-email-04"
+          ],
+          "falseNegativeIds": [
+            "T-url-08",
+            "T-url-10",
+            "T-message-09",
+            "T-email-08",
+            "T-email-10",
+            "H-url-09",
+            "H-url-10",
+            "H-message-09",
+            "H-message-10",
+            "H-email-07",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "block": {
+          "tp": 16,
+          "fp": 0,
+          "tn": 30,
+          "fn": 14,
+          "precision": 1,
+          "recall": 0.5333333333333333,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-08",
+            "T-url-10",
+            "T-message-09",
+            "T-email-08",
+            "T-email-10",
+            "H-url-06",
+            "H-url-09",
+            "H-url-10",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "H-email-07",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "latency": {
+          "count": 60,
+          "meanMs": 0.10285333333333331,
+          "p50Ms": 0.05079999999999529,
+          "p95Ms": 0.46120000000000516,
+          "maxMs": 1.002599999999994
+        }
+      },
+      "bySplit": {
+        "tuning": {
+          "count": 30,
+          "warning": {
+            "tp": 10,
+            "fp": 5,
+            "tn": 10,
+            "fn": 5,
+            "precision": 0.6666666666666666,
+            "recall": 0.6666666666666666,
+            "fpr": 0.3333333333333333,
+            "falsePositiveIds": [
+              "T-url-01",
+              "T-url-02",
+              "T-url-05",
+              "T-message-01",
+              "T-email-04"
+            ],
+            "falseNegativeIds": [
+              "T-url-08",
+              "T-url-10",
+              "T-message-09",
+              "T-email-08",
+              "T-email-10"
+            ]
+          },
+          "block": {
+            "tp": 10,
+            "fp": 0,
+            "tn": 15,
+            "fn": 5,
+            "precision": 1,
+            "recall": 0.6666666666666666,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-08",
+              "T-url-10",
+              "T-message-09",
+              "T-email-08",
+              "T-email-10"
+            ]
+          },
+          "latency": {
+            "count": 30,
+            "meanMs": 0.16672666666666652,
+            "p50Ms": 0.08489999999999753,
+            "p95Ms": 0.576900000000002,
+            "maxMs": 1.002599999999994
+          }
+        },
+        "held-out": {
+          "count": 30,
+          "warning": {
+            "tp": 8,
+            "fp": 7,
+            "tn": 8,
+            "fn": 7,
+            "precision": 0.5333333333333333,
+            "recall": 0.5333333333333333,
+            "fpr": 0.4666666666666667,
+            "falsePositiveIds": [
+              "H-url-03",
+              "H-url-04",
+              "H-url-05",
+              "H-message-01",
+              "H-message-02",
+              "H-message-03",
+              "H-email-04"
+            ],
+            "falseNegativeIds": [
+              "H-url-09",
+              "H-url-10",
+              "H-message-09",
+              "H-message-10",
+              "H-email-07",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "block": {
+            "tp": 6,
+            "fp": 0,
+            "tn": 15,
+            "fn": 9,
+            "precision": 1,
+            "recall": 0.4,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-url-06",
+              "H-url-09",
+              "H-url-10",
+              "H-message-08",
+              "H-message-09",
+              "H-message-10",
+              "H-email-07",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "latency": {
+            "count": 30,
+            "meanMs": 0.038980000000000105,
+            "p50Ms": 0.028799999999996828,
+            "p95Ms": 0.11400000000000432,
+            "maxMs": 0.1430999999999969
+          }
+        }
+      },
+      "byKind": {
+        "url": {
+          "count": 20,
+          "warning": {
+            "tp": 6,
+            "fp": 6,
+            "tn": 4,
+            "fn": 4,
+            "precision": 0.5,
+            "recall": 0.6,
+            "fpr": 0.6,
+            "falsePositiveIds": [
+              "T-url-01",
+              "T-url-02",
+              "T-url-05",
+              "H-url-03",
+              "H-url-04",
+              "H-url-05"
+            ],
+            "falseNegativeIds": [
+              "T-url-08",
+              "T-url-10",
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "block": {
+            "tp": 5,
+            "fp": 0,
+            "tn": 10,
+            "fn": 5,
+            "precision": 1,
+            "recall": 0.5,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-08",
+              "T-url-10",
+              "H-url-06",
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "latency": {
+            "count": 20,
+            "meanMs": 0.15150499999999917,
+            "p50Ms": 0.06109999999999616,
+            "p95Ms": 0.46120000000000516,
+            "maxMs": 1.002599999999994
+          }
+        },
+        "message": {
+          "count": 20,
+          "warning": {
+            "tp": 7,
+            "fp": 4,
+            "tn": 6,
+            "fn": 3,
+            "precision": 0.6363636363636364,
+            "recall": 0.7,
+            "fpr": 0.4,
+            "falsePositiveIds": [
+              "T-message-01",
+              "H-message-01",
+              "H-message-02",
+              "H-message-03"
+            ],
+            "falseNegativeIds": [
+              "T-message-09",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "block": {
+            "tp": 6,
+            "fp": 0,
+            "tn": 10,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-message-09",
+              "H-message-08",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "latency": {
+            "count": 20,
+            "meanMs": 0.05231500000000082,
+            "p50Ms": 0.009500000000002728,
+            "p95Ms": 0.14749999999999375,
+            "maxMs": 0.46820000000000306
+          }
+        },
+        "email": {
+          "count": 20,
+          "warning": {
+            "tp": 5,
+            "fp": 2,
+            "tn": 8,
+            "fn": 5,
+            "precision": 0.7142857142857143,
+            "recall": 0.5,
+            "fpr": 0.2,
+            "falsePositiveIds": [
+              "T-email-04",
+              "H-email-04"
+            ],
+            "falseNegativeIds": [
+              "T-email-08",
+              "T-email-10",
+              "H-email-07",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "block": {
+            "tp": 5,
+            "fp": 0,
+            "tn": 10,
+            "fn": 5,
+            "precision": 1,
+            "recall": 0.5,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-email-08",
+              "T-email-10",
+              "H-email-07",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "latency": {
+            "count": 20,
+            "meanMs": 0.10473999999999997,
+            "p50Ms": 0.030400000000000205,
+            "p95Ms": 0.25209999999999866,
+            "maxMs": 0.576900000000002
+          }
+        }
+      },
+      "bySplitAndKind": {
+        "tuning/url": {
+          "count": 10,
+          "warning": {
+            "tp": 3,
+            "fp": 3,
+            "tn": 2,
+            "fn": 2,
+            "precision": 0.5,
+            "recall": 0.6,
+            "fpr": 0.6,
+            "falsePositiveIds": [
+              "T-url-01",
+              "T-url-02",
+              "T-url-05"
+            ],
+            "falseNegativeIds": [
+              "T-url-08",
+              "T-url-10"
+            ]
+          },
+          "block": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-08",
+              "T-url-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.2547599999999989,
+            "p50Ms": 0.09920000000000329,
+            "p95Ms": 1.002599999999994,
+            "maxMs": 1.002599999999994
+          }
+        },
+        "tuning/message": {
+          "count": 10,
+          "warning": {
+            "tp": 4,
+            "fp": 1,
+            "tn": 4,
+            "fn": 1,
+            "precision": 0.8,
+            "recall": 0.8,
+            "fpr": 0.2,
+            "falsePositiveIds": [
+              "T-message-01"
+            ],
+            "falseNegativeIds": [
+              "T-message-09"
+            ]
+          },
+          "block": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 5,
+            "fn": 1,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-message-09"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.08437000000000054,
+            "p50Ms": 0.01099999999999568,
+            "p95Ms": 0.46820000000000306,
+            "maxMs": 0.46820000000000306
+          }
+        },
+        "tuning/email": {
+          "count": 10,
+          "warning": {
+            "tp": 3,
+            "fp": 1,
+            "tn": 4,
+            "fn": 2,
+            "precision": 0.75,
+            "recall": 0.6,
+            "fpr": 0.2,
+            "falsePositiveIds": [
+              "T-email-04"
+            ],
+            "falseNegativeIds": [
+              "T-email-08",
+              "T-email-10"
+            ]
+          },
+          "block": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-email-08",
+              "T-email-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.1610500000000002,
+            "p50Ms": 0.08489999999999753,
+            "p95Ms": 0.576900000000002,
+            "maxMs": 0.576900000000002
+          }
+        },
+        "held-out/url": {
+          "count": 10,
+          "warning": {
+            "tp": 3,
+            "fp": 3,
+            "tn": 2,
+            "fn": 2,
+            "precision": 0.5,
+            "recall": 0.6,
+            "fpr": 0.6,
+            "falsePositiveIds": [
+              "H-url-03",
+              "H-url-04",
+              "H-url-05"
+            ],
+            "falseNegativeIds": [
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "block": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 5,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.4,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-url-06",
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.04824999999999946,
+            "p50Ms": 0.049399999999998556,
+            "p95Ms": 0.08789999999999765,
+            "maxMs": 0.08789999999999765
+          }
+        },
+        "held-out/message": {
+          "count": 10,
+          "warning": {
+            "tp": 3,
+            "fp": 3,
+            "tn": 2,
+            "fn": 2,
+            "precision": 0.5,
+            "recall": 0.6,
+            "fpr": 0.6,
+            "falsePositiveIds": [
+              "H-message-01",
+              "H-message-02",
+              "H-message-03"
+            ],
+            "falseNegativeIds": [
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "block": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 5,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.4,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-message-08",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.0202600000000011,
+            "p50Ms": 0.0033000000000029672,
+            "p95Ms": 0.06609999999999872,
+            "maxMs": 0.06609999999999872
+          }
+        },
+        "held-out/email": {
+          "count": 10,
+          "warning": {
+            "tp": 2,
+            "fp": 1,
+            "tn": 4,
+            "fn": 3,
+            "precision": 0.6666666666666666,
+            "recall": 0.4,
+            "fpr": 0.2,
+            "falsePositiveIds": [
+              "H-email-04"
+            ],
+            "falseNegativeIds": [
+              "H-email-07",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "block": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 5,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.4,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-email-07",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.04842999999999975,
+            "p50Ms": 0.010699999999999932,
+            "p95Ms": 0.1430999999999969,
+            "maxMs": 0.1430999999999969
+          }
+        }
+      }
+    },
+    "current": {
+      "overall": {
+        "count": 60,
+        "warning": {
+          "tp": 20,
+          "fp": 0,
+          "tn": 30,
+          "fn": 10,
+          "precision": 1,
+          "recall": 0.6666666666666666,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-10",
+            "T-message-09",
+            "T-email-08",
+            "H-url-09",
+            "H-url-10",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "block": {
+          "tp": 19,
+          "fp": 0,
+          "tn": 30,
+          "fn": 11,
+          "precision": 1,
+          "recall": 0.6333333333333333,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-09",
+            "T-url-10",
+            "T-message-09",
+            "T-email-08",
+            "H-url-09",
+            "H-url-10",
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "H-email-09",
+            "H-email-10"
+          ]
+        },
+        "latency": {
+          "count": 60,
+          "meanMs": 0.15488166666666672,
+          "p50Ms": 0.07429999999999382,
+          "p95Ms": 0.33849999999999625,
+          "maxMs": 1.8560000000000088
+        }
+      },
+      "bySplit": {
+        "tuning": {
+          "count": 30,
+          "warning": {
+            "tp": 12,
+            "fp": 0,
+            "tn": 15,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-10",
+              "T-message-09",
+              "T-email-08"
+            ]
+          },
+          "block": {
+            "tp": 11,
+            "fp": 0,
+            "tn": 15,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.7333333333333333,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-09",
+              "T-url-10",
+              "T-message-09",
+              "T-email-08"
+            ]
+          },
+          "latency": {
+            "count": 30,
+            "meanMs": 0.251500000000001,
+            "p50Ms": 0.12460000000000093,
+            "p95Ms": 1.6440999999999946,
+            "maxMs": 1.8560000000000088
+          }
+        },
+        "held-out": {
+          "count": 30,
+          "warning": {
+            "tp": 8,
+            "fp": 0,
+            "tn": 15,
+            "fn": 7,
+            "precision": 1,
+            "recall": 0.5333333333333333,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-url-09",
+              "H-url-10",
+              "H-message-08",
+              "H-message-09",
+              "H-message-10",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "block": {
+            "tp": 8,
+            "fp": 0,
+            "tn": 15,
+            "fn": 7,
+            "precision": 1,
+            "recall": 0.5333333333333333,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-url-09",
+              "H-url-10",
+              "H-message-08",
+              "H-message-09",
+              "H-message-10",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "latency": {
+            "count": 30,
+            "meanMs": 0.05826333333333243,
+            "p50Ms": 0.048799999999999955,
+            "p95Ms": 0.12770000000000437,
+            "maxMs": 0.16870000000000118
+          }
+        }
+      },
+      "byKind": {
+        "url": {
+          "count": 20,
+          "warning": {
+            "tp": 7,
+            "fp": 0,
+            "tn": 10,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.7,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-10",
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "block": {
+            "tp": 6,
+            "fp": 0,
+            "tn": 10,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-09",
+              "T-url-10",
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "latency": {
+            "count": 20,
+            "meanMs": 0.16037500000000052,
+            "p50Ms": 0.057699999999996976,
+            "p95Ms": 0.2931000000000097,
+            "maxMs": 1.6440999999999946
+          }
+        },
+        "message": {
+          "count": 20,
+          "warning": {
+            "tp": 6,
+            "fp": 0,
+            "tn": 10,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-message-09",
+              "H-message-08",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "block": {
+            "tp": 6,
+            "fp": 0,
+            "tn": 10,
+            "fn": 4,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-message-09",
+              "H-message-08",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "latency": {
+            "count": 20,
+            "meanMs": 0.16970999999999847,
+            "p50Ms": 0.0478999999999985,
+            "p95Ms": 0.33849999999999625,
+            "maxMs": 1.8560000000000088
+          }
+        },
+        "email": {
+          "count": 20,
+          "warning": {
+            "tp": 7,
+            "fp": 0,
+            "tn": 10,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.7,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-email-08",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "block": {
+            "tp": 7,
+            "fp": 0,
+            "tn": 10,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.7,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-email-08",
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "latency": {
+            "count": 20,
+            "meanMs": 0.13456000000000118,
+            "p50Ms": 0.09399999999999409,
+            "p95Ms": 0.2826000000000022,
+            "maxMs": 0.39270000000000493
+          }
+        }
+      },
+      "bySplitAndKind": {
+        "tuning/url": {
+          "count": 10,
+          "warning": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 5,
+            "fn": 1,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-10"
+            ]
+          },
+          "block": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-url-09",
+              "T-url-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.28333000000000086,
+            "p50Ms": 0.09369999999999834,
+            "p95Ms": 1.6440999999999946,
+            "maxMs": 1.6440999999999946
+          }
+        },
+        "tuning/message": {
+          "count": 10,
+          "warning": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 5,
+            "fn": 1,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-message-09"
+            ]
+          },
+          "block": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 5,
+            "fn": 1,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-message-09"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.29780999999999835,
+            "p50Ms": 0.05349999999999966,
+            "p95Ms": 1.8560000000000088,
+            "maxMs": 1.8560000000000088
+          }
+        },
+        "tuning/email": {
+          "count": 10,
+          "warning": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 5,
+            "fn": 1,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-email-08"
+            ]
+          },
+          "block": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 5,
+            "fn": 1,
+            "precision": 1,
+            "recall": 0.8,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "T-email-08"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.17336000000000382,
+            "p50Ms": 0.15780000000000882,
+            "p95Ms": 0.39270000000000493,
+            "maxMs": 0.39270000000000493
+          }
+        },
+        "held-out/url": {
+          "count": 10,
+          "warning": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "block": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-url-09",
+              "H-url-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.03742000000000019,
+            "p50Ms": 0.03280000000000882,
+            "p95Ms": 0.05939999999999657,
+            "maxMs": 0.05939999999999657
+          }
+        },
+        "held-out/message": {
+          "count": 10,
+          "warning": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 5,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.4,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-message-08",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "block": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 5,
+            "fn": 3,
+            "precision": 1,
+            "recall": 0.4,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-message-08",
+              "H-message-09",
+              "H-message-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.04160999999999859,
+            "p50Ms": 0.028099999999994907,
+            "p95Ms": 0.07689999999999486,
+            "maxMs": 0.07689999999999486
+          }
+        },
+        "held-out/email": {
+          "count": 10,
+          "warning": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "block": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 5,
+            "fn": 2,
+            "precision": 1,
+            "recall": 0.6,
+            "fpr": 0,
+            "falsePositiveIds": [],
+            "falseNegativeIds": [
+              "H-email-09",
+              "H-email-10"
+            ]
+          },
+          "latency": {
+            "count": 10,
+            "meanMs": 0.09575999999999851,
+            "p50Ms": 0.08429999999999893,
+            "p95Ms": 0.16870000000000118,
+            "maxMs": 0.16870000000000118
+          }
+        }
+      }
+    },
+    "delta": {
+      "overall": {
+        "warning": {
+          "tp": 2,
+          "fp": -12,
+          "tn": 12,
+          "fn": -2,
+          "precision": 0.4,
+          "recall": 0.06666666666666665,
+          "fpr": -0.4
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 0,
+          "fn": -3,
+          "precision": 0,
+          "recall": 0.09999999999999998,
+          "fpr": 0
+        },
+        "latencyMeanMs": 0.05202833333333341
+      },
+      "bySplit": {
+        "tuning": {
+          "warning": {
+            "tp": 2,
+            "fp": -5,
+            "tn": 5,
+            "fn": -2,
+            "precision": 0.33333333333333337,
+            "recall": 0.13333333333333341,
+            "fpr": -0.3333333333333333
+          },
+          "block": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": -1,
+            "precision": 0,
+            "recall": 0.06666666666666665,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.08477333333333448
+        },
+        "held-out": {
+          "warning": {
+            "tp": 0,
+            "fp": -7,
+            "tn": 7,
+            "fn": 0,
+            "precision": 0.4666666666666667,
+            "recall": 0,
+            "fpr": -0.4666666666666667
+          },
+          "block": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 0,
+            "fn": -2,
+            "precision": 0,
+            "recall": 0.1333333333333333,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.019283333333332327
+        }
+      },
+      "byKind": {
+        "url": {
+          "warning": {
+            "tp": 1,
+            "fp": -6,
+            "tn": 6,
+            "fn": -1,
+            "precision": 0.5,
+            "recall": 0.09999999999999998,
+            "fpr": -0.6
+          },
+          "block": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": -1,
+            "precision": 0,
+            "recall": 0.09999999999999998,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.008870000000001349
+        },
+        "message": {
+          "warning": {
+            "tp": -1,
+            "fp": -4,
+            "tn": 4,
+            "fn": 1,
+            "precision": 0.36363636363636365,
+            "recall": -0.09999999999999998,
+            "fpr": -0.4
+          },
+          "block": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 0,
+            "recall": 0,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.11739499999999765
+        },
+        "email": {
+          "warning": {
+            "tp": 2,
+            "fp": -2,
+            "tn": 2,
+            "fn": -2,
+            "precision": 0.2857142857142857,
+            "recall": 0.19999999999999996,
+            "fpr": -0.2
+          },
+          "block": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 0,
+            "fn": -2,
+            "precision": 0,
+            "recall": 0.19999999999999996,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.029820000000001207
+        }
+      },
+      "bySplitAndKind": {
+        "tuning/url": {
+          "warning": {
+            "tp": 1,
+            "fp": -3,
+            "tn": 3,
+            "fn": -1,
+            "precision": 0.5,
+            "recall": 0.20000000000000007,
+            "fpr": -0.6
+          },
+          "block": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 0,
+            "recall": 0,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.028570000000001983
+        },
+        "tuning/message": {
+          "warning": {
+            "tp": 0,
+            "fp": -1,
+            "tn": 1,
+            "fn": 0,
+            "precision": 0.19999999999999996,
+            "recall": 0,
+            "fpr": -0.2
+          },
+          "block": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 0,
+            "recall": 0,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.2134399999999978
+        },
+        "tuning/email": {
+          "warning": {
+            "tp": 1,
+            "fp": -1,
+            "tn": 1,
+            "fn": -1,
+            "precision": 0.25,
+            "recall": 0.20000000000000007,
+            "fpr": -0.2
+          },
+          "block": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": -1,
+            "precision": 0,
+            "recall": 0.20000000000000007,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.012310000000003624
+        },
+        "held-out/url": {
+          "warning": {
+            "tp": 0,
+            "fp": -3,
+            "tn": 3,
+            "fn": 0,
+            "precision": 0.5,
+            "recall": 0,
+            "fpr": -0.6
+          },
+          "block": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": -1,
+            "precision": 0,
+            "recall": 0.19999999999999996,
+            "fpr": 0
+          },
+          "latencyMeanMs": -0.01082999999999927
+        },
+        "held-out/message": {
+          "warning": {
+            "tp": -1,
+            "fp": -3,
+            "tn": 3,
+            "fn": 1,
+            "precision": 0.5,
+            "recall": -0.19999999999999996,
+            "fpr": -0.6
+          },
+          "block": {
+            "tp": 0,
+            "fp": 0,
+            "tn": 0,
+            "fn": 0,
+            "precision": 0,
+            "recall": 0,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.021349999999997493
+        },
+        "held-out/email": {
+          "warning": {
+            "tp": 1,
+            "fp": -1,
+            "tn": 1,
+            "fn": -1,
+            "precision": 0.33333333333333337,
+            "recall": 0.19999999999999996,
+            "fpr": -0.2
+          },
+          "block": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 0,
+            "fn": -1,
+            "precision": 0,
+            "recall": 0.19999999999999996,
+            "fpr": 0
+          },
+          "latencyMeanMs": 0.04732999999999876
+        }
+      }
+    },
+    "changed": [
+      {
+        "id": "T-url-01",
+        "label": "legitimate",
+        "beforeScore": 60,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-url-02",
+        "label": "legitimate",
+        "beforeScore": 60,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-url-04",
+        "label": "legitimate",
+        "beforeScore": 92,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-url-05",
+        "label": "legitimate",
+        "beforeScore": 76,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-url-06",
+        "label": "phishing",
+        "beforeScore": 7,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-url-07",
+        "label": "phishing",
+        "beforeScore": 11,
+        "afterScore": 50,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-url-08",
+        "label": "phishing",
+        "beforeScore": 82,
+        "afterScore": 40,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-url-09",
+        "label": "phishing",
+        "beforeScore": 27,
+        "afterScore": 65,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": false
+        }
+      },
+      {
+        "id": "T-message-01",
+        "label": "legitimate",
+        "beforeScore": 58,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-message-02",
+        "label": "legitimate",
+        "beforeScore": 80,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-message-03",
+        "label": "legitimate",
+        "beforeScore": 84,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-message-05",
+        "label": "legitimate",
+        "beforeScore": 90,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-message-06",
+        "label": "phishing",
+        "beforeScore": 42,
+        "afterScore": 18,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-message-07",
+        "label": "phishing",
+        "beforeScore": 42,
+        "afterScore": 0,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-message-08",
+        "label": "phishing",
+        "beforeScore": 23,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-message-10",
+        "label": "phishing",
+        "beforeScore": 44,
+        "afterScore": 33,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-email-01",
+        "label": "legitimate",
+        "beforeScore": 91,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-email-02",
+        "label": "legitimate",
+        "beforeScore": 92,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-email-04",
+        "label": "legitimate",
+        "beforeScore": 77,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-email-05",
+        "label": "legitimate",
+        "beforeScore": 96,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "T-email-06",
+        "label": "phishing",
+        "beforeScore": 28,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-email-07",
+        "label": "phishing",
+        "beforeScore": 32,
+        "afterScore": 33,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-email-09",
+        "label": "phishing",
+        "beforeScore": 32,
+        "afterScore": 15,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "T-email-10",
+        "label": "phishing",
+        "beforeScore": 91,
+        "afterScore": 45,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-url-01",
+        "label": "legitimate",
+        "beforeScore": 92,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-url-03",
+        "label": "legitimate",
+        "beforeScore": 68,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-url-04",
+        "label": "legitimate",
+        "beforeScore": 74,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-url-05",
+        "label": "legitimate",
+        "beforeScore": 76,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-url-06",
+        "label": "phishing",
+        "beforeScore": 60,
+        "afterScore": 25,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-url-07",
+        "label": "phishing",
+        "beforeScore": 11,
+        "afterScore": 50,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-url-08",
+        "label": "phishing",
+        "beforeScore": 7,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-url-09",
+        "label": "phishing",
+        "beforeScore": 92,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-message-01",
+        "label": "legitimate",
+        "beforeScore": 58,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-message-02",
+        "label": "legitimate",
+        "beforeScore": 78,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-message-03",
+        "label": "legitimate",
+        "beforeScore": 64,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-message-04",
+        "label": "legitimate",
+        "beforeScore": 84,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-message-05",
+        "label": "legitimate",
+        "beforeScore": 90,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-message-06",
+        "label": "phishing",
+        "beforeScore": 0,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-message-07",
+        "label": "phishing",
+        "beforeScore": 23,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-message-08",
+        "label": "phishing",
+        "beforeScore": 70,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-email-01",
+        "label": "legitimate",
+        "beforeScore": 83,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-email-02",
+        "label": "legitimate",
+        "beforeScore": 83,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-email-04",
+        "label": "legitimate",
+        "beforeScore": 74,
+        "afterScore": 100,
+        "before": {
+          "warning": true,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-email-05",
+        "label": "legitimate",
+        "beforeScore": 93,
+        "afterScore": 100,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      },
+      {
+        "id": "H-email-06",
+        "label": "phishing",
+        "beforeScore": 32,
+        "afterScore": 35,
+        "before": {
+          "warning": true,
+          "block": true
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-email-07",
+        "label": "phishing",
+        "beforeScore": 91,
+        "afterScore": 45,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": true,
+          "block": true
+        }
+      },
+      {
+        "id": "H-email-10",
+        "label": "phishing",
+        "beforeScore": 91,
+        "afterScore": 88,
+        "before": {
+          "warning": false,
+          "block": false
+        },
+        "after": {
+          "warning": false,
+          "block": false
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+﻿{
+    "capturedAt":  "2026-09-30T05:27:22.2896675Z",
+    "gitHead":  "cfdff3dfe4349a2d7624adc496aa88d3f49d709f",
+    "scope":  "Unchanged backend scanUrl, scanMessage, analyzeEmail and their local dependency riskScorer",
+    "files":  [
+                  {
+                      "source":  "backend\\services\\urlScanner.js",
+                      "snapshot":  "evaluation\\baseline\\scanners\\urlScanner.js",
+                      "sha256":  "ba688e4a4edfccd55b4bc4edaed605b133e02fb42b18df420d637633c5860857"
+                  },
+                  {
+                      "source":  "backend\\services\\messageScanner.js",
+                      "snapshot":  "evaluation\\baseline\\scanners\\messageScanner.js",
+                      "sha256":  "3f2ffdc63e068cd5b0ec5bd855cbcb6708fef45604bb7b5cfdef934302001735"
+                  },
+                  {
+                      "source":  "backend\\services\\emailAnalyzer.js",
+                      "snapshot":  "evaluation\\baseline\\scanners\\emailAnalyzer.js",
+                      "sha256":  "5ad6ee9ff0c726cd2591e1c368d4738d41288d955bbabc4a4093a03b60af27a7"
+                  },
+                  {
+                      "source":  "backend\\services\\riskScorer.js",
+                      "snapshot":  "evaluation\\baseline\\scanners\\riskScorer.js",
+                      "sha256":  "3060d625d9192a3b2691ef0f652a783f05fe366c5e6ba7cc1effe7609c02cfc5"
+                  }
+              ]
+}

@@ -1,0 +1,172 @@
+{
+    "status":  "passed",
+    "passed":  10,
+    "failed":  0,
+    "startedAt":  "2026-09-30T05:42:46.449Z",
+    "finishedAt":  "2026-09-30T05:43:08.353Z",
+    "browser":  "154.0.4258.37",
+    "playwright":  "1.63.0",
+    "buildAsset":  "index-WnibWWX4.js",
+    "buildSha256":  "cba70c4489ce112139d38f995831c6767ab0a5099a79a1fbcf8cd4f98ffb7916",
+    "artifacts":  "C:\\Users\\Bry\\AppData\\Local\\Temp\\tracking-threats-browser-acceptance-DoEEnS",
+    "cases":  [
+                  {
+                      "name":  "benign SMS and history survive reload",
+                      "status":  "passed",
+                      "elapsedMs":  1669,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanStatus":  "Safe",
+                      "scanScore":  100,
+                      "coverage":  {
+                                       "status":  "local-only",
+                                       "checkedProviders":  0,
+                                       "totalProviders":  0,
+                                       "limitations":  [
+                                                           "Reputation not checked.",
+                                                           "Local heuristics cannot establish safety or verify ownership.",
+                                                           "Message intent and sender identity were not verified.",
+                                                           "Linked pages were not fetched.",
+                                                           "No extracted links were available for reputation checks."
+                                                       ]
+                                   }
+                  },
+                  {
+                      "name":  "direct credential SMS shows risk without claiming automatic blocking",
+                      "status":  "passed",
+                      "elapsedMs":  1459,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanStatus":  "Dangerous",
+                      "scanScore":  33,
+                      "coverage":  {
+                                       "status":  "local-only",
+                                       "checkedProviders":  0,
+                                       "totalProviders":  0,
+                                       "limitations":  [
+                                                           "Reputation not checked.",
+                                                           "Local heuristics cannot establish safety or verify ownership.",
+                                                           "Message intent and sender identity were not verified.",
+                                                           "Linked pages were not fetched.",
+                                                           "No extracted links were available for reputation checks."
+                                                       ]
+                                   }
+                  },
+                  {
+                      "name":  "offline URL explicitly discloses incomplete coverage and persists it",
+                      "status":  "passed",
+                      "elapsedMs":  1289,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanStatus":  "Safe",
+                      "scanScore":  100,
+                      "coverage":  {
+                                       "status":  "unavailable",
+                                       "checkedProviders":  0,
+                                       "totalProviders":  1,
+                                       "limitations":  [
+                                                           "URL reputation and local rules only; page content and redirects were not inspected.",
+                                                           "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+                                                       ]
+                                   }
+                  },
+                  {
+                      "name":  "settings persist and Delete My Data removes this client data",
+                      "status":  "passed",
+                      "elapsedMs":  2313,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ]
+                  },
+                  {
+                      "name":  "Delete Scan History persists and preserves a second browser client",
+                      "status":  "passed",
+                      "elapsedMs":  3623,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ]
+                  },
+                  {
+                      "name":  "partial preview roundtrip stays exact and creates no saved scan",
+                      "status":  "passed",
+                      "elapsedMs":  1272,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanPosts":  0
+                  },
+                  {
+                      "name":  "unavailable preview roundtrip stays exact and creates no saved scan",
+                      "status":  "passed",
+                      "elapsedMs":  1266,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanPosts":  0
+                  },
+                  {
+                      "name":  "local-only preview roundtrip stays exact and creates no saved scan",
+                      "status":  "passed",
+                      "elapsedMs":  1306,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanPosts":  0
+                  },
+                  {
+                      "name":  "legacy preview roundtrip stays exact and creates no saved scan",
+                      "status":  "passed",
+                      "elapsedMs":  1330,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ],
+                      "scanPosts":  0
+                  },
+                  {
+                      "name":  "malformed preview reports invalid data without a saved result",
+                      "status":  "passed",
+                      "elapsedMs":  750,
+                      "pageErrors":  [
+
+                                     ],
+                      "blockedExternalRequests":  [
+
+                                                  ]
+                  }
+              ],
+    "limitations":  [
+                        "External reputation and mail services disabled.",
+                        "Preview serializer exercised with synthetic fixtures; installed extension and live search-engine integration not covered."
+                    ],
+    "initialRun":  "9 passed, 1 harness false positive matching a negated blocking disclaimer; assertion corrected and entire suite rerun."
+}

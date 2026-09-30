@@ -13,33 +13,32 @@ const processSteps = [
   ['1', 'Intake', 'Validate the scan type and required input, then assign a random scan ID.'],
   ['2', 'Minimize', 'Use raw content only for analysis. Public deployments retain metadata and results, not raw bodies or file text.'],
   ['3', 'Local rules', 'Evaluate URL structure, sender patterns, message language, links, file names, extensions, and script indicators.'],
-  ['4', 'Reputation', 'Query configured providers for URL or SHA-256 reputation. Provider errors do not become threat matches.'],
-  ['5', 'Score', 'Start at 100, apply documented deductions, and map the result to Safe, Caution, or Dangerous.'],
+  ['4', 'Reputation', 'Check URL, IP, or SHA-256 reputation. Missing keys, skipped lookups, and errors are unavailable checks, never clean results. Email and SMS checks inspect at most five unique links, with two lookups in flight.'],
+  ['5', 'Score', 'Apply rule-based deductions on a 0-100 scale. Higher scores mean fewer detected indicators; the score is not a calibrated probability. Coverage and content categories are reported separately.'],
   ['6', 'Evidence', 'Save the result, matched rules, provider findings, methodology version, retention date, and audit metadata.'],
-  ['7', 'Response', 'Allow, request review, or block. A result reports indicators and never guarantees authenticity.'],
+  ['7', 'Response', 'Show indicators and coverage for review. Manual scans and previews do not themselves block access. Browser enforcement is a separate action; no result guarantees safety or authenticity.'],
 ]
 
 const rules = [
-  ['URL', 'Missing or malformed URL', 18],
-  ['URL', 'URL does not use HTTPS', 16],
-  ['URL', 'Punycode domain', 24],
-  ['URL', 'Multiple domain hyphens', 12],
-  ['URL', 'Mixed letters and numbers', 10],
-  ['URL', 'Account, login, verification, or reward wording', 18],
-  ['URL', 'Known piracy or torrent domain', 55],
-  ['URL', 'Gambling or betting domain', 45],
-  ['URL', 'Suspicious top-level domain', 18],
-  ['URL', 'IP address used as host', 25],
-  ['URL', 'URL shortener', 20],
-  ['URL', 'Possible brand typosquatting', 25],
-  ['Email', 'Sender has no valid domain', 24],
-  ['Email', 'Lookalike brand spelling', 22],
-  ['Email', 'Official-sounding free-mail sender', 14],
-  ['Message', 'Urgency or pressure language', 16],
-  ['Message', 'Financial or identity-information request', 20],
-  ['Message', 'Password or login request', 22],
-  ['Message', 'Prize or lottery language', 16],
-  ['Message', 'Contains an unverified link', 10],
+  ['URL', 'Uninterpretable web address (local analysis; API rejects invalid URL inputs)', 22],
+  ['URL', 'Brand label or brand-with-lure on an unrelated registrable domain', 40],
+  ['URL', 'Bounded brand lookalike', 30],
+  ['URL', 'User information before @ conceals destination', 30],
+  ['URL', 'User information resembles a trusted destination', 25],
+  ['URL', 'Credential wording with impersonation, user information or IP destination', 20],
+  ['URL', 'IP address destination', 10],
+  ['URL', 'Internationalized domain with credential or impersonation context', 10],
+  ['URL', 'HTTP on an already concerning URL', 5],
+  ['Content', 'Gambling or piracy references (separate content warning)', 0],
+  ['Email', 'Supplied sender cannot be interpreted', 10],
+  ['Email', 'Brand claim from unrelated domain alongside sensitive request', 25],
+  ['Message', 'Direct request to disclose a secret', 55],
+  ['Message', 'Secret entry request without an explicit disclosure request', 12],
+  ['Message', 'Direct request for financial or identity details', 30],
+  ['Message', 'Account action requested alongside a link', 12],
+  ['Message', 'Payment requested to obtain a prize or reward', 50],
+  ['Message', 'Urgency alongside a sensitive request or concerning link', 12],
+  ['Message', 'Account loss threat alongside a sensitive request or concerning link', 15],
   ['File', 'No visible extension', 12],
   ['File', 'Executable extension', 34],
   ['File', 'Macro-enabled Office extension', 24],
@@ -51,13 +50,15 @@ const rules = [
   ['Provider', 'Verified active PhishTank entry', 60],
   ['Provider', 'Google Safe Browsing threat match', 60],
   ['Provider', 'URLhaus URL listing', 65],
+  ['Provider', 'URLhaus host listing', 55],
+  ['Provider', 'AbuseIPDB confidence at least 80% (IP evidence, not page identity)', 20],
   ['Provider', 'VirusTotal malicious file-hash detection', 65],
 ]
 
 const providers = [
   ['VirusTotal', 'URL and SHA-256 reputation', 'A match requires at least one malicious or suspicious engine detection.'],
   ['Google Safe Browsing', 'Known web threats', 'A match requires a returned threat entry.'],
-  ['URLhaus', 'Malware URLs and hosts', 'A match requires an active database result.'],
+  ['URLhaus', 'Malware URLs and hosts', 'A match requires a database listing; it may describe historical activity and is not proof of phishing.'],
   ['PhishTank', 'Community phishing reports', 'A match requires an in-database, verified, and valid entry.'],
   ['AbuseIPDB', 'Host IP reputation', 'Confidence is supporting evidence; it does not prove the page itself is malicious.'],
   ['DNS', 'Public address resolution', 'Missing or private address results are structural warnings, not identity proof.'],
@@ -72,7 +73,12 @@ const documentChecks = [
 ]
 
 const limitations = [
-  'Safe means no configured indicator was found; it does not prove ownership, identity, or authenticity.',
+  'URL inspection is static URL analysis plus reputation. It does not fetch redirects or page content, inspect rendered forms, or verify destination-page behavior.',
+  'Scores are rules, not calibrated probabilities. Gambling and piracy categories are content warnings, not evidence of phishing.',
+  'Coverage complete means the selected checks completed; provider databases can miss new threats. Missing API keys count as skipped checks.',
+  'Email and SMS reputation checks cover at most five unique links. Extra links are reported as unchecked; messages without links have local-only coverage.',
+  'Manual safe-host exceptions and allowlist bypasses have local-only coverage; reputation checks were not run.',
+  'The compatibility status Safe displays as No strong indicators only for complete coverage. Partial, unavailable, local-only, or unrecorded coverage displays as Incomplete checks.',
   'The scanner does not execute files in a malware sandbox.',
   'It does not currently validate PDF or Office digital signatures or certificate chains.',
   'It does not perform full binary parsing, OCR, or forensic document examination.',
@@ -102,7 +108,7 @@ export function Methodology({ embedded = false }) {
     <div className="space-y-5">
       {!embedded && (
         <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.09</p>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.10</p>
           <h1 className="mt-1 text-2xl font-semibold">How Tracking Threats reaches a verdict</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             This library documents the active process, evidence sources, score deductions, and known
@@ -113,7 +119,7 @@ export function Methodology({ embedded = false }) {
 
       {embedded && (
         <div>
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.09</p>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Methodology 2026.10</p>
           <h2 className="mt-1 text-xl font-semibold">How Tracking Threats reaches a verdict</h2>
         </div>
       )}
@@ -154,9 +160,9 @@ export function Methodology({ embedded = false }) {
           </ol>
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             {[
-              ['Safe', '80-100', 'Allowed'],
+              ['No strong indicators / Incomplete checks', '80-100', 'Depends on coverage'],
               ['Caution', '51-79', 'Review'],
-              ['Dangerous', '0-50', 'Blocked'],
+              ['Risk detected', '0-50', 'Review / browser policy'],
             ].map(([label, range, action]) => (
               <div key={label} className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
                 <p className="text-sm font-semibold">{label}</p>
@@ -231,7 +237,7 @@ export function Methodology({ embedded = false }) {
       )}
 
       <footer className="flex items-center gap-3 border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <Database size={16} /> Each completed result is stored with methodology version 2026.09 and its supporting evidence.
+        <Database size={16} /> Methodology 2026.10. Historical records may use an earlier version or omit coverage.
       </footer>
     </div>
   )

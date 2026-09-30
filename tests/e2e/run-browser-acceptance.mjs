@@ -1,0 +1,404 @@
+import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { once } from 'node:events'
+import { existsSync, readFileSync } from 'node:fs'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import net from 'node:net'
+import os from 'node:os'
+import path from 'node:path'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
+import vm from 'node:vm'
+import { setTimeout as delay } from 'node:timers/promises'
+import { readSearchPreview } from '../../src/utils/searchPreview.js'
+
+// Deliberately separate from node --test: this requires a reviewed public build.
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const args = new Set(process.argv.slice(2))
+const checkOnly = args.has('--check')
+const ready = args.has('--build-ready')
+const report = { startedAt: new Date().toISOString(), status: 'not-run', cases: [] }
+let backend
+let browser
+let artifacts
+let backendLog = ''
+
+function dependencies() {
+  const modules = process.env.E2E_PLAYWRIGHT_NODE_MODULES
+  if (!modules || !path.isAbsolute(modules)) {
+    throw new Error('Set E2E_PLAYWRIGHT_NODE_MODULES to the absolute node_modules directory of a TEMP @playwright/test install. See docs/browser-acceptance.md.')
+  }
+  const entry = path.join(modules, '@playwright/test/package.json')
+  if (!existsSync(entry)) throw new Error(`External Playwright missing: ${entry}. No browser checks ran.`)
+  const externalRequire = createRequire(entry)
+  const { chromium, expect } = externalRequire('@playwright/test')
+  const executablePath = process.env.E2E_BROWSER_EXECUTABLE
+  if (!executablePath || !path.isAbsolute(executablePath) || !existsSync(executablePath)) {
+    throw new Error('Set E2E_BROWSER_EXECUTABLE to an installed Chromium/Edge executable. No browser checks ran.')
+  }
+  return { chromium, expect: expect.configure({ timeout: 12000 }), executablePath,
+    version: JSON.parse(readFileSync(entry, 'utf8')).version }
+}
+
+async function freePort() {
+  const server = net.createServer()
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  const port = server.address().port
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
+  return port
+}
+
+function backendEnvironment(port) {
+  // Start outside the checkout so loadEnvFile cannot load the developer's .env.
+  // Only OS runtime variables are inherited; never inherit provider credentials.
+  const allowed = /^(path|systemroot|windir|comspec|pathext|temp|tmp|userprofile|appdata|localappdata|home|lang)$/i
+  return {
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => allowed.test(key))),
+    NODE_OPTIONS: '--use-system-ca', NODE_ENV: 'production', PORT: String(port),
+    DATABASE_URL: '', DATABASE_PATH: path.join(artifacts, 'acceptance.sqlite'),
+    PUBLIC_DEPLOYMENT: 'true', STORE_SCAN_CONTENT: 'false', AUTO_MONITOR: 'false',
+    SMTP_ENABLED: 'false', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', SMTP_FROM: '',
+    RESEND_API_KEY: '', RESEND_FROM: '', REPUTATION_ENABLED: 'false',
+    URLHAUS_AUTH_KEY: '', VIRUSTOTAL_API_KEY: '', GOOGLE_SAFE_BROWSING_API_KEY: '',
+    PHISHTANK_APP_KEY: '', ABUSEIPDB_API_KEY: '',
+    FRONTEND_ORIGIN: `http://127.0.0.1:${port}`, CORS_ALLOW_NO_ORIGIN: 'true',
+  }
+}
+
+async function startBackend() {
+  const source = readFileSync(path.join(root, 'backend/services/threatIntel.js'), 'utf8')
+  assert.match(source, /REPUTATION_ENABLED/, 'Backend must implement the offline reputation switch before running.')
+  assert.ok(existsSync(path.join(root, 'dist/index.html')), 'Missing dist/index.html; main must build the public frontend first.')
+  const port = await freePort()
+  const origin = `http://127.0.0.1:${port}`
+  backend = spawn(process.execPath, [path.join(root, 'backend/server.js')], {
+    cwd: artifacts, env: backendEnvironment(port), windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  backend.stdout.on('data', (chunk) => { backendLog += chunk })
+  backend.stderr.on('data', (chunk) => { backendLog += chunk })
+  let launchError
+  backend.on('error', (error) => { launchError = error })
+  for (let i = 0; i < 100; i++) {
+    if (launchError) throw launchError
+    if (backend.exitCode !== null) throw new Error(`Isolated backend exited (${backend.exitCode}). ${backendLog}`)
+    try {
+      const response = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(500) })
+      const health = await response.json()
+      if (response.ok && health.ok) {
+        assert.equal(health.repository, 'sqlite', 'Acceptance must use temporary SQLite.')
+        return origin
+      }
+    } catch { /* The newly spawned server may still be initializing. */ }
+    await delay(200)
+  }
+  throw new Error(`Isolated backend did not become healthy. ${backendLog}`)
+}
+
+function extensionPreviewUrl(origin, snapshot) {
+  // Execute the extension's actual URL serializer, as its existing unit tests do.
+  // This is not a claim to have loaded the extension into the browser.
+  const source = readFileSync(path.join(root, 'browser-extension/google-results.js'), 'utf8')
+  const end = source.indexOf('function addBadge(')
+  assert.ok(end > 0, 'Extension preview serializer boundary changed; update harness.')
+  const sandbox = { URL, URLSearchParams, TRACKING_THREATS_CONFIG: { APP_URL: origin } }
+  vm.runInNewContext(source.slice(0, end), sandbox, { timeout: 1000 })
+  const href = sandbox.getDetailsUrl(snapshot.target, `${origin}/?scan=old&blocked=old`, snapshot)
+  assert.deepEqual(readSearchPreview(href), snapshot, 'Preview serializer/parser must retain every supplied display field exactly.')
+  const url = new URL(href)
+  assert.equal(url.searchParams.has('scan'), false)
+  assert.equal(url.searchParams.has('blocked'), false)
+  assert.equal(url.search.includes('example.com'), false, 'Preview target belongs in the fragment.')
+  return href
+}
+
+async function run() {
+  const { chromium, expect, executablePath, version } = dependencies()
+  if (checkOnly) {
+    console.log(JSON.stringify({ status: 'prerequisites-ready', playwright: version, executablePath,
+      browserLaunched: false, backendStarted: false, acceptanceRun: false }, null, 2))
+    return
+  }
+  if (!ready) throw new Error('UI checks are gated. Wait for main to confirm the public build is ready, then pass --build-ready. No browser checks ran.')
+  artifacts = await mkdtemp(path.join(os.tmpdir(), 'tracking-threats-browser-acceptance-'))
+  console.log(`Artifacts: ${artifacts}`)
+  report.artifacts = artifacts
+  report.playwright = version
+  report.executablePath = executablePath
+  report.buildSha256 = createHash('sha256').update(readFileSync(path.join(root, 'dist/index.html'))).digest('hex')
+  const origin = await startBackend()
+  report.origin = origin
+  browser = await chromium.launch({ executablePath, headless: process.env.E2E_HEADED !== 'true' })
+  report.browser = browser.version()
+  const cases = []
+  const test = (name, fn) => cases.push({ name, fn })
+
+  const output = (page) => page.locator('section').filter({ has: page.getByRole('heading', { name: 'Scan output', exact: true }) })
+  const row = (page, scan) => page.locator(`[id="scan-${scan.id}"]`)
+  const apiResponse = (page, method, pathname) => page.waitForResponse((res) =>
+    res.request().method() === method && new URL(res.url()).pathname === pathname)
+  const screenshot = (page, name) => page.screenshot({ path: path.join(artifacts, `${name}.png`), fullPage: true })
+  async function responseJson(pending) {
+    const response = await pending
+    assert.ok(response.ok(), `${response.request().method()} ${new URL(response.url()).pathname}: ${response.status()} ${await response.text()}`)
+    return response.json()
+  }
+  async function open(page, route, reload = false) {
+    const activity = page.waitForResponse((res) => res.request().method() === 'GET' && new URL(res.url()).pathname.startsWith('/api/public/activity/'))
+    const settings = apiResponse(page, 'GET', '/api/notification-settings')
+    await (reload ? page.reload() : page.goto(`${origin}/?page=${route}`))
+    await Promise.all([responseJson(activity), responseJson(settings)])
+  }
+  async function scanSms(page, content, target) {
+    await open(page, 'manual')
+    await page.getByRole('button', { name: 'SMS', exact: true }).click()
+    await page.getByLabel('Sender or subject', { exact: true }).fill(target)
+    await page.getByLabel('SMS content', { exact: true }).fill(content)
+    await expect(page.getByRole('button', { name: 'Run Scan', exact: true })).toBeDisabled()
+    await page.getByRole('checkbox', { name: /I am authorized to scan this item/ }).check()
+    const pending = apiResponse(page, 'POST', '/api/scan/message')
+    await page.getByRole('button', { name: 'Run Scan', exact: true }).click()
+    const scan = await responseJson(pending)
+    assert.ok(scan.id, 'A real UI submission must create a saved scan.')
+    await expect(output(page)).toContainText(`Safety score ${scan.score}/100`)
+    return scan
+  }
+  async function persist(page, scan) {
+    await open(page, 'history')
+    await expect(row(page, scan)).toBeVisible()
+    await expect(row(page, scan)).toContainText(`Safety score ${scan.score}/100`)
+    await open(page, 'history', true)
+    await expect(row(page, scan)).toBeVisible()
+    await expect(row(page, scan)).toContainText(scan.summary)
+    return row(page, scan)
+  }
+
+  test('benign SMS and history survive reload', async ({ page, evidence }) => {
+    const scan = await scanSms(page, 'Hi Sam, lunch is at noon in the usual cafe. See you there!', 'E2E lunch reminder')
+    evidence.scan = scan
+    assert.equal(scan.status, 'Safe', 'Benign conversational SMS should have no strong indicators.')
+    assert.ok(scan.score >= 80)
+    await expect(output(page)).toContainText('Local checks only')
+    await expect(output(page)).toContainText('not a calibrated probability')
+    await screenshot(page, 'benign-sms-output')
+    await persist(page, scan)
+  })
+
+  test('direct credential SMS shows risk without claiming automatic blocking', async ({ page, evidence }) => {
+    const scan = await scanSms(page, 'Reply with your password and OTP now to verify your account.', 'E2E fictional credential request')
+    evidence.scan = scan
+    assert.notEqual(scan.status, 'Safe', 'A direct password and OTP request must be flagged.')
+    await expect(output(page)).toContainText(/Risk detected|Caution/)
+    await expect(output(page)).toContainText(/review recommended|Review result/i)
+    const text = await output(page).innerText()
+    // Match affirmative claims, not the explanation's "does not ... prove that access was blocked".
+    assert.doesNotMatch(text, /automatically blocked|(?:^|\n)\s*Access (?:has been|was) blocked|Response:\s*Blocked|System response\s*Blocked/i)
+    if (scan.blocked) await expect(output(page)).toContainText('A manual scan does not itself block access.')
+    await screenshot(page, 'credential-sms-output')
+    await persist(page, scan)
+  })
+
+  test('offline URL explicitly discloses incomplete coverage and persists it', async ({ page, evidence }) => {
+    await open(page, 'manual')
+    await page.getByLabel('URL to scan', { exact: true }).fill('https://example.com/')
+    await page.getByRole('checkbox', { name: /I am authorized to scan this item/ }).check()
+    const pending = apiResponse(page, 'POST', '/api/scan/url')
+    await page.getByRole('button', { name: 'Run Scan', exact: true }).click()
+    const scan = await responseJson(pending)
+    evidence.scan = scan
+    assert.equal(scan.coverage?.checkedProviders, 0)
+    assert.notEqual(scan.coverage.status, 'complete')
+    await expect(output(page)).toContainText('Incomplete checks')
+    await expect(output(page)).toContainText(/Checks unavailable|Local checks only/)
+    await expect(output(page)).toContainText('not a verified safe result')
+    await expect(output(page).getByText('Safe', { exact: true })).toHaveCount(0)
+    await expect(output(page)).toContainText(/Not checked|skipped|disabled/i)
+    await screenshot(page, 'offline-url-output')
+    const saved = await persist(page, scan)
+    await expect(saved).toContainText('Incomplete checks')
+    await expect(saved).toContainText(`0/${scan.coverage.totalProviders} providers checked`)
+  })
+
+  test('settings persist and Delete My Data removes this client data', async ({ page, evidence }) => {
+    const scan = await scanSms(page, 'Meeting starts at ten. Bring your notes.', 'E2E settings sample')
+    await open(page, 'settings')
+    await page.getByPlaceholder('TrackingThreats@example.com').fill('acceptance@example.invalid')
+    await page.getByRole('button', { name: 'Add Email', exact: true }).click()
+    await page.getByRole('checkbox', { name: /Email scanned records/ }).uncheck()
+    await page.getByRole('checkbox', { name: /Email history digest/ }).uncheck()
+    const save = apiResponse(page, 'PUT', '/api/notification-settings')
+    await page.getByRole('button', { name: 'Save Settings', exact: true }).click()
+    evidence.saved = await responseJson(save)
+    await expect(page.getByText('Settings saved', { exact: true })).toBeVisible()
+    await open(page, 'settings', true)
+    await expect(page.getByText('acceptance@example.invalid', { exact: true })).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: /Email scanned records/ })).not.toBeChecked()
+    await expect(page.getByRole('checkbox', { name: /Email history digest/ })).not.toBeChecked()
+    await expect(page.getByRole('button', { name: 'Send History Digest', exact: true })).toBeDisabled()
+    await screenshot(page, 'settings-persisted-before-deletion')
+    const deletion = page.waitForResponse((res) => res.request().method() === 'DELETE' && new URL(res.url()).pathname.startsWith('/api/public/data/'))
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Delete My Data', exact: true }).click()
+    evidence.deleted = await responseJson(deletion)
+    await expect(page.getByText('Client data deleted.', { exact: true })).toBeVisible()
+    await open(page, 'settings', true)
+    await expect(page.getByText('acceptance@example.invalid', { exact: true })).toHaveCount(0)
+    await open(page, 'history')
+    await expect(row(page, scan)).toHaveCount(0)
+    await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
+  })
+
+  test('Delete Scan History persists and preserves a second browser client', async ({ page, newPage, evidence }) => {
+    const own = await scanSms(page, 'See you at the library tomorrow.', 'E2E first client')
+    const otherPage = await newPage()
+    const other = await scanSms(otherPage, 'Dinner is ready at six.', 'E2E second client')
+    await persist(otherPage, other)
+    await persist(page, own)
+    await expect(row(page, other)).toHaveCount(0)
+    const deletion = page.waitForResponse((res) => res.request().method() === 'DELETE' && new URL(res.url()).pathname.startsWith('/api/public/activity/'))
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Delete Scan History', exact: true }).click()
+    evidence.deleted = await responseJson(deletion)
+    await expect(row(page, own)).toHaveCount(0)
+    await open(page, 'history', true)
+    await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
+    await expect(page.getByText('No scan yet. New email and manual scans will be saved.', { exact: true })).toBeVisible()
+    await open(otherPage, 'history', true)
+    await expect(row(otherPage, other)).toBeVisible()
+    evidence.preservedOtherScanId = other.id
+  })
+
+  for (const [status, checkedProviders, totalProviders, label] of [
+    ['partial', 1, 3, 'Incomplete checks'], ['unavailable', 0, 3, 'Checks unavailable'],
+    ['local-only', 0, 0, 'Local checks only'], ['legacy', 0, 0, 'Coverage not recorded'],
+  ]) {
+    test(`${status} preview roundtrip stays exact and creates no saved scan`, async ({ page, evidence }) => {
+      await open(page, 'history')
+      await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
+      const snapshot = {
+        target: `https://example.com/preview?case=${status}&note=%E2%9C%93`,
+        status: 'Safe', score: 87, summary: `E2E ${status} preview — exact & unchanged.`,
+        warningSigns: ['Fixture warning: café & <text>'], recommendations: ['Review this fixture before proceeding.'],
+        categories: ['gambling-content'], categoryWarnings: ['Fixture content category is not phishing evidence.'],
+        ...(status === 'legacy' ? {} : { coverage: { status, checkedProviders, totalProviders,
+          limitations: ['Fixture coverage limitation: providers unavailable.'], linksChecked: 1, totalLinks: 2 } }),
+      }
+      const href = extensionPreviewUrl(origin, snapshot)
+      evidence.snapshot = snapshot
+      const scans = []
+      page.on('request', (req) => {
+        if (req.method() === 'POST' && new URL(req.url()).pathname.startsWith('/api/scan/')) scans.push(req.url())
+      })
+      await page.goto(href)
+      const preview = page.locator('section').filter({ has: page.getByText('Search result preview', { exact: true }) })
+      await expect(preview).toBeVisible()
+      await expect(preview.getByText(snapshot.target, { exact: true })).toBeVisible()
+      await expect(preview.getByText(snapshot.summary, { exact: true })).toBeVisible()
+      await expect(preview).toContainText('Safety score 87/100')
+      for (const item of [...snapshot.warningSigns, ...snapshot.recommendations, ...snapshot.categoryWarnings]) {
+        await expect(preview.getByText(item, { exact: true }).first()).toBeVisible()
+      }
+      await expect(preview).toContainText(label)
+      await expect(preview).toContainText('Incomplete checks')
+      await expect(preview).toContainText('not a verified safe result')
+      await expect(preview).toContainText('These content categories do not establish phishing.')
+      await expect(preview).toContainText('It has not been saved to scan history.')
+      if (snapshot.coverage) {
+        await expect(preview).toContainText(`${checkedProviders}/${totalProviders} providers checked; 1/2 links checked.`)
+        await expect(preview).toContainText(snapshot.coverage.limitations[0])
+      }
+      assert.deepEqual(readSearchPreview(page.url()), snapshot)
+      await page.reload()
+      await expect(preview).toContainText(snapshot.summary)
+      await expect(preview).toContainText(label)
+      assert.deepEqual(readSearchPreview(page.url()), snapshot)
+      assert.equal(scans.length, 0, 'Preview must never submit a scan or rescan the target.')
+      await screenshot(page, `preview-${status}-after-reload`)
+      await open(page, 'history')
+      await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
+      evidence.scanPosts = scans.length
+    })
+  }
+
+  test('malformed preview reports invalid data without a saved result', async ({ page }) => {
+    await open(page, 'history')
+    await page.goto(`${origin}/?page=history&preview=1#preview=not-json`)
+    await expect(page.getByText(/This preview link is incomplete or invalid/)).toBeVisible()
+    await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
+  })
+
+  for (const { name, fn } of cases) {
+    const evidence = { name, status: 'running' }
+    report.cases.push(evidence)
+    const contexts = []
+    const pages = []
+    const errors = []
+    const external = []
+    const slug = `${String(report.cases.length).padStart(2, '0')}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 85)}`
+    async function newPage() {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, serviceWorkers: 'block' })
+      contexts.push(context)
+      await context.tracing.start({ screenshots: true, snapshots: true, sources: false })
+      await context.route('**/*', async (route) => {
+        const url = new URL(route.request().url())
+        if (url.origin === origin || ['data:', 'blob:'].includes(url.protocol)) return route.continue()
+        external.push(`${route.request().method()} ${url.origin}${url.pathname}`)
+        return route.abort('blockedbyclient')
+      })
+      const page = await context.newPage()
+      pages.push(page)
+      page.setDefaultTimeout(15000)
+      page.on('pageerror', (error) => errors.push(error.message))
+      return page
+    }
+    const started = Date.now()
+    try {
+      const page = await newPage()
+      await fn({ page, newPage, evidence })
+      assert.deepEqual(errors, [], 'Browser emitted an uncaught error.')
+      assert.deepEqual(external, [], 'App attempted external browser network access; use a same-origin public build.')
+      evidence.status = 'passed'
+    } catch (error) {
+      evidence.status = 'failed'
+      evidence.error = error.stack ?? String(error)
+    } finally {
+      evidence.elapsedMs = Date.now() - started
+      evidence.pageErrors = errors
+      evidence.blockedExternalRequests = external
+      for (let i = 0; i < contexts.length; i++) {
+        await pages[i]?.screenshot({ path: path.join(artifacts, `${slug}-${i + 1}.png`), fullPage: true }).catch(() => {})
+        await contexts[i].tracing.stop({ path: path.join(artifacts, `${slug}-${i + 1}.zip`) }).catch(() => {})
+        await contexts[i].close()
+      }
+    }
+    console.log(`${evidence.status.toUpperCase()}: ${name}${evidence.error ? `\n${evidence.error}` : ''}`)
+    await writeFile(path.join(artifacts, 'results.json'), JSON.stringify(report, null, 2))
+  }
+  report.status = report.cases.every((item) => item.status === 'passed') ? 'passed' : 'failed'
+  report.passed = report.cases.filter((item) => item.status === 'passed').length
+  report.failed = report.cases.length - report.passed
+  if (report.failed) process.exitCode = 1
+}
+
+try {
+  await run()
+} catch (error) {
+  report.status = 'failed'
+  report.error = error.stack ?? String(error)
+  console.error(report.error)
+  process.exitCode = 1
+} finally {
+  await browser?.close().catch(() => {})
+  if (backend && backend.exitCode === null) {
+    const exited = once(backend, 'exit').catch(() => {})
+    backend.kill()
+    await Promise.race([exited, delay(5000)])
+  }
+  report.finishedAt = new Date().toISOString()
+  if (artifacts) {
+    await writeFile(path.join(artifacts, 'backend.log'), backendLog)
+    await writeFile(path.join(artifacts, 'results.json'), JSON.stringify(report, null, 2))
+    console.log(`Acceptance ${report.status}: ${report.passed ?? 0} passed, ${report.failed ?? 0} failed. Evidence: ${artifacts}`)
+  }
+}

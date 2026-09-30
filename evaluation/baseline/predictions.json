@@ -1,0 +1,585 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-30T05:29:56.942Z",
+  "nodeVersion": "v24.21.0",
+  "statement": "SYNTHETIC regression cases; these results are not real-world accuracy estimates.",
+  "sourceManifest": {
+    "capturedAt": "2026-09-30T05:27:22.2896675Z",
+    "gitHead": "cfdff3dfe4349a2d7624adc496aa88d3f49d709f",
+    "scope": "Unchanged backend scanUrl, scanMessage, analyzeEmail and their local dependency riskScorer",
+    "files": [
+      {
+        "source": "backend\\services\\urlScanner.js",
+        "snapshot": "evaluation\\baseline\\scanners\\urlScanner.js",
+        "sha256": "ba688e4a4edfccd55b4bc4edaed605b133e02fb42b18df420d637633c5860857"
+      },
+      {
+        "source": "backend\\services\\messageScanner.js",
+        "snapshot": "evaluation\\baseline\\scanners\\messageScanner.js",
+        "sha256": "3f2ffdc63e068cd5b0ec5bd855cbcb6708fef45604bb7b5cfdef934302001735"
+      },
+      {
+        "source": "backend\\services\\emailAnalyzer.js",
+        "snapshot": "evaluation\\baseline\\scanners\\emailAnalyzer.js",
+        "sha256": "5ad6ee9ff0c726cd2591e1c368d4738d41288d955bbabc4a4093a03b60af27a7"
+      },
+      {
+        "source": "backend\\services\\riskScorer.js",
+        "snapshot": "evaluation\\baseline\\scanners\\riskScorer.js",
+        "sha256": "3060d625d9192a3b2691ef0f652a783f05fe366c5e6ba7cc1effe7609c02cfc5"
+      }
+    ]
+  },
+  "datasets": [
+    {
+      "split": "tuning",
+      "sha256": "e9184cb29ead9d226882e151eef3c821fe58f6839e51a736a58e4b6676526773"
+    },
+    {
+      "split": "held-out",
+      "sha256": "bc560b36eecce733865a4c704eafe05039b74e2b32af868abb6d2dbc19639514"
+    }
+  ],
+  "predictions": [
+    {
+      "id": "T-url-01",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 60,
+      "status": "Suspicious",
+      "latencyMs": 1.002599999999994
+    },
+    {
+      "id": "T-url-02",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 60,
+      "status": "Suspicious",
+      "latencyMs": 0.3376999999999981
+    },
+    {
+      "id": "T-url-03",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.198599999999999
+    },
+    {
+      "id": "T-url-04",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 92,
+      "status": "Safe",
+      "latencyMs": 0.1734999999999971
+    },
+    {
+      "id": "T-url-05",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 76,
+      "status": "Suspicious",
+      "latencyMs": 0.09920000000000329
+    },
+    {
+      "id": "T-url-06",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 7,
+      "status": "Dangerous",
+      "latencyMs": 0.46120000000000516
+    },
+    {
+      "id": "T-url-07",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 11,
+      "status": "Dangerous",
+      "latencyMs": 0.0653999999999968
+    },
+    {
+      "id": "T-url-08",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 82,
+      "status": "Safe",
+      "latencyMs": 0.06119999999999948
+    },
+    {
+      "id": "T-url-09",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 27,
+      "status": "Dangerous",
+      "latencyMs": 0.06109999999999616
+    },
+    {
+      "id": "T-url-10",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.08709999999999951
+    },
+    {
+      "id": "T-message-01",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 58,
+      "status": "Suspicious",
+      "latencyMs": 0.46820000000000306
+    },
+    {
+      "id": "T-message-02",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 80,
+      "status": "Safe",
+      "latencyMs": 0.14749999999999375
+    },
+    {
+      "id": "T-message-03",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 84,
+      "status": "Safe",
+      "latencyMs": 0.009500000000002728
+    },
+    {
+      "id": "T-message-04",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.008100000000005991
+    },
+    {
+      "id": "T-message-05",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 90,
+      "status": "Safe",
+      "latencyMs": 0.10439999999999827
+    },
+    {
+      "id": "T-message-06",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 42,
+      "status": "Dangerous",
+      "latencyMs": 0.009399999999999409
+    },
+    {
+      "id": "T-message-07",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 42,
+      "status": "Dangerous",
+      "latencyMs": 0.008600000000001273
+    },
+    {
+      "id": "T-message-08",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 23,
+      "status": "Dangerous",
+      "latencyMs": 0.0619000000000014
+    },
+    {
+      "id": "T-message-09",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.01099999999999568
+    },
+    {
+      "id": "T-message-10",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 44,
+      "status": "Dangerous",
+      "latencyMs": 0.015100000000003888
+    },
+    {
+      "id": "T-email-01",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 91,
+      "status": "Safe",
+      "latencyMs": 0.25209999999999866
+    },
+    {
+      "id": "T-email-02",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 92,
+      "status": "Safe",
+      "latencyMs": 0.08489999999999753
+    },
+    {
+      "id": "T-email-03",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.01559999999999917
+    },
+    {
+      "id": "T-email-04",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 77,
+      "status": "Suspicious",
+      "latencyMs": 0.017000000000003013
+    },
+    {
+      "id": "T-email-05",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 96,
+      "status": "Safe",
+      "latencyMs": 0.1991000000000014
+    },
+    {
+      "id": "T-email-06",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 28,
+      "status": "Dangerous",
+      "latencyMs": 0.21249999999999858
+    },
+    {
+      "id": "T-email-07",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 32,
+      "status": "Dangerous",
+      "latencyMs": 0.19650000000000034
+    },
+    {
+      "id": "T-email-08",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.030400000000000205
+    },
+    {
+      "id": "T-email-09",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 32,
+      "status": "Dangerous",
+      "latencyMs": 0.576900000000002
+    },
+    {
+      "id": "T-email-10",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 91,
+      "status": "Safe",
+      "latencyMs": 0.025500000000000966
+    },
+    {
+      "id": "H-url-01",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 92,
+      "status": "Safe",
+      "latencyMs": 0.04540000000000077
+    },
+    {
+      "id": "H-url-02",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.030299999999996885
+    },
+    {
+      "id": "H-url-03",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 68,
+      "status": "Suspicious",
+      "latencyMs": 0.0555000000000021
+    },
+    {
+      "id": "H-url-04",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 74,
+      "status": "Suspicious",
+      "latencyMs": 0.05079999999999529
+    },
+    {
+      "id": "H-url-05",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 76,
+      "status": "Suspicious",
+      "latencyMs": 0.049399999999998556
+    },
+    {
+      "id": "H-url-06",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 60,
+      "status": "Suspicious",
+      "latencyMs": 0.05470000000000397
+    },
+    {
+      "id": "H-url-07",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 11,
+      "status": "Dangerous",
+      "latencyMs": 0.023499999999998522
+    },
+    {
+      "id": "H-url-08",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 7,
+      "status": "Dangerous",
+      "latencyMs": 0.028799999999996828
+    },
+    {
+      "id": "H-url-09",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 92,
+      "status": "Safe",
+      "latencyMs": 0.056200000000004025
+    },
+    {
+      "id": "H-url-10",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.08789999999999765
+    },
+    {
+      "id": "H-message-01",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 58,
+      "status": "Suspicious",
+      "latencyMs": 0.005000000000002558
+    },
+    {
+      "id": "H-message-02",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 78,
+      "status": "Suspicious",
+      "latencyMs": 0.0031999999999996476
+    },
+    {
+      "id": "H-message-03",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 64,
+      "status": "Suspicious",
+      "latencyMs": 0.0031000000000034333
+    },
+    {
+      "id": "H-message-04",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 84,
+      "status": "Safe",
+      "latencyMs": 0.002600000000001046
+    },
+    {
+      "id": "H-message-05",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 90,
+      "status": "Safe",
+      "latencyMs": 0.06609999999999872
+    },
+    {
+      "id": "H-message-06",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 0,
+      "status": "Dangerous",
+      "latencyMs": 0.03149999999999409
+    },
+    {
+      "id": "H-message-07",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 23,
+      "status": "Dangerous",
+      "latencyMs": 0.024500000000003297
+    },
+    {
+      "id": "H-message-08",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 70,
+      "status": "Suspicious",
+      "latencyMs": 0.060000000000002274
+    },
+    {
+      "id": "H-message-09",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.0033000000000029672
+    },
+    {
+      "id": "H-message-10",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.0033000000000029672
+    },
+    {
+      "id": "H-email-01",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 83,
+      "status": "Safe",
+      "latencyMs": 0.1430999999999969
+    },
+    {
+      "id": "H-email-02",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 83,
+      "status": "Safe",
+      "latencyMs": 0.010699999999999932
+    },
+    {
+      "id": "H-email-03",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.009599999999998943
+    },
+    {
+      "id": "H-email-04",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 74,
+      "status": "Suspicious",
+      "latencyMs": 0.11400000000000432
+    },
+    {
+      "id": "H-email-05",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 93,
+      "status": "Safe",
+      "latencyMs": 0.015699999999995384
+    },
+    {
+      "id": "H-email-06",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 32,
+      "status": "Dangerous",
+      "latencyMs": 0.056100000000000705
+    },
+    {
+      "id": "H-email-07",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 91,
+      "status": "Safe",
+      "latencyMs": 0.009800000000005582
+    },
+    {
+      "id": "H-email-08",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "latencyMs": 0.10739999999999839
+    },
+    {
+      "id": "H-email-09",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "latencyMs": 0.009799999999998477
+    },
+    {
+      "id": "H-email-10",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 91,
+      "status": "Safe",
+      "latencyMs": 0.008099999999998886
+    }
+  ]
+}

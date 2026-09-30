@@ -1,6 +1,6 @@
 # Scan Repository, Methodology, and Privacy Design
 
-Version: 2026.09
+Version: 2026.10
 
 ## Purpose
 
@@ -15,7 +15,7 @@ making an authenticity guarantee.
 2. Create a `scan_submissions` row with status `queued`.
 3. Change the submission status to `scanning`.
 4. Analyze the item with local rules and configured reputation providers.
-5. Calculate the 0-100 safety score and response policy.
+5. Calculate the rule-based 0-100 score and response policy; report check coverage separately.
 6. Store the scan result, normalized evidence, methodology version, and expiry.
 7. Mark the submission `completed`, or `failed` with a limited error message.
 8. Delete expired records during scheduled retention cleanup.
@@ -135,16 +135,48 @@ credential model, not a named-user account system. Formal multi-user use
 would still need individual accounts, stronger administrator authentication,
 and a documented identity-verification procedure for manual deletion.
 
-## Verdict interpretation
+## Verdict interpretation and coverage
 
-- Safe (80-100): no configured strong threat indicator was detected.
-- Caution (51-79): one or more indicators require human review.
-- Dangerous (0-50): high-risk indicators triggered the block policy.
+The score is rule-based, not a calibrated probability of safety or phishing.
+Raw compatibility statuses remain unchanged:
 
-Safe does not mean authentic. The scanner does not currently execute files in a
-sandbox, validate document signatures, verify issuing organizations, perform
-OCR, or conduct full binary forensics. Important IDs, contracts, certificates,
-invoices, and payment requests must be verified with the issuer.
+- Safe (80-100): display **No strong indicators** when coverage is complete,
+  otherwise **Incomplete checks**.
+- Suspicious (51-79): display **Caution** and request review.
+- Dangerous (0-50): display **Risk detected**. This does not confirm phishing.
+
+A manual result or search preview does not itself block access. A stored block
+policy and an actual browser enforcement action are distinct. Local allowlist
+and manual safe-host exceptions bypass reputation checks and report local-only
+coverage; an exception does not establish safety.
+
+Results include top-level `coverage` with `status` (`complete`, `partial`,
+`unavailable`, or `local-only`), `checkedProviders`, `totalProviders`, optional
+`linksChecked`/`totalLinks`, and a `limitations` array. Missing provider keys,
+skipped checks, and lookup errors are not clean results. A provider can display
+?No match? only after a completed check; a database miss is not an authenticity
+guarantee. Historical results without coverage are displayed conservatively.
+
+Top-level `categories` may contain `phishing-indicators`, `malware-reputation`,
+`ip-reputation`, `gambling-content`, `piracy-content`, and `file-risk`.
+`categoryWarnings` is an optional array of content-warning strings. Gambling
+and piracy warnings appear separately from phishing indicators; they do not
+establish phishing. The UI preserves these fields in browser-local public
+history and extension search-preview fragments. Preview fragments are display
+snapshots, not saved or authenticated scan records.
+
+URL inspection currently uses static URL features and reputation providers.
+It does **not** fetch redirects or page content, inspect rendered forms, or
+verify behavior at the destination. Email and SMS reputation checks cover at
+most five unique links, with two checks in flight; extra links remain unchecked
+and are reflected in coverage. Messages without links have local-only coverage.
+File scans also report coverage. Complete coverage only describes the selected
+checks, not exhaustive detection.
+
+The scanner does not execute files in a sandbox, validate document signatures,
+verify issuing organizations, perform OCR, or conduct full binary forensics.
+Important IDs, contracts, certificates, invoices, and payment requests must be
+verified with the issuer. Reputation data can be delayed, incomplete, or wrong.
 
 ## Data Privacy Act alignment
 

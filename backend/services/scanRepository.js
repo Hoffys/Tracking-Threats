@@ -1,7 +1,7 @@
 import { dbPromise, fromJson, toJson } from '../db/database.js'
 import { createHash } from 'node:crypto'
 
-export const methodologyVersion = '2026.09'
+export const methodologyVersion = '2026.10'
 export const privacyNoticeVersion = '2026.09'
 
 const parsePositiveInteger = (value, fallback) => {
@@ -103,7 +103,8 @@ export async function recordScanEvidence(db, scan, analysis) {
     if (!provider?.provider) continue
     const finding = provider.error
       ? `Provider unavailable: ${provider.error}`
-      : provider.warning || (provider.found ? 'Threat match reported' : 'No threat match')
+      : provider.skipped || (provider.checked === false ? 'Provider was not checked'
+        : provider.warning || (provider.found ? 'Threat match reported' : 'No threat match'))
     await db.run(
       `INSERT INTO scan_evidence
         (id, scan_id, evidence_type, source, finding, matched, score_impact, details, created_at)

@@ -1,3 +1,5 @@
+import { normalizeCategories, normalizeCoverage } from './scanPresentation.js'
+
 // Preview links contain display data only; they never create history records.
 export function readSearchPreview(href) {
   try {
@@ -19,6 +21,9 @@ export function readSearchPreview(href) {
       summary: typeof preview.summary === 'string' ? preview.summary : '',
       warningSigns: strings(preview.warningSigns),
       recommendations: strings(preview.recommendations),
+      ...(preview.coverage !== undefined ? { coverage: normalizeCoverage(preview.coverage) } : {}),
+      ...(preview.categories !== undefined ? { categories: normalizeCategories(preview.categories) } : {}),
+      ...(preview.categoryWarnings !== undefined ? { categoryWarnings: strings(preview.categoryWarnings) } : {}),
     }
   } catch {
     return null

@@ -5,6 +5,8 @@ import { scanMessage } from '../services/messageScanner.js'
 import { sendScanReport } from '../services/mailReporter.js'
 import { isMarkedSafeUrlTarget } from '../services/safeHosts.js'
 import { enrichUrlAnalysis } from '../services/threatIntel.js'
+import { enrichContentLinks } from '../services/linkReputation.js'
+import { localCoverage } from '../services/coverage.js'
 import { scanUrl } from '../services/urlScanner.js'
 import {
   completeScanSubmission,
@@ -44,7 +46,8 @@ const getStoredTarget = (type, target = '') => {
 
 const sanitizeDetailsForStorage = (value, key = '') => {
   if (shouldStoreScanContent() || value == null) return value
-  if (['url', 'matches', 'addresses', 'fileName', 'extracted'].includes(key)) return undefined
+  if (['url', 'matches', 'addresses', 'fileName', 'extracted', 'phrase', 'input'].includes(key)) return undefined
+  if (key === 'links' && Array.isArray(value)) return undefined
   if (typeof value === 'string') return redactSensitiveText(value)
   if (Array.isArray(value)) {
     return value
@@ -104,6 +107,9 @@ export const mapScan = (row) => {
     contentRetained: row.content_retained === 1,
     expiresAt: row.expires_at ?? null,
     threatIntel: details.threatIntel ?? [],
+    coverage: details.coverage ?? localCoverage('This older scan did not record which checks completed.'),
+    categories: details.categories ?? [],
+    categoryWarnings: (details.categoryWarnings ?? []).map((item) => typeof item === 'string' ? item : item.label).filter(Boolean),
     emailBreakdown: details.emailBreakdown,
     fileDetails: details.file,
     responseStatus: row.action === 'Blocked' ? 'Blocked' : null,
@@ -439,7 +445,7 @@ export async function createUrlScan(target, source = 'api', clientId = null, pri
           warningSigns: [],
           recommendations: ['Allow this URL unless new suspicious behavior appears.'],
           recommendation: 'Allow this URL unless new suspicious behavior appears.',
-          details: { threatIntel: [] },
+          details: { threatIntel: [], coverage: localCoverage('This host was manually allowed. Detection and reputation checks were bypassed.') },
         },
         source,
         clientId,
@@ -478,6 +484,7 @@ export async function previewUrlScan(target) {
       recommendations: ['Allow this URL unless new suspicious behavior appears.'],
       recommendation: 'Allow this URL unless new suspicious behavior appears.',
       threatIntel: [],
+      coverage: localCoverage('This host was manually allowed. Detection and reputation checks were bypassed.'),
       responseStatus: null,
       blocked: false,
     }
@@ -499,6 +506,9 @@ export async function previewUrlScan(target) {
     recommendations: analysis.recommendations ?? [],
     recommendation: analysis.recommendation,
     threatIntel: analysis.details?.threatIntel ?? [],
+    coverage: analysis.details?.coverage,
+    categories: analysis.details?.categories ?? [],
+    categoryWarnings: (analysis.details?.categoryWarnings ?? []).map((item) => typeof item === 'string' ? item : item.label).filter(Boolean),
     responseStatus: analysis.action === 'Blocked' ? 'Blocked' : null,
     blocked: analysis.action === 'Blocked',
   }
@@ -513,7 +523,7 @@ export async function createMessageScan(
   return runWithSubmission(
     { type: 'Message', target, content, source, clientId },
     async (submissionId) => {
-      const analysis = scanMessage(content)
+      const analysis = await enrichContentLinks(content, scanMessage(content))
       const storedTarget = shouldStoreScanContent() ? target : 'Public message scan'
       const scan = await persistScan({
         type: 'Message',
@@ -550,7 +560,7 @@ export async function createEmailScan(
   return runWithSubmission(
     { type: 'Email', target, content, source, clientId },
     async (submissionId) => {
-      const analysis = analyzeEmail({ sender, subject, body })
+      const analysis = await enrichContentLinks(content, analyzeEmail({ sender, subject, body }))
       const storedSender = shouldStoreScanContent()
         ? sender || 'Unknown sender'
         : getEmailDomain(sender) || 'Sender redacted'
