@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
-import { hasIncompleteChecks, responseLabel } from '../utils/scanPresentation'
+import { responseLabel } from '../utils/scanPresentation'
 import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
@@ -196,7 +196,7 @@ export function ManualScan({ onNavigate }) {
             className={`h-3 rounded-full ${
               scanResult.status === 'Dangerous'
                 ? 'bg-rose-500'
-                : scanResult.status === 'Suspicious' || hasIncompleteChecks(scanResult.coverage)
+                : scanResult.status === 'Suspicious'
                   ? 'bg-amber-500'
                   : 'bg-emerald-500'
             }`}
@@ -311,7 +311,7 @@ export function ManualScan({ onNavigate }) {
                 </ul>
               ) : (
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  No strong indicators detected.
+                  Appears safe based on this scan.
                 </p>
               )}
             </div>

@@ -97,3 +97,7 @@ To open a retained trace using the external installation:
 ```powershell
 node (Join-Path $env:E2E_PLAYWRIGHT_NODE_MODULES 'playwright/cli.js') show-trace '<TEMP artifact directory>\<case>.zip'
 ```
+
+## Verdict wording update, 2026-09-30
+
+The later public build `index-C0C-UxUd.js` passed all 10 browser cases. A completed low-indicator scan now displays **Appears safe**, with separate check limitations and an explicit **Scan finished; no further checks are pending** message. Caution and risk verdicts retain their severity. Failed scans remain unavailable and are not presented as successful safe assessments. The actual offline-result screenshot was reviewed: the green verdict, completed-scan wording, and unavailable-provider details are visible and readable. Evidence: `tests/e2e/results/2026-09-30-verdict-labels.json`. Earlier results above describe the previous wording.

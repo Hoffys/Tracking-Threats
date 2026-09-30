@@ -6,10 +6,10 @@ function hasIncompleteChecks(scan) {
 
 function getCoverageText(scan) {
   const coverage = scan?.coverage
-  if (!coverage) return 'Coverage not recorded; checks cannot be verified.'
-  const labels = { complete: 'Complete checks', partial: 'Incomplete checks', unavailable: 'Checks unavailable', 'local-only': 'Local checks only' }
+  if (!coverage) return 'Scan finished. Check details were not recorded; no further checks are pending.'
+  const labels = { complete: 'All configured reputation checks responded', partial: 'Some reputation checks were unavailable or skipped', unavailable: 'Reputation checks were unavailable', 'local-only': 'Local analysis only' }
   const links = Number.isInteger(coverage.totalLinks) ? `; ${coverage.linksChecked}/${coverage.totalLinks} links checked` : ''
-  return `${labels[coverage.status] ?? 'Coverage unknown'}: ${coverage.checkedProviders}/${coverage.totalProviders} providers checked${links}. ${(coverage.limitations ?? []).join(' ')}`
+  return `Scan finished. ${labels[coverage.status] ?? 'Check details unavailable'}. No further checks are pending. ${coverage.checkedProviders}/${coverage.totalProviders} providers checked${links}. ${(coverage.limitations ?? []).join(' ')}`
 }
 
 function getCategoryText(scan) {
@@ -495,9 +495,9 @@ function getInboxBadgeStyle(scan) {
       rowBackground: 'rgba(225,29,72,.12)',
     }
   }
-  if (level === 'caution' || level === 'incomplete') {
+  if (level === 'caution') {
     return {
-      text: level === 'incomplete' ? 'INCOMPLETE CHECKS' : 'CAUTION',
+      text: 'CAUTION',
       border: 'rgba(245,158,11,.7)',
       background: '#fef3c7',
       color: '#92400e',
@@ -505,7 +505,7 @@ function getInboxBadgeStyle(scan) {
     }
   }
   return {
-    text: 'NO STRONG INDICATORS',
+    text: 'APPEARS SAFE',
     border: 'rgba(16,185,129,.55)',
     background: '#ccfbf1',
     color: '#065f46',
@@ -588,10 +588,12 @@ function showInboxStatus() {
     statusText = 'No new visible messages. Open another Gmail page to continue.'
   } else if (inboxPending === 0 && hasRisk) {
     statusText = `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
+  } else if (inboxPending === 0 && inboxStats.checked === 0 && inboxStats.failed > 0) {
+    statusText = 'Could not assess these messages. Try scanning again.'
   } else if (inboxPending === 0 && hasGaps) {
-    statusText = 'Some message checks are incomplete or unavailable.'
+    statusText = 'Checked messages appear safe. Some verification services or message scans were unavailable.'
   } else if (inboxPending === 0 && inboxStats.checked > 0) {
-    statusText = 'No strong indicators in checked messages.'
+    statusText = 'Checked messages appear safe based on available checks.'
   }
 
   banner.id = 'threattrack-inbox-status'
@@ -627,7 +629,7 @@ function showInboxStatus() {
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   const totals = document.createElement('p')
-  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe} no strong indicators - ${inboxStats.incomplete} incomplete - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
+  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe + inboxStats.incomplete} appear safe (${inboxStats.incomplete} with limited verification) - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
   totals.style.cssText = 'margin:3px 0 0;color:#cbd5e1;font-size:11px'
 
   const header = document.createElement('div')
@@ -726,7 +728,7 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
     identity.append(subject, sender)
     const status = document.createElement('span')
     status.textContent = result.pending ? 'Scanning' : result.failed ? 'Failed' : `${getStatusLabel(result.status, result.coverage)} ${result.score}/100`
-    status.style.cssText = `flex:none;align-self:center;color:${result.failed ? '#fca5a5' : result.pending ? '#cbd5e1' : result.level === 'dangerous' ? '#fecdd3' : (result.level === 'caution' || result.level === 'incomplete') ? '#fde68a' : '#6ee7b7'};font:700 11px/1.4 Arial,sans-serif`
+    status.style.cssText = `flex:none;align-self:center;color:${result.failed ? '#fca5a5' : result.pending ? '#cbd5e1' : result.level === 'dangerous' ? '#fecdd3' : result.level === 'caution' ? '#fde68a' : '#6ee7b7'};font:700 11px/1.4 Arial,sans-serif`
     const context = document.createElement('span')
     context.textContent = result.pending || result.failed ? '' : [getCoverageText(result), getCategoryText(result)].filter(Boolean).join(' ')
     context.style.cssText = 'display:block;margin-top:4px;color:#cbd5e1;font:12px/1.4 Arial,sans-serif'
@@ -909,8 +911,8 @@ function getScanLevel(scan) {
   return 'safe'
 }
 
-function getStatusLabel(status, coverage) {
-  if (status === 'Safe') return hasIncompleteChecks({ coverage }) ? 'Incomplete checks' : 'No strong indicators'
+function getStatusLabel(status) {
+  if (status === 'Safe') return 'Appears safe'
   if (status === 'Dangerous') return 'Risk detected'
   return status === 'Suspicious' ? 'Caution' : status
 }
@@ -935,7 +937,7 @@ function showEmailWarning(scan, email) {
   const banner = existing ?? document.createElement('aside')
   const warnings = scan.warningSigns?.slice(0, 4) ?? []
   const recommendations = scan.recommendations?.slice(0, 2) ?? []
-  const isSafe = scan.status === 'Safe' && !hasIncompleteChecks(scan)
+  const isSafe = scan.status === 'Safe'
   const isDangerous = scan.status === 'Dangerous' || scan.blocked
   const borderColor = isDangerous ? 'rgba(225,29,72,.45)' : isSafe ? 'rgba(16,185,129,.45)' : 'rgba(245,158,11,.45)'
   const accentColor = isDangerous ? '#fecdd3' : isSafe ? '#6ee7b7' : '#fde68a'

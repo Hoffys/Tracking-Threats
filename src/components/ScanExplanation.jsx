@@ -22,7 +22,7 @@ const getExplanation = (scan) => {
       icon: AlertTriangle,
       tone: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300',
       summary:
-        'The rules or reputation checks found risk indicators. This result alone does not confirm phishing or prove that access was blocked.',
+        'Avoid opening links, downloading files, or sharing information from this source. The scan found risk indicators; this result alone does not prove that access was blocked.',
       mainSignal,
       matchedIntel,
       unavailableIntel,
@@ -35,21 +35,18 @@ const getExplanation = (scan) => {
       icon: SlidersHorizontal,
       tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
       summary:
-        'The scan found warning signs that need review. Indicators are not proof of malicious intent.',
+        'Verify the sender and destination before continuing. Do not enter passwords or send money until you have checked through an official channel.',
       mainSignal,
       matchedIntel,
       unavailableIntel,
     }
   }
 
-  const incomplete = hasIncompleteChecks(scan?.coverage)
   return {
-    title: incomplete ? 'Incomplete checks' : 'No strong indicators',
-    icon: incomplete ? SlidersHorizontal : CheckCircle2,
-    tone: incomplete ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300' : 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
-    summary: incomplete
-      ? 'The available checks did not find strong indicators, but coverage is incomplete or unknown. This is not a verified safe result.'
-      : 'No strong indicators were found in the completed checks. This does not guarantee safety or authenticity.',
+    title: 'Appears safe based on this scan',
+    icon: CheckCircle2,
+    tone: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300',
+    summary: 'No strong phishing indicators were found in the checks that ran. Continue with normal caution, and never share passwords or OTPs. This assessment is not a guarantee of safety.',
     mainSignal,
     matchedIntel,
     unavailableIntel,

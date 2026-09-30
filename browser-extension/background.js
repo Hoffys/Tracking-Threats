@@ -567,8 +567,8 @@ function getScanNotification(scan, rawUrl) {
   }
 
   return {
-    title: scan?.coverage?.status === 'complete' ? 'Tracking Threats result' : 'Tracking Threats incomplete checks',
-    message: `${host}: ${scan?.coverage?.status === 'complete' ? 'no strong indicators in completed checks' : 'checks incomplete or coverage unknown'}. Rule-based score ${score}/100; not a safety guarantee.`,
+    title: 'Tracking Threats: appears safe',
+    message: `${host}: appears safe based on this scan. ${scan?.coverage?.status === 'complete' ? 'Configured reputation checks responded.' : 'Verification was limited.'} Scan finished. Score ${score}/100; not a safety guarantee.`,
   }
 }
 

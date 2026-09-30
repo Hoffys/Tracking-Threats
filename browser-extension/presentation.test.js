@@ -45,10 +45,15 @@ test('rendered results distinguish incomplete checks, content categories and man
     for (const status of ['partial', 'unavailable', 'local-only', undefined]) {
       const coverage = status ? { ...complete, status, checkedProviders: 0 } : undefined
       const html = renderToStaticMarkup(createElement(RiskBadge, { risk: 'Safe', coverage }))
-      assert.match(html, /Incomplete checks/)
-      assert.doesNotMatch(html, /emerald/)
+      assert.match(html, /Appears safe/)
+      assert.match(html, /emerald/)
+      const explanation = renderToStaticMarkup(createElement(ScanExplanation, { scan: { status: 'Safe', score: 100, coverage } }))
+      assert.match(explanation, /Scan finished/)
+      assert.match(explanation, /no further checks are pending/i)
+      assert.match(explanation, /not a guarantee of safety/)
+      assert.doesNotMatch(explanation, /Incomplete checks/)
     }
-    assert.match(renderToStaticMarkup(createElement(RiskBadge, { risk: 'Safe', coverage: complete })), /No strong indicators/)
+    assert.match(renderToStaticMarkup(createElement(RiskBadge, { risk: 'Safe', coverage: complete })), /Appears safe/)
     const html = renderToStaticMarkup(createElement(ScanExplanation, { manual: true, scan: {
       status: 'Dangerous', blocked: true, score: 20, coverage: { ...complete, status: 'partial', checkedProviders: 1,
         linksChecked: 2, totalLinks: 7, limitations: ['Some links were not checked.'] },

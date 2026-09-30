@@ -6,10 +6,10 @@ function hasIncompleteChecks(scan) {
 
 function getCoverageText(scan) {
   const coverage = scan?.coverage
-  if (!coverage) return 'Coverage not recorded; checks cannot be verified.'
-  const labels = { complete: 'Complete checks', partial: 'Incomplete checks', unavailable: 'Checks unavailable', 'local-only': 'Local checks only' }
+  if (!coverage) return 'Scan finished. Check details were not recorded; no further checks are pending.'
+  const labels = { complete: 'All configured reputation checks responded', partial: 'Some reputation checks were unavailable or skipped', unavailable: 'Reputation checks were unavailable', 'local-only': 'Local analysis only' }
   const links = Number.isInteger(coverage.totalLinks) ? `; ${coverage.linksChecked}/${coverage.totalLinks} links checked` : ''
-  return `${labels[coverage.status] ?? 'Coverage unknown'}: ${coverage.checkedProviders}/${coverage.totalProviders} providers checked${links}. ${(coverage.limitations ?? []).join(' ')}`
+  return `Scan finished. ${labels[coverage.status] ?? 'Check details unavailable'}. No further checks are pending. ${coverage.checkedProviders}/${coverage.totalProviders} providers checked${links}. ${(coverage.limitations ?? []).join(' ')}`
 }
 
 function getCategoryText(scan) {
@@ -136,9 +136,9 @@ function getResultStyle(scan) {
       rowBackground: 'rgba(225,29,72,.12)',
     }
   }
-  if (level === 'caution' || level === 'incomplete') {
+  if (level === 'caution') {
     return {
-      label: level === 'incomplete' ? 'INCOMPLETE CHECKS' : 'CAUTION',
+      label: 'CAUTION',
       border: 'rgba(245,158,11,.55)',
       background: '#fef3c7',
       color: '#92400e',
@@ -146,7 +146,7 @@ function getResultStyle(scan) {
     }
   }
   return {
-    label: 'NO STRONG INDICATORS',
+    label: 'APPEARS SAFE',
     border: 'rgba(16,185,129,.45)',
     background: '#ccfbf1',
     color: '#115e59',
@@ -301,9 +301,11 @@ function showSearchStatus() {
   const statusText =
     scanStats.checked === 0 && scanStats.failed === 0
       ? 'Scanning visible search results...'
+      : scanStats.checked === 0
+        ? 'Could not assess these results. Try scanning again.'
       : hasRisk
         ? `${riskyCount} risky search result${riskyCount === 1 ? '' : 's'} found`
-        : hasGaps ? 'Some checks are incomplete or unavailable.' : 'No strong indicators in checked visible results'
+        : hasGaps ? 'Checked results appear safe. Some verification services or result scans were unavailable.' : 'Checked results appear safe based on available checks'
 
   banner.id = 'threattrack-search-status'
   banner.setAttribute('role', 'status')
@@ -334,7 +336,7 @@ function showSearchStatus() {
   body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
 
   const counts = document.createElement('p')
-  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe} no strong indicators - ${scanStats.incomplete} incomplete - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
+  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe + scanStats.incomplete} appear safe (${scanStats.incomplete} with limited verification) - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   banner.append(title, body, counts)
@@ -495,7 +497,7 @@ function showClickPreview(url, scan, anchor) {
   const accentColor =
     level === 'dangerous'
       ? '#fecdd3'
-      : (level === 'caution' || level === 'incomplete')
+      : level === 'caution'
         ? '#fde68a'
         : '#6ee7b7'
   const warnings = scan.warningSigns?.slice(0, 4) ?? []

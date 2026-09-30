@@ -179,7 +179,7 @@ async function run() {
     evidence.scan = scan
     assert.equal(scan.status, 'Safe', 'Benign conversational SMS should have no strong indicators.')
     assert.ok(scan.score >= 80)
-    await expect(output(page)).toContainText('Local checks only')
+    await expect(output(page)).toContainText('Local analysis only')
     await expect(output(page)).toContainText('not a calibrated probability')
     await screenshot(page, 'benign-sms-output')
     await persist(page, scan)
@@ -209,14 +209,16 @@ async function run() {
     evidence.scan = scan
     assert.equal(scan.coverage?.checkedProviders, 0)
     assert.notEqual(scan.coverage.status, 'complete')
-    await expect(output(page)).toContainText('Incomplete checks')
-    await expect(output(page)).toContainText(/Checks unavailable|Local checks only/)
-    await expect(output(page)).toContainText('not a verified safe result')
+    await expect(output(page)).toContainText('Appears safe')
+    await expect(output(page)).toContainText('Scan finished.')
+    await expect(output(page)).toContainText('No further checks are pending.')
+    await expect(output(page)).toContainText(/Reputation checks were unavailable|Local analysis only/)
+    await expect(output(page)).toContainText('not a guarantee of safety')
     await expect(output(page).getByText('Safe', { exact: true })).toHaveCount(0)
     await expect(output(page)).toContainText(/Not checked|skipped|disabled/i)
     await screenshot(page, 'offline-url-output')
     const saved = await persist(page, scan)
-    await expect(saved).toContainText('Incomplete checks')
+    await expect(saved).toContainText('Appears safe')
     await expect(saved).toContainText(`0/${scan.coverage.totalProviders} providers checked`)
   })
 
@@ -270,8 +272,8 @@ async function run() {
   })
 
   for (const [status, checkedProviders, totalProviders, label] of [
-    ['partial', 1, 3, 'Incomplete checks'], ['unavailable', 0, 3, 'Checks unavailable'],
-    ['local-only', 0, 0, 'Local checks only'], ['legacy', 0, 0, 'Coverage not recorded'],
+    ['partial', 1, 3, 'Some reputation checks were unavailable or skipped'], ['unavailable', 0, 3, 'Reputation checks were unavailable'],
+    ['local-only', 0, 0, 'Local analysis only'], ['legacy', 0, 0, 'Check details were not recorded'],
   ]) {
     test(`${status} preview roundtrip stays exact and creates no saved scan`, async ({ page, evidence }) => {
       await open(page, 'history')
@@ -300,8 +302,8 @@ async function run() {
         await expect(preview.getByText(item, { exact: true }).first()).toBeVisible()
       }
       await expect(preview).toContainText(label)
-      await expect(preview).toContainText('Incomplete checks')
-      await expect(preview).toContainText('not a verified safe result')
+      await expect(preview).toContainText('Appears safe')
+      await expect(preview).toContainText('not a guarantee of safety')
       await expect(preview).toContainText('These content categories do not establish phishing.')
       await expect(preview).toContainText('It has not been saved to scan history.')
       if (snapshot.coverage) {

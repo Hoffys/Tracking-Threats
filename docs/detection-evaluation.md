@@ -57,3 +57,7 @@ Reject ambiguous labels rather than labeling every unavailable or unlisted URL l
 Local URL and text findings deduct from 100. Message and email results retain the lowest score across content, sender, and inspected links, so averaging cannot hide a dangerous component. Provider deductions form a separate score; the final URL result is the lower of the local and provider scores. The URL and text rules are heuristic choices requiring independent validation; their weights are not learned probabilities.
 
 The PSL parser uses [`tldts` with private suffix support](https://github.com/remusao/tldts). Reputation providers can return false positives or false negatives, as described in [Google Safe Browsing guidance](https://developers.google.com/safe-browsing/v4/usage-limits).
+
+## Result wording update
+
+Completed scans with internal status `Safe` now display **Appears safe**, regardless of provider availability. The detail panel states that the scan has finished and lists any unavailable, skipped, local-only, or unrecorded checks. This is a qualified assessment from the checks that ran, not a guarantee of safety or a claim that all providers responded. Caution/risk verdicts and failed-scan handling remain distinct. Scoring, provider results, and the recorded evaluation metrics are unchanged by this presentation update.

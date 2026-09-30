@@ -40,8 +40,8 @@ export function hasIncompleteChecks(coverage) {
   return normalizeCoverage(coverage)?.status !== 'complete'
 }
 
-export function riskLabel(risk, coverage) {
-  if (risk === 'Safe') return hasIncompleteChecks(coverage) ? 'Incomplete checks' : 'No strong indicators'
+export function riskLabel(risk) {
+  if (risk === 'Safe') return 'Appears safe'
   if (risk === 'Dangerous') return 'Risk detected'
   if (risk === 'Suspicious') return 'Caution'
   return risk
@@ -57,9 +57,9 @@ export function providerState(provider) {
 
 export function coverageLabel(coverage) {
   const value = normalizeCoverage(coverage)
-  if (!value) return 'Coverage not recorded; checks cannot be verified.'
-  const labels = { complete: 'Complete checks', partial: 'Incomplete checks', unavailable: 'Checks unavailable', 'local-only': 'Local checks only' }
-  return `${labels[value.status]}: ${value.checkedProviders}/${value.totalProviders} providers checked` +
+  if (!value) return 'Scan finished. Check details were not recorded for this result; no further checks are pending.'
+  const labels = { complete: 'All configured reputation checks responded', partial: 'Some reputation checks were unavailable or skipped', unavailable: 'Reputation checks were unavailable', 'local-only': 'Local analysis only' }
+  return `Scan finished. ${labels[value.status]}. No further checks are pending. ${value.checkedProviders}/${value.totalProviders} providers checked` +
     (value.totalLinks === undefined ? '.' : `; ${value.linksChecked}/${value.totalLinks} links checked.`)
 }
 

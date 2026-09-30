@@ -30,12 +30,11 @@ chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => {
   const status = threattrackStatus.lastStatus
   // The compact activity record may predate coverage reporting.
   const coverage = threattrackStatus.coverage
-  const incomplete = coverage?.status !== 'complete'
-  const label = status === 'Safe' ? (incomplete ? 'Incomplete checks' : 'No strong indicators')
+  const label = status === 'Safe' ? 'Appears safe'
     : status === 'Dangerous' ? 'Risk detected' : status === 'Suspicious' ? 'Caution' : status
   pill.textContent = `${label} - ${threattrackStatus.lastScore}/100`
-  if (incomplete || ['Suspicious', 'Dangerous', 'Blocked'].includes(status)) pill.classList.add('error')
-  message.textContent += ` ? Rule-based score, not a probability. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
+  if (['Suspicious', 'Dangerous', 'Blocked'].includes(status)) pill.classList.add('error')
+  message.textContent += ` - Scan finished; no further checks are pending. Rule-based score, not a probability. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
   if (coverage) message.textContent += ` ${coverage.checkedProviders}/${coverage.totalProviders} providers checked. ${(coverage.limitations ?? []).join(' ')}`
   if (threattrackStatus.categories?.length) message.textContent += ` Categories: ${threattrackStatus.categories.join(', ')}. Content categories do not establish phishing.`
 })

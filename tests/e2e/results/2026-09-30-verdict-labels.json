@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "startedAt": "2026-09-30T06:07:58.079Z",
+  "finishedAt": "2026-09-30T06:08:18.150Z",
+  "buildAsset": "index-C0C-UxUd.js",
+  "extensionVersion": "1.0.29",
+  "artifacts": "C:/Users/Bry/AppData/Local/Temp/tracking-threats-browser-acceptance-Jo9L2N",
+  "cases": [
+    {
+      "name": "benign SMS and history survive reload",
+      "status": "passed"
+    },
+    {
+      "name": "direct credential SMS shows risk without claiming automatic blocking",
+      "status": "passed"
+    },
+    {
+      "name": "offline URL explicitly discloses incomplete coverage and persists it",
+      "status": "passed"
+    },
+    {
+      "name": "settings persist and Delete My Data removes this client data",
+      "status": "passed"
+    },
+    {
+      "name": "Delete Scan History persists and preserves a second browser client",
+      "status": "passed"
+    },
+    {
+      "name": "partial preview roundtrip stays exact and creates no saved scan",
+      "status": "passed"
+    },
+    {
+      "name": "unavailable preview roundtrip stays exact and creates no saved scan",
+      "status": "passed"
+    },
+    {
+      "name": "local-only preview roundtrip stays exact and creates no saved scan",
+      "status": "passed"
+    },
+    {
+      "name": "legacy preview roundtrip stays exact and creates no saved scan",
+      "status": "passed"
+    },
+    {
+      "name": "malformed preview reports invalid data without a saved result",
+      "status": "passed"
+    }
+  ],
+  "passed": 10,
+  "failed": 0
+}

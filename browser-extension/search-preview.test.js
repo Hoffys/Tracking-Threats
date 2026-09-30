@@ -87,8 +87,10 @@ test('coverage, categories and content warnings survive linked-app preview round
     assert.deepEqual(readSearchPreview(anchor.href), { target, ...expected })
     assert.equal(new URL(anchor.href).search.includes('Provider'), false)
     const style = app.getResultStyle(expected)
-    assert.equal(style.label, status === 'complete' ? 'NO STRONG INDICATORS' : 'INCOMPLETE CHECKS')
-    if (status !== 'complete') assert.equal(style.background, '#fef3c7')
+    assert.equal(style.label, 'APPEARS SAFE')
+    assert.equal(style.background, '#ccfbf1')
+    assert.match(app.getCoverageText(expected), /Scan finished/)
+    assert.match(app.getCoverageText(expected), /No further checks are pending/)
   }
 })
 
@@ -102,7 +104,8 @@ test('malformed coverage and forged category values cannot advertise complete ch
   assert.equal(result.coverage, undefined)
   assert.deepEqual(result.categories, ['gambling-content'])
   assert.deepEqual(result.categoryWarnings, ['Content warning'])
-  assert.equal(app.getResultStyle(result).label, 'INCOMPLETE CHECKS')
+  assert.equal(app.getResultStyle(result).label, 'APPEARS SAFE')
+  assert.match(app.getCoverageText(result), /Check details were not recorded/)
   assert.equal(app.getResultStyle({ ...scan, status: 'Dangerous' }).label, 'RISK DETECTED')
 })
 
@@ -127,5 +130,6 @@ test('missing and failed preview replies produce an amber unavailable message', 
   const banner = elements.get('threattrack-search-status')
   assert.match(banner.style.cssText, /rgba\(245,158,11/)
   assert.match(banner.children.map((child) => child.textContent).join(' '), /2 unavailable/)
-  assert.doesNotMatch(banner.children.map((child) => child.textContent).join(' '), /looks safe/)
+  assert.match(banner.children.map((child) => child.textContent).join(' '), /Could not assess/)
+  assert.doesNotMatch(banner.children.map((child) => child.textContent).join(' '), /results appear safe/)
 })

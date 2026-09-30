@@ -22,7 +22,7 @@ test('download ZIP contains runnable extension assets and excludes private files
     ...manifest.web_accessible_resources.flatMap((resource) => resource.resources),
     ...manifest.declarative_net_request.rule_resources.map((rule) => rule.path), 'popup.js', 'INSTALL.txt']
   needed.forEach((file) => assert.ok(entries.has(file), `Missing ${file}`))
-  assert.equal(manifest.version, '1.0.28')
+  assert.equal(manifest.version, '1.0.29')
   assert.ok(manifest.permissions.includes('alarms'))
   assert.ok([...entries.keys()].every((name) => !/\.env|_metadata|\.test\.|sqlite/.test(name)))
   assert.match(entries.get('config.js').toString(), /tracking-threats-production.up.railway.app/)
