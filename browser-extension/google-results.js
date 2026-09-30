@@ -17,7 +17,8 @@ function getCategoryText(scan) {
   const categories = (scan?.categories ?? []).filter((category) => Object.hasOwn(labels, category))
   const content = categories.filter((category) => category.endsWith('-content'))
   const risk = categories.filter((category) => !category.endsWith('-content'))
-  return [(scan?.categoryWarnings?.length ? 'Content category warnings (not phishing proof): ' + scan.categoryWarnings.join(' ') : ''), risk.length ? 'Risk categories: ' + risk.map((category) => labels[category]).join(', ') + '.' : '', content.length ? 'Content warnings: ' + content.map((category) => labels[category]).join(', ') + '. These do not establish phishing.' : ''].filter(Boolean).join(' ')
+  const piracyCaution = categories.includes('piracy-content') ? 'Download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.' : ''
+  return [(scan?.categoryWarnings?.length ? 'Content category warnings (not phishing proof): ' + scan.categoryWarnings.join(' ') : ''), risk.length ? 'Risk categories: ' + risk.map((category) => labels[category]).join(', ') + '.' : '', content.length ? 'Content warnings: ' + content.map((category) => labels[category]).join(', ') + '. These do not establish phishing.' : '', piracyCaution].filter(Boolean).join(' ')
 }
 
 function appendScanContext(parent, scan) {
@@ -69,6 +70,7 @@ const scanStats = {
   failed: 0,
   caution: 0,
   dangerous: 0,
+  content: 0,
 }
 let scanTimer = null
 
@@ -118,9 +120,14 @@ function isRiskyScan(scan) {
   return scan?.status === 'Dangerous' || scan?.status === 'Suspicious' || scan?.blocked
 }
 
+function hasPiracyContent(scan) {
+  return scan?.categories?.includes('piracy-content') === true
+}
+
 function getScanLevel(scan) {
   if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
   if (scan?.status === 'Suspicious') return 'caution'
+  if (scan?.status === 'Safe' && hasPiracyContent(scan)) return 'content'
   if (hasIncompleteChecks(scan)) return 'incomplete'
   return 'safe'
 }
@@ -139,6 +146,15 @@ function getResultStyle(scan) {
   if (level === 'caution') {
     return {
       label: 'CAUTION',
+      border: 'rgba(245,158,11,.55)',
+      background: '#fef3c7',
+      color: '#92400e',
+      rowBackground: 'rgba(245,158,11,.12)',
+    }
+  }
+  if (level === 'content') {
+    return {
+      label: 'DOWNLOAD RISK UNKNOWN',
       border: 'rgba(245,158,11,.55)',
       background: '#fef3c7',
       color: '#92400e',
@@ -290,12 +306,13 @@ function showSearchStatus() {
   const banner = existing ?? document.createElement('aside')
   const riskyCount = scanStats.caution + scanStats.dangerous
   const hasRisk = riskyCount > 0
+  const hasContentWarnings = scanStats.content > 0
   const hasGaps = scanStats.incomplete > 0 || scanStats.failed > 0
-  const accentColor = scanStats.dangerous > 0 ? '#fecdd3' : hasRisk || hasGaps ? '#fde68a' : '#6ee7b7'
+  const accentColor = scanStats.dangerous > 0 ? '#fecdd3' : hasRisk || hasContentWarnings || hasGaps ? '#fde68a' : '#6ee7b7'
   const borderColor =
     scanStats.dangerous > 0
       ? 'rgba(225,29,72,.45)'
-      : hasRisk || hasGaps
+      : hasRisk || hasContentWarnings || hasGaps
         ? 'rgba(245,158,11,.45)'
         : 'rgba(16,185,129,.45)'
   const statusText =
@@ -305,6 +322,8 @@ function showSearchStatus() {
         ? 'Could not assess these results. Try scanning again.'
       : hasRisk
         ? `${riskyCount} risky search result${riskyCount === 1 ? '' : 's'} found`
+        : hasContentWarnings
+          ? `${scanStats.content} result${scanStats.content === 1 ? '' : 's'} with download-risk content warnings`
         : hasGaps ? 'Checked results appear safe. Some verification services or result scans were unavailable.' : 'Checked results appear safe based on available checks'
 
   banner.id = 'threattrack-search-status'
@@ -336,7 +355,7 @@ function showSearchStatus() {
   body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
 
   const counts = document.createElement('p')
-  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe + scanStats.incomplete} appear safe (${scanStats.incomplete} with limited verification) - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
+  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe + scanStats.incomplete} appear safe (${scanStats.incomplete} with limited verification) - ${scanStats.content} download-risk warning - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   banner.append(title, body, counts)
@@ -353,7 +372,7 @@ function showResultPopup(url, scan) {
   const warningSigns = topScan.warningSigns?.slice(0, 3) ?? []
   const recommendations = topScan.recommendations?.slice(0, 2) ?? []
   const popup = existing ?? document.createElement('aside')
-  const isSafe = topScan.status === 'Safe' && !hasIncompleteChecks(topScan)
+  const isSafe = getScanLevel(topScan) === 'safe'
   const isDangerous = topScan.status === 'Dangerous' || topScan.blocked
   const borderColor = isDangerous
     ? 'rgba(225,29,72,.45)'
@@ -424,6 +443,13 @@ function showResultPopup(url, scan) {
     safeText.textContent = 'No strong phishing indicators were found for this result.'
     safeText.style.cssText = 'margin:10px 0 0;color:#cbd5e1'
     popup.appendChild(safeText)
+  }
+
+  if (hasPiracyContent(topScan)) {
+    const cautionText = document.createElement('p')
+    cautionText.textContent = 'No strong phishing indicators were found, but download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
+    cautionText.style.cssText = 'margin:10px 0 0;color:#fde68a;font-weight:700'
+    popup.appendChild(cautionText)
   }
 
   if (warningSigns.length > 0) {
@@ -497,7 +523,7 @@ function showClickPreview(url, scan, anchor) {
   const accentColor =
     level === 'dangerous'
       ? '#fecdd3'
-      : level === 'caution'
+      : level === 'caution' || level === 'content'
         ? '#fde68a'
         : '#6ee7b7'
   const warnings = scan.warningSigns?.slice(0, 4) ?? []

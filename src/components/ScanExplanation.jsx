@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 
-import { categoryLabels, coverageLabel, hasIncompleteChecks, normalizeCategories, responseLabel } from '../utils/scanPresentation'
+import { categoryLabels, coverageLabel, hasIncompleteChecks, hasPiracyContent, normalizeCategories, responseLabel } from '../utils/scanPresentation'
 
 const getScoreBand = (score = 100) => {
   if (score >= 80) return 'Low indicator range: 80-100'
@@ -37,6 +37,18 @@ const getExplanation = (scan) => {
       summary:
         'Verify the sender and destination before continuing. Do not enter passwords or send money until you have checked through an official channel.',
       mainSignal,
+      matchedIntel,
+      unavailableIntel,
+    }
+  }
+
+  if (status === 'Safe' && hasPiracyContent(scan?.categories)) {
+    return {
+      title: 'No strong phishing indicators; download risk unknown',
+      icon: AlertTriangle,
+      tone: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
+      summary: 'This result contains piracy-related references. That is separate from the phishing verdict and does not make downloads safe. Files may still involve malware, fake mirrors, tampering, or copyright risk.',
+      mainSignal: 'Piracy-related content detected',
       matchedIntel,
       unavailableIntel,
     }
@@ -96,6 +108,11 @@ export function ScanExplanation({ scan, manual = false }) {
         <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">
           Content warnings: {contentCategories.map((category) => categoryLabels[category]).join(', ')}.
           {' '}These content categories do not establish phishing.
+        </p>
+      )}
+      {hasPiracyContent(categories) && (
+        <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+          Download risk is unknown. Piracy-related sources can expose you to malware, fake mirrors, tampered files, and copyright risk. Scan the actual file before opening it.
         </p>
       )}
       {scan.categoryWarnings?.length > 0 && (

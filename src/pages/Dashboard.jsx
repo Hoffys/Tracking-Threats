@@ -426,7 +426,7 @@ export function Dashboard({ onNavigate }) {
                       {scan.type} - Safety score {scan.score}/100
                     </p>
                   </div>
-                  <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} />
+                  <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} categories={scan.categories} />
                 </div>
               ))
             ) : (
@@ -492,7 +492,7 @@ export function Dashboard({ onNavigate }) {
                   Source: {scan.source}
                 </p>
               </div>
-              <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} />
+              <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} categories={scan.categories} />
             </div>
           ))}
         </div>

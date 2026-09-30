@@ -323,7 +323,7 @@ async function checkPhishTank(target) {
       : null,
     deduction: confirmed ? 60 : 0,
   }
-}
+} 
 
 async function resolveHostAddresses(host) {
   if (!host) return { addresses: [], errors: [] }

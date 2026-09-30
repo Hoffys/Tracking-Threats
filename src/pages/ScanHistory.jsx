@@ -160,7 +160,7 @@ export function ScanHistory() {
                   <p className="break-all font-medium">{searchPreview.target}</p>
                   <p className="mt-1 text-sm">Safety score {searchPreview.score}/100</p>
                 </div>
-                <RiskBadge risk={searchPreview.status} coverage={searchPreview.coverage} />
+                <RiskBadge risk={searchPreview.status} coverage={searchPreview.coverage} categories={searchPreview.categories} />
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 This is the result shown by your extension before opening the link. It has not been saved to scan history. Saved scans are listed below.
@@ -211,7 +211,7 @@ export function ScanHistory() {
                   : 'No matching saved scan is available. Search result previews are not saved until you visit the site. To see a preview, open it again from the updated extension.'}
               </p>
             </div>
-            {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} coverage={focusedScan.coverage} />}
+            {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} coverage={focusedScan.coverage} categories={focusedScan.categories} />}
           </div>
         </Panel>
       )}
@@ -311,7 +311,7 @@ export function ScanHistory() {
                       </p>
                     )}
                   </div>
-                  <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} />
+                  <RiskBadge risk={scan.status ?? scan.risk} coverage={scan.coverage} categories={scan.categories} />
                 </div>
                 <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                   {scan.summary}

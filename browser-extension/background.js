@@ -91,6 +91,170 @@ async function getClientId() {
   return (await getClientCredentials()).clientId
 }
 
+async function detectBrowserName() {
+  try {
+    if (
+      navigator.brave &&
+      typeof navigator.brave.isBrave === 'function' &&
+      await navigator.brave.isBrave()
+    ) {
+      return 'Brave'
+    }
+  } catch {
+    // Ignore Brave detection errors
+  }
+
+  const userAgent = navigator.userAgent || ''
+
+  if (userAgent.includes('Edg/')) {
+    return 'Edge'
+  }
+
+  if (userAgent.includes('Chrome/')) {
+    return 'Chrome'
+  }
+
+  return 'Other'
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== 'PAIR_DEVICE') {
+    return
+  }
+
+  ;(async () => {
+    try {
+      const pairCode = String(message.pairCode ?? '')
+        .trim()
+        .toUpperCase()
+
+      if (!/^[A-F0-9]{8}$/.test(pairCode)) {
+        sendResponse({
+          ok: false,
+          error: 'Enter a valid 8-character device code.',
+        })
+        return
+      }
+
+      const browserName = await detectBrowserName()
+
+      const response = await scanFetch(
+        `${API_BASE_URL}/api/public/devices/pair`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            pairCode,
+            browserName,
+          }),
+        },
+      )
+
+      const result = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        sendResponse({
+          ok: false,
+          error: result.error || 'Unable to link this browser.',
+        })
+        return
+      }
+
+      await chrome.storage.local.set({
+        linkedDeviceId: result.device?.deviceId ?? '',
+        linkedDeviceName: result.device?.deviceName ?? '',
+        linkedBrowserName: result.browserName ?? browserName,
+      })
+
+      sendResponse({
+        ok: true,
+        device: result.device,
+        browserName: result.browserName ?? browserName,
+      })
+    } catch (error) {
+      console.error('Device pairing failed:', error)
+
+      sendResponse({
+        ok: false,
+        error: error?.message || 'Unable to link this browser.',
+      })
+    }
+  })()
+
+  return true
+})
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type !== 'CREATE_DEVICE') {
+    return
+  }
+
+  ;(async () => {
+    try {
+      const deviceName = String(message.deviceName ?? '').trim()
+
+      if (!deviceName || deviceName.length > 80) {
+        sendResponse({
+          ok: false,
+          error: 'Enter a valid device name.',
+        })
+        return
+      }
+
+      const browserName = await detectBrowserName()
+
+      const response = await scanFetch(
+        `${API_BASE_URL}/api/public/devices`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            deviceName,
+          }),
+        },
+      )
+
+      const result = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        sendResponse({
+          ok: false,
+          error: result.error || 'Unable to create device.',
+        })
+        return
+      }
+
+      await chrome.storage.local.set({
+        linkedDeviceId: result.device?.deviceId ?? '',
+        linkedDeviceName: result.device?.deviceName ?? deviceName,
+        linkedBrowserName: browserName,
+      })
+
+      sendResponse({
+        ok: true,
+        device: result.device,
+        browserName,
+        pairCode: result.pairCode,
+        expiresAt: result.expiresAt,
+      })
+    } catch (error) {
+      console.error('Create device failed:', error)
+
+      sendResponse({
+        ok: false,
+        error: error?.message || 'Unable to create device.',
+      })
+    }
+  })()
+
+  return true
+})
+
+
 async function scanFetch(url, options) {
   const send = (credential) => fetch(url, {
     ...options,
@@ -552,6 +716,7 @@ function getScanNotification(scan, rawUrl) {
   const score = Number(scan?.score ?? 0)
   const status = scan?.status === 'Dangerous' || scan?.blocked ? 'Blocked' : scan?.status
   const host = getHost(rawUrl) || rawUrl
+  const piracyCaution = status === 'Safe' && scan?.categories?.includes('piracy-content')
 
   if (status === 'Blocked') {
     return {
@@ -564,6 +729,13 @@ function getScanNotification(scan, rawUrl) {
     return {
       title: 'Tracking Threats caution',
       message: `${host} has warning signs. Rule-based score ${score}/100; not a probability.`,
+    }
+  }
+
+  if (piracyCaution) {
+    return {
+      title: 'Tracking Threats: download risk unknown',
+      message: `${host}: no strong phishing indicators were found, but piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.`,
     }
   }
 
@@ -686,6 +858,8 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       lastUrl: rawUrl,
       lastStatus: scan.status,
       lastScore: scan.score,
+      coverage: scan.coverage,
+      categories: scan.categories,
     })
     if (!previewOnly) {
       await notifyScanResult(rawUrl, scan)
@@ -782,6 +956,8 @@ async function recordBlockedVisit(rawUrl) {
       lastUrl: rawUrl,
       lastStatus: scan.status,
       lastScore: scan.score,
+      coverage: scan.coverage,
+      categories: scan.categories,
     })
     await notifyScanResult(rawUrl, scan)
     return scan
@@ -822,6 +998,8 @@ async function scanEmailContent({ sender = '', subject = '', body = '' }) {
       lastUrl: 'Email scan',
       lastStatus: scan.status,
       lastScore: scan.score,
+      coverage: scan.coverage,
+      categories: scan.categories,
     })
     return scan
   } catch (error) {
@@ -920,6 +1098,8 @@ async function scanDownload(downloadItem) {
       lastUrl: getDownloadFileName(downloadItem),
       lastStatus: fileScan.status,
       lastScore: fileScan.score,
+      coverage: fileScan.coverage,
+      categories: fileScan.categories,
     })
     return fileScan
   } catch (error) {

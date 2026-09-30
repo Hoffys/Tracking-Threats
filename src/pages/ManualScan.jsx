@@ -192,7 +192,7 @@ export function ManualScan({ onNavigate }) {
               </p>
             )}
           </div>
-          <RiskBadge risk={scanResult.status ?? scanResult.risk} coverage={scanResult.coverage} />
+          <RiskBadge risk={scanResult.status ?? scanResult.risk} coverage={scanResult.coverage} categories={scanResult.categories} />
         </div>
 
         <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">

@@ -76,6 +76,7 @@ test('gambling and piracy are separate categories with no phishing deductions', 
     assert.deepEqual(result.details.categories.sort(), ['gambling-content', 'piracy-content'])
     assert.equal(result.details.categoryWarnings.length, 2)
     assert.deepEqual(result.warningSigns, [])
+    assert.match(result.recommendations[0], /Download risk is unknown/)
   }
   const mixed = scanUrl('https://paypal.example/login/casino/torrent')
   assert.equal(mixed.status, 'Dangerous')

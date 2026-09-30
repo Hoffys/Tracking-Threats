@@ -154,4 +154,77 @@ document.getElementById('continue-button').addEventListener('click', () => {
   )
 })
 
+const devicePairCodeInput = document.getElementById('devicePairCode')
+const linkDeviceButton = document.getElementById('linkDeviceButton')
+const devicePairStatus = document.getElementById('devicePairStatus')
+const linkedDeviceInfo = document.getElementById('linkedDeviceInfo')
+const devicePairForm = document.getElementById('devicePairForm')
+
+async function loadLinkedDeviceInfo() {
+  const stored = await chrome.storage.local.get([
+    'linkedDeviceId',
+    'linkedDeviceName',
+    'linkedBrowserName',
+  ])
+
+  if (!stored.linkedDeviceId) {
+    linkedDeviceInfo.style.display = 'none'
+    devicePairForm.style.display = 'block'
+    return
+  }
+
+  linkedDeviceInfo.style.display = 'block'
+  linkedDeviceInfo.textContent =
+    `Linked to: ${stored.linkedDeviceName || 'Device'} (${stored.linkedBrowserName || 'Browser'})`
+
+  devicePairForm.style.display = 'none'
+}
+
+if (linkDeviceButton) {
+  linkDeviceButton.addEventListener('click', async () => {
+    const pairCode = String(devicePairCodeInput?.value ?? '')
+      .trim()
+      .toUpperCase()
+
+    if (!/^[A-F0-9]{8}$/.test(pairCode)) {
+      devicePairStatus.textContent =
+        'Enter a valid 8-character device code.'
+      return
+    }
+
+    linkDeviceButton.disabled = true
+    devicePairStatus.textContent = 'Linking device...'
+
+    try {
+      const result = await chrome.runtime.sendMessage({
+        type: 'PAIR_DEVICE',
+        pairCode,
+      })
+
+      if (!result?.ok) {
+        devicePairStatus.textContent =
+          result?.error || 'Unable to link this browser.'
+        return
+      }
+
+      devicePairStatus.textContent = 'Device linked successfully.'
+
+      if (devicePairCodeInput) {
+        devicePairCodeInput.value = ''
+      }
+
+      await loadLinkedDeviceInfo()
+    } catch (error) {
+      console.error('Pair device popup error:', error)
+
+      devicePairStatus.textContent =
+        'Unable to communicate with the extension.'
+    } finally {
+      linkDeviceButton.disabled = false
+    }
+  })
+}
+
+loadLinkedDeviceInfo()
+
 loadBlockedContext()

@@ -365,7 +365,7 @@ export function LiveMonitor({ onNavigate }) {
                       </div>
                     </button>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <RiskBadge risk={event.status} coverage={event.coverage} />
+                      <RiskBadge risk={event.status} coverage={event.coverage} categories={event.categories} />
                       <button
                         className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-950"
                         type="button"
@@ -476,7 +476,7 @@ export function LiveMonitor({ onNavigate }) {
                       {formatTime(selectedEvent.timestamp)}
                     </p>
                   </div>
-                  <RiskBadge risk={selectedEvent.status} coverage={selectedEvent.coverage} />
+                  <RiskBadge risk={selectedEvent.status} coverage={selectedEvent.coverage} categories={selectedEvent.categories} />
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">

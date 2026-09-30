@@ -64,3 +64,9 @@ one-time rendered-form check for the active page. The extension sends bounded
 counts and booleans, not page HTML. Navigation URL monitoring, reputation
 checks, and dynamic block rules continue to run with their declared browser
 permissions. Reload the unpacked extension after installing this version.
+
+Version 1.0.31 separates phishing results from piracy-related download risk.
+A result with no strong phishing indicators now shows **Download risk unknown**
+when piracy content is detected, along with malware, fake-mirror, tampered-file,
+and copyright-risk guidance. The phishing score is unchanged because piracy
+content alone is not proof of phishing.

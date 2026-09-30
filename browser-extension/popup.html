@@ -54,6 +54,11 @@
         color: #be123c;
       }
 
+      .warning {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
       a {
         display: inline-block;
         margin-top: 12px;
@@ -91,6 +96,118 @@
       <a id="openApp" href="http://localhost:5173/" target="_blank">Open Tracking Threats</a>
     </main>
     <script src="config.js"></script>
+
+    <div id="createDeviceSection" style="
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+">
+  <div style="font-weight: 600; margin-bottom: 6px;">
+    Register This Device
+  </div>
+
+  <input
+    id="deviceNameInput"
+    type="text"
+    maxlength="80"
+    placeholder="Example: Gaming PC"
+    autocomplete="off"
+    style="
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      margin-bottom: 8px;
+    "
+  />
+
+  <button
+    id="createDeviceButton"
+    type="button"
+    style="
+      width: 100%;
+      padding: 8px;
+      cursor: pointer;
+    "
+  >
+    Create This Device
+  </button>
+
+  <div
+    id="createDeviceStatus"
+    style="
+      margin-top: 8px;
+      font-size: 12px;
+    "
+  ></div>
+
+  <div
+    id="generatedPairCode"
+    style="
+      display: none;
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    "
+  ></div>
+</div>
+    
+    <div id="devicePairSection" style="
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+">
+  <div style="font-weight: 600; margin-bottom: 6px;">
+    Device Connection
+  </div>
+
+  <div
+    id="linkedDeviceInfo"
+    style="
+      display: none;
+      font-size: 12px;
+      margin-bottom: 8px;
+    "
+  ></div>
+
+  <div id="devicePairForm">
+    <input
+      id="devicePairCode"
+      type="text"
+      maxlength="8"
+      placeholder="Enter 8-character device code"
+      autocomplete="off"
+      style="
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        margin-bottom: 8px;
+      "
+    />
+
+    <button
+      id="linkDeviceButton"
+      type="button"
+      style="
+        width: 100%;
+        padding: 8px;
+        cursor: pointer;
+      "
+    >
+      Link This Browser
+    </button>
+  </div>
+
+  <div
+    id="devicePairStatus"
+    style="
+      margin-top: 8px;
+      font-size: 12px;
+    "
+  ></div>
+</div>
+
     <script src="popup.js"></script>
   </body>
 </html>

@@ -260,6 +260,20 @@ export async function initDatabase() {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS devices (
+      device_id TEXT PRIMARY KEY,
+      device_name TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_seen_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS device_pair_codes (
+      code_hash TEXT PRIMARY KEY,
+      device_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS admin_actions (
       id TEXT PRIMARY KEY,
       action TEXT NOT NULL,
@@ -272,6 +286,8 @@ export async function initDatabase() {
   await ensureColumn(db, 'client_credentials', 'last_seen_at', 'TEXT')
   await ensureColumn(db, 'client_credentials', 'extension_seen_at', 'TEXT')
   await ensureColumn(db, 'client_credentials', 'extension_version', 'TEXT')
+  await ensureColumn(db, 'client_credentials', 'device_id', 'TEXT')
+  await ensureColumn(db, 'client_credentials', 'browser_name', 'TEXT')
   await db.run("INSERT INTO usage_counters (name, count, started_at) VALUES ('extension-downloads', 0, ?) ON CONFLICT(name) DO NOTHING", new Date().toISOString())
   await ensureColumn(db, 'blocked_threats', 'review_status', "TEXT NOT NULL DEFAULT 'active'")
   await ensureColumn(db, 'blocked_threats', 'active_visible', 'INTEGER NOT NULL DEFAULT 1')
@@ -298,6 +314,8 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_scan_submissions_client_id ON scan_submissions(client_id);
     CREATE INDEX IF NOT EXISTS idx_scan_submissions_status ON scan_submissions(processing_status);
     CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON admin_actions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_client_credentials_device_id ON client_credentials(device_id);
+    CREATE INDEX IF NOT EXISTS idx_device_pair_codes_device_id ON device_pair_codes(device_id);
   `)
   await db.run(
     `INSERT INTO notification_settings
