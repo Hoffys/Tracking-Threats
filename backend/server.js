@@ -126,7 +126,13 @@ retentionInterval.unref()
 if (process.env.AUTO_MONITOR === 'true') {
   startAutoMonitor()
 }
+console.log(
+  `PhishTank API: ${process.env.PHISHTANK_APP_KEY ? 'configured' : 'missing'}`
+)
 
+console.log(
+  `AbuseIPDB API: ${process.env.ABUSEIPDB_API_KEY ? 'configured' : 'missing'}`
+)
 app.listen(port, () => {
   console.log(`Tracking Threats backend running at http://localhost:${port}`)
   console.log(`Scan repository: ${databaseProvider}`)
