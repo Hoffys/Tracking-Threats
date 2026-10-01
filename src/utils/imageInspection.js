@@ -46,6 +46,7 @@ async function recognizeText(canvas) {
   const { createWorker } = await import('tesseract.js')
   const worker = await createWorker('eng', 1, {
     workerPath: '/ocr/worker.min.js',
+    workerBlobURL: false,
     corePath: '/ocr',
     langPath: '/ocr',
   })
@@ -64,6 +65,9 @@ export async function inspectImageFile(file) {
   const [qrResult, ocrResult] = await Promise.allSettled([detectQr(canvas, context), recognizeText(canvas)])
   if (qrResult.status === 'rejected' && ocrResult.status === 'rejected') {
     throw new Error('This browser could not inspect text or QR codes in the image')
+  }
+  if (ocrResult.status === 'rejected') {
+    throw new Error('Image text recognition could not complete. Retry the image or scan its QR URL directly; no complete image scan was submitted.')
   }
   return extractImageIndicators(
     ocrResult.status === 'fulfilled' ? ocrResult.value : '',

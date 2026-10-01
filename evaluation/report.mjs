@@ -39,14 +39,14 @@ export function renderMarkdown(report) {
     '# Detection evaluation', '', report.evidence.statement, '',
     `Captured: ${report.capturedAt}. Scanner: ${report.scanner}. Selected split: ${report.selectedSplit}.`, '',
     `Dataset fingerprint: \`${report.datasetHash}\`.`, '', report.policy, '',
-    '| Split | Policy | TP | FP | TN | FN | Precision | Recall | FPR |',
-    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+    '| Split | Policy | TP | FP | TN | FN | Accuracy | Precision | Recall | F1 | FPR |',
+    '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
   ]
   for (const [split, metrics] of Object.entries(report.metrics.bySplit)) {
     if (!metrics.count) continue
     for (const policy of ['warning', 'block']) {
       const m = metrics[policy]
-      rows.push(`| ${split} | ${policy} | ${m.tp} | ${m.fp} | ${m.tn} | ${m.fn} | ${percent(m.precision)} | ${percent(m.recall)} | ${percent(m.fpr)} |`)
+      rows.push(`| ${split} | ${policy} | ${m.tp} | ${m.fp} | ${m.tn} | ${m.fn} | ${percent(m.accuracy)} | ${percent(m.precision)} | ${percent(m.recall)} | ${percent(m.f1)} | ${percent(m.fpr)} |`)
     }
   }
   rows.push('', 'Undefined ratios have a zero denominator; they are not silently converted to zero or 100%.', '', report.latencyMethod, '', '| Split | Calls | Mean ms | P50 ms | P95 ms | Max ms |', '| --- | ---: | ---: | ---: | ---: | ---: |')
@@ -65,6 +65,12 @@ export function renderMarkdown(report) {
       }
     }
     rows.push('', `${report.comparison.changed.length} cases changed score or status. JSON includes baseline/current metrics, deltas, and changed case IDs.`)
+  }
+  for (const policy of ['warning', 'block']) {
+    const m = report.metrics.overall[policy]
+    rows.push('', `## Confusion matrix: ${policy}`, '',
+      '| Predicted / Actual | Malicious | Legitimate |', '| --- | ---: | ---: |',
+      `| Malicious | ${m.tp} | ${m.fp} |`, `| Legitimate | ${m.fn} | ${m.tn} |`)
   }
   rows.push('', '## Misses and false positives (IDs only)', '')
   for (const [split, metrics] of Object.entries(report.metrics.bySplit)) {

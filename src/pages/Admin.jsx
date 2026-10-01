@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { apiService } from '../services/api'
+import { EvaluationPanel } from '../components/EvaluationPanel'
 
 const formatDate = (value) => value
   ? new Intl.DateTimeFormat(undefined, {
@@ -23,6 +24,7 @@ const tabs = [
   { id: 'clients', label: 'Clients' },
   { id: 'reports', label: 'Reports' },
   { id: 'logs', label: 'Logs' },
+  { id: 'evaluation', label: 'Evaluation' },
 ]
 
 const usageMetrics = [
@@ -232,7 +234,7 @@ export function Admin() {
         </p>
       </section>
 
-      <div role="tablist" aria-label="Admin views" className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+      <div role="tablist" aria-label="Admin views" className="flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-700">
         {tabs.map((item) => (
           <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => { setTab(item.id); setSelected(null) }}
             className={`border-b-2 px-4 py-2.5 text-sm font-semibold ${tab === item.id ? 'border-emerald-500 text-emerald-700 dark:text-emerald-300' : 'border-transparent text-slate-500'}`}>
@@ -240,6 +242,8 @@ export function Admin() {
           </button>
         ))}
       </div>
+
+      {tab === 'evaluation' && <EvaluationPanel token={adminToken} />}
 
       {tab === 'clients' && (
         selected ? (

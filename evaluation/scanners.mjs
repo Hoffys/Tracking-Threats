@@ -6,7 +6,7 @@ import { sha256, EvaluationError } from './dataset.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(import.meta.url)
-export function scannerGraph(scanner) {
+export function scannerGraph(scanner, production = false) {
   const directory = scanner === 'baseline' ? resolve(root, 'evaluation/baseline/scanners') : resolve(root, 'backend/services')
   const files = new Map()
   function visit(path) {
@@ -34,6 +34,7 @@ export function scannerGraph(scanner) {
     }
   }
   for (const name of ['urlScanner.js', 'messageScanner.js', 'emailAnalyzer.js']) visit(resolve(directory, name))
+  if (production) visit(resolve(directory, 'detectionPipeline.js'))
   return { directory, files: [...files].map(([path, hash]) => ({ path: relative(root, path).replaceAll('\\', '/'), sha256: hash })).sort((a, b) => a.path.localeCompare(b.path)) }
 }
 export function verifyFrozenSources() {

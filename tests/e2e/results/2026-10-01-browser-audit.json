@@ -1,0 +1,413 @@
+{
+  "startedAt": "2026-10-01T14:03:14.628Z",
+  "status": "passed",
+  "cases": [
+    {
+      "name": "benign SMS and history survive reload",
+      "status": "passed",
+      "scan": {
+        "id": "bf574f53-8117-4d87-972a-e47171ebc744",
+        "type": "Message",
+        "target": "Redacted message scan",
+        "content": "",
+        "score": 100,
+        "status": "Safe",
+        "risk": "low",
+        "action": "Allowed",
+        "summary": "No strong local message phishing indicators were found. Reputation was not checked.",
+        "warningSigns": [],
+        "recommendations": [
+          "Proceed with normal caution.",
+          "Continue monitoring for unusual sender or domain behavior."
+        ],
+        "recommendation": "Proceed with normal caution. Continue monitoring for unusual sender or domain behavior.",
+        "source": "public-web-scan",
+        "clientId": "cl_1f6f15b8d0273a78331c216ae9f9f597",
+        "submissionId": "5b7910f2-4f35-4256-8de3-9e91fbddb8cf",
+        "processingStatus": "completed",
+        "methodologyVersion": "2026.10",
+        "contentRetained": false,
+        "expiresAt": "2026-10-31T14:03:18.990Z",
+        "threatIntel": [],
+        "coverage": {
+          "status": "local-only",
+          "checkedProviders": 0,
+          "totalProviders": 0,
+          "limitations": [
+            "Reputation not checked.",
+            "Local heuristics cannot establish safety or verify ownership.",
+            "Message intent and sender identity were not verified.",
+            "Linked pages were not fetched.",
+            "No extracted links were available for reputation checks."
+          ]
+        },
+        "categories": [],
+        "categoryWarnings": [],
+        "responseStatus": null,
+        "blocked": false,
+        "date": "2026-10-01T14:03:18.990Z"
+      },
+      "elapsedMs": 2536,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "direct credential SMS shows risk without claiming automatic blocking",
+      "status": "passed",
+      "scan": {
+        "id": "b1daf2d0-64c6-4cfd-87e1-027f9d25a78b",
+        "type": "Message",
+        "target": "Redacted message scan",
+        "content": "",
+        "score": 33,
+        "status": "Dangerous",
+        "risk": "critical",
+        "action": "Blocked",
+        "summary": "Found 2 local message warning signs.",
+        "warningSigns": [
+          "Directly asks the recipient to disclose a secret",
+          "Urgency accompanies a sensitive request or concerning link"
+        ],
+        "recommendations": [
+          "Block the threat immediately.",
+          "Quarantine the content and report it to security.",
+          "Verify any account or payment request using an official website or phone number."
+        ],
+        "recommendation": "Block the threat immediately. Quarantine the content and report it to security. Verify any account or payment request using an official website or phone number.",
+        "source": "public-web-scan",
+        "clientId": "cl_80d946843f17026449f69e1a35283409",
+        "submissionId": "8dab4396-fa8a-402f-b1b7-bd289a59a72d",
+        "processingStatus": "completed",
+        "methodologyVersion": "2026.10",
+        "contentRetained": false,
+        "expiresAt": "2026-10-31T14:03:21.669Z",
+        "threatIntel": [],
+        "coverage": {
+          "status": "local-only",
+          "checkedProviders": 0,
+          "totalProviders": 0,
+          "limitations": [
+            "Reputation not checked.",
+            "Local heuristics cannot establish safety or verify ownership.",
+            "Message intent and sender identity were not verified.",
+            "Linked pages were not fetched.",
+            "No extracted links were available for reputation checks."
+          ]
+        },
+        "categories": [
+          "phishing-indicators"
+        ],
+        "categoryWarnings": [],
+        "responseStatus": "Blocked",
+        "blocked": true,
+        "date": "2026-10-01T14:03:21.669Z"
+      },
+      "elapsedMs": 2684,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "offline URL explicitly discloses incomplete coverage and persists it",
+      "status": "passed",
+      "scan": {
+        "id": "c3ac19a5-6556-4e5d-a935-d43b49fd71bd",
+        "type": "URL",
+        "target": "example.com",
+        "content": "",
+        "score": 100,
+        "status": "Safe",
+        "risk": "low",
+        "action": "Allowed",
+        "summary": "No strong indicators were found in URL, reputation, redirect, and page checks.",
+        "warningSigns": [],
+        "recommendations": [
+          "Proceed with normal caution.",
+          "Continue monitoring for unusual sender or domain behavior."
+        ],
+        "recommendation": "Proceed with normal caution. Continue monitoring for unusual sender or domain behavior.",
+        "source": "public-web-scan",
+        "clientId": "cl_c1080828900dfe700bba71a7c5510263",
+        "submissionId": "5bdf0467-f8cd-4653-8e21-cf48c076f77f",
+        "processingStatus": "completed",
+        "methodologyVersion": "2026.10",
+        "contentRetained": false,
+        "expiresAt": "2026-10-31T14:03:24.680Z",
+        "threatIntel": [
+          {
+            "provider": "URL reputation",
+            "checked": false,
+            "found": false,
+            "skipped": "External reputation checks are disabled"
+          },
+          {
+            "provider": "Page inspection",
+            "checked": false,
+            "skipped": "Page inspection is disabled",
+            "found": false,
+            "deduction": 0
+          }
+        ],
+        "coverage": {
+          "status": "unavailable",
+          "checkedProviders": 0,
+          "totalProviders": 2,
+          "limitations": [
+            "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+            "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+          ]
+        },
+        "categories": [],
+        "categoryWarnings": [],
+        "responseStatus": null,
+        "blocked": false,
+        "date": "2026-10-01T14:03:24.680Z"
+      },
+      "elapsedMs": 2555,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "settings persist and Delete My Data removes this client data",
+      "status": "passed",
+      "saved": {
+        "reportEmails": [
+          "acceptance@example.invalid"
+        ],
+        "emailScanReports": false,
+        "emailHistoryDigest": false,
+        "mailConfigured": false,
+        "mailStatus": {
+          "configured": false,
+          "enabled": false,
+          "provider": null,
+          "missing": [
+            "RESEND_API_KEY",
+            "RESEND_FROM"
+          ],
+          "smtp": {
+            "configured": false,
+            "enabled": false,
+            "host": null,
+            "missing": [
+              "SMTP_HOST",
+              "SMTP_USER",
+              "SMTP_PASS"
+            ]
+          },
+          "resend": {
+            "configured": false,
+            "missing": [
+              "RESEND_API_KEY",
+              "RESEND_FROM"
+            ]
+          }
+        }
+      },
+      "deleted": {
+        "ok": true,
+        "deletedScans": 1,
+        "settingsDeleted": true
+      },
+      "elapsedMs": 3724,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "Delete Scan History persists and preserves a second browser client",
+      "status": "passed",
+      "deleted": {
+        "ok": true,
+        "deletedScans": 1,
+        "settingsDeleted": false
+      },
+      "preservedOtherScanId": "cf2fab3d-2750-45b3-a700-d9407233ba10",
+      "elapsedMs": 5245,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "partial preview roundtrip stays exact and creates no saved scan",
+      "status": "passed",
+      "snapshot": {
+        "target": "https://example.com/preview?case=partial&note=%E2%9C%93",
+        "status": "Safe",
+        "score": 87,
+        "summary": "E2E partial preview — exact & unchanged.",
+        "warningSigns": [
+          "Fixture warning: café & <text>"
+        ],
+        "recommendations": [
+          "Review this fixture before proceeding."
+        ],
+        "categories": [
+          "gambling-content"
+        ],
+        "categoryWarnings": [
+          "Fixture content category is not phishing evidence."
+        ],
+        "coverage": {
+          "status": "partial",
+          "checkedProviders": 1,
+          "totalProviders": 3,
+          "limitations": [
+            "Fixture coverage limitation: providers unavailable."
+          ],
+          "linksChecked": 1,
+          "totalLinks": 2
+        }
+      },
+      "scanPosts": 0,
+      "elapsedMs": 1926,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "unavailable preview roundtrip stays exact and creates no saved scan",
+      "status": "passed",
+      "snapshot": {
+        "target": "https://example.com/preview?case=unavailable&note=%E2%9C%93",
+        "status": "Safe",
+        "score": 87,
+        "summary": "E2E unavailable preview — exact & unchanged.",
+        "warningSigns": [
+          "Fixture warning: café & <text>"
+        ],
+        "recommendations": [
+          "Review this fixture before proceeding."
+        ],
+        "categories": [
+          "gambling-content"
+        ],
+        "categoryWarnings": [
+          "Fixture content category is not phishing evidence."
+        ],
+        "coverage": {
+          "status": "unavailable",
+          "checkedProviders": 0,
+          "totalProviders": 3,
+          "limitations": [
+            "Fixture coverage limitation: providers unavailable."
+          ],
+          "linksChecked": 1,
+          "totalLinks": 2
+        }
+      },
+      "scanPosts": 0,
+      "elapsedMs": 1964,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "local-only preview roundtrip stays exact and creates no saved scan",
+      "status": "passed",
+      "snapshot": {
+        "target": "https://example.com/preview?case=local-only&note=%E2%9C%93",
+        "status": "Safe",
+        "score": 87,
+        "summary": "E2E local-only preview — exact & unchanged.",
+        "warningSigns": [
+          "Fixture warning: café & <text>"
+        ],
+        "recommendations": [
+          "Review this fixture before proceeding."
+        ],
+        "categories": [
+          "gambling-content"
+        ],
+        "categoryWarnings": [
+          "Fixture content category is not phishing evidence."
+        ],
+        "coverage": {
+          "status": "local-only",
+          "checkedProviders": 0,
+          "totalProviders": 0,
+          "limitations": [
+            "Fixture coverage limitation: providers unavailable."
+          ],
+          "linksChecked": 1,
+          "totalLinks": 2
+        }
+      },
+      "scanPosts": 0,
+      "elapsedMs": 1886,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "legacy preview roundtrip stays exact and creates no saved scan",
+      "status": "passed",
+      "snapshot": {
+        "target": "https://example.com/preview?case=legacy&note=%E2%9C%93",
+        "status": "Safe",
+        "score": 87,
+        "summary": "E2E legacy preview — exact & unchanged.",
+        "warningSigns": [
+          "Fixture warning: café & <text>"
+        ],
+        "recommendations": [
+          "Review this fixture before proceeding."
+        ],
+        "categories": [
+          "gambling-content"
+        ],
+        "categoryWarnings": [
+          "Fixture content category is not phishing evidence."
+        ]
+      },
+      "scanPosts": 0,
+      "elapsedMs": 2130,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "malformed preview reports invalid data without a saved result",
+      "status": "passed",
+      "elapsedMs": 1100,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "mobile viewport keeps primary navigation and scan form usable",
+      "status": "passed",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "overflow": 0
+      },
+      "elapsedMs": 1792,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "admin evaluation runs real samples, displays counts and restores saved history",
+      "status": "passed",
+      "synthetic": {
+        "evaluated": 60,
+        "tp": 20,
+        "tn": 30,
+        "fp": 0,
+        "fn": 10
+      },
+      "elapsedMs": 6489,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    },
+    {
+      "name": "production OCR assets recognize text in an uploaded image",
+      "status": "passed",
+      "recognizedText": "OCR text:\nMeeting tomorrow at noon",
+      "elapsedMs": 2068,
+      "pageErrors": [],
+      "blockedExternalRequests": []
+    }
+  ],
+  "artifacts": "C:\\Users\\Bry\\AppData\\Local\\Temp\\tracking-threats-browser-acceptance-X2XVv3",
+  "playwright": "1.63.0",
+  "executablePath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "buildSha256": "915d54176f73d7a59f952e1796ba87799a3733882badfc8ecacbff1021f9a387",
+  "origin": "http://127.0.0.1:51686",
+  "browser": "154.0.4258.37",
+  "passed": 13,
+  "failed": 0,
+  "finishedAt": "2026-10-01T14:04:01.849Z"
+}

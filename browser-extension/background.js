@@ -521,14 +521,9 @@ function getBlockRule(host, ruleId) {
   return {
     id: ruleId,
     priority: 1,
-    action: {
-      type: 'redirect',
-      redirect: {
-        regexSubstitution: `${chrome.runtime.getURL('blocked.html')}?host=${encodeURIComponent(
-          host,
-        )}`,
-      },
-    },
+    // DNR redirects require destination-site host access. A block action works
+    // with declarativeNetRequest alone; the tab API opens our warning separately.
+    action: { type: 'block' },
     condition: {
       regexFilter: `^https?://([^/?#]+\\.)?${escapedHost}([/?#].*)?$`,
       resourceTypes: ['main_frame'],
@@ -743,6 +738,19 @@ async function saveStatus(status) {
       appUrl: getLinkedAppUrl(clientId),
     },
   })
+  await updateBadge(status)
+}
+
+async function updateBadge(status) {
+  if (!chrome.action) return
+  const incomplete = status.coverage?.status !== 'complete'
+  const text = !status.ok ? 'OFF' : ['Dangerous', 'Blocked'].includes(status.lastStatus) ? '!'
+    : status.lastStatus === 'Suspicious' ? '?' : incomplete ? '?' : 'OK'
+  const color = !status.ok ? '#64748b' : text === '!' ? '#be123c' : text === '?' ? '#b45309' : '#0f766e'
+  await Promise.all([
+    chrome.action.setBadgeText({ text }),
+    chrome.action.setBadgeBackgroundColor({ color }),
+  ]).catch(() => { /* Badge availability must not interrupt protection. */ })
 }
 
 async function getScannerError(response, label = 'Scanner') {
@@ -1107,45 +1115,47 @@ async function scanDownloadUrl(downloadItem, clientId) {
 }
 
 async function cancelDangerousDownload(downloadItem, scan) {
+  let cancelled = false
   try {
     await chrome.downloads.cancel(downloadItem.id)
+    cancelled = true
   } catch {
     // The download may already be complete or unavailable.
-  }
-
-  try {
-    await chrome.downloads.erase({ id: downloadItem.id })
-  } catch {
-    // Some browsers do not allow erasing immediately after cancel.
   }
 
   await saveStatus({
     ok: true,
     lastUrl: getDownloadFileName(downloadItem),
-    lastStatus: 'Blocked',
+    lastStatus: cancelled ? 'Blocked' : 'Dangerous',
     lastScore: scan?.score ?? 0,
+    coverage: scan?.coverage,
+    categories: scan?.categories,
+    ...(cancelled ? {} : { downloadWarning: 'Risk detected, but the browser could not cancel this download. It may already be complete.' }),
   })
   await notifyScanResult(downloadItem.url || getDownloadFileName(downloadItem), {
     ...scan,
     status: 'Dangerous',
-    blocked: true,
+    blocked: cancelled,
   })
+  return cancelled
 }
 
 async function scanDownload(downloadItem) {
   if (!downloadItem?.id) return null
-
+  let paused = false
+  let blocked = false
   try {
+    try { await chrome.downloads.pause(downloadItem.id); paused = true } catch { /* Browser may refuse to pause a completed download. */ }
     const clientId = await getClientId()
     const urlScan = await scanDownloadUrl(downloadItem, clientId)
     if (isBlockedScan(urlScan)) {
-      await cancelDangerousDownload(downloadItem, urlScan)
+      blocked = await cancelDangerousDownload(downloadItem, urlScan)
       return urlScan
     }
 
     const fileScan = await scanDownloadFile(downloadItem, clientId)
     if (isBlockedScan(fileScan)) {
-      await cancelDangerousDownload(downloadItem, fileScan)
+      blocked = await cancelDangerousDownload(downloadItem, fileScan)
       return fileScan
     }
 
@@ -1165,6 +1175,10 @@ async function scanDownload(downloadItem) {
       error: error.message,
     })
     return { ok: false, error: error.message }
+  } finally {
+    if (paused && !blocked) {
+      try { await chrome.downloads.resume(downloadItem.id) } catch { /* Download may have been removed. */ }
+    }
   }
 }
 
@@ -1259,6 +1273,23 @@ chrome.webNavigation.onCommitted.addListener((details) => {
 
 chrome.tabs.onRemoved.addListener((tabId) => tabRedirectChains.delete(tabId))
 
+chrome.webNavigation.onErrorOccurred?.addListener(async (details) => {
+  const host = getHost(details.url)
+  if (details.frameId !== 0 || !details.error?.includes('ERR_BLOCKED_BY_CLIENT') || !blockedHosts.has(host) || hasBypass(host)) return
+  const key = getBlockContextKey(host)
+  const stored = await chrome.storage.local.get(key)
+  const context = stored[key]
+  openBlockedPage(details.tabId, details.url, {
+    status: context?.status ?? 'Dangerous', score: context?.score ?? 0,
+    id: context?.scanId, warningSigns: context?.primaryWarning ? [context.primaryWarning] : [],
+  })
+})
+
+// History API navigations do not necessarily produce an onCommitted event.
+chrome.webNavigation.onHistoryStateUpdated?.addListener((details) => {
+  if (details.frameId === 0) handleTabUrl(details.tabId, details.url, 'history-state')
+})
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'scan-candidate-url' && message.url) {
     scanUrl(message.url, message.reason ?? 'content-script')
@@ -1343,7 +1374,11 @@ Promise.all([loadBlockedHosts(), loadBypassHosts(), loadAllowedHosts()])
     // Storage may be temporarily unavailable during extension startup.
   })
 
-setInterval(syncSafeHosts, SAFE_HOST_SYNC_MS)
+// MV3 workers suspend: alarms wake the worker, ordinary intervals do not.
+chrome.alarms.create('tracking-threats-safe-hosts', { periodInMinutes: Math.max(1, SAFE_HOST_SYNC_MS / 60000) })
+chrome.storage.local.get('threattrackStatus').then(({ threattrackStatus }) => {
+  if (threattrackStatus) return updateBadge(threattrackStatus)
+}).catch(() => {})
 
 async function reportExtensionUsage() {
   try {
@@ -1362,6 +1397,7 @@ async function reportExtensionUsage() {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'tracking-threats-usage') reportExtensionUsage()
+  if (alarm.name === 'tracking-threats-safe-hosts') syncSafeHosts().catch(() => {})
 })
 chrome.alarms.create('tracking-threats-usage', { periodInMinutes: 5 })
 reportExtensionUsage()

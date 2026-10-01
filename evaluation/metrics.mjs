@@ -26,7 +26,9 @@ export function confusion(rows, policy, thresholds = DEFAULT_THRESHOLDS) {
       else tn++
     }
   }
-  return { tp, fp, tn, fn, precision: ratio(tp, tp + fp), recall: ratio(tp, tp + fn), fpr: ratio(fp, fp + tn), falsePositiveIds, falseNegativeIds }
+  return { tp, fp, tn, fn, accuracy: ratio(tp + tn, tp + tn + fp + fn),
+    precision: ratio(tp, tp + fp), recall: ratio(tp, tp + fn),
+    f1: ratio(2 * tp, 2 * tp + fp + fn), fpr: ratio(fp, fp + tn), falsePositiveIds, falseNegativeIds }
 }
 export function latency(rows) {
   const samples = rows.map((row) => row.latencyMs).sort((a, b) => a - b)
@@ -57,7 +59,7 @@ export function compareReports(baseline, current) {
   // Recompute from predictions, never trust possibly stale summary counts.
   const before = summarize(selected, current.thresholds)
   const after = summarize(current.predictions, current.thresholds)
-  const difference = (old, now) => Object.fromEntries(['tp', 'fp', 'tn', 'fn', 'precision', 'recall', 'fpr'].map((key) => [key, old[key] === null || now[key] === null ? null : now[key] - old[key]]))
+  const difference = (old, now) => Object.fromEntries(['tp', 'fp', 'tn', 'fn', 'accuracy', 'precision', 'recall', 'f1', 'fpr'].map((key) => [key, old[key] === null || now[key] === null ? null : now[key] - old[key]]))
   const delta = (old, now) => ({ warning: difference(old.warning, now.warning), block: difference(old.block, now.block), latencyMeanMs: old.latency.meanMs === null || now.latency.meanMs === null ? null : now.latency.meanMs - old.latency.meanMs })
   return {
     direction: 'current minus baseline; lower FPR is better, higher recall/precision is better; null means undefined',

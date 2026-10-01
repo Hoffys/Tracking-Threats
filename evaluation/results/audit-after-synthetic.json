@@ -1,0 +1,3721 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-01T08:59:34.479Z",
+  "nodeVersion": "v24.21.0",
+  "scanner": "production-shared/local",
+  "source": {
+    "files": [
+      {
+        "path": "backend/services/emailAnalyzer.js",
+        "sha256": "5813c313a8e90f829459692e00eeeeca92fe69a4cc1543f594dbe7ae6139c0e7"
+      },
+      {
+        "path": "backend/services/messageScanner.js",
+        "sha256": "97ded1a3e40855086401fa4e5a4ed2539c5d1fb2964c19be4c0f8b3bd0c4d2ff"
+      },
+      {
+        "path": "backend/services/riskScorer.js",
+        "sha256": "7f5fbb8b871c978fd46e66e0d3e98a410c427f5ba79942e9d5e003baeda33ff6"
+      },
+      {
+        "path": "backend/services/urlLexicalFeatures.js",
+        "sha256": "1a1cbef0c725911f69fdf648ab4bc523613d5bb7aaaf79305be6ace8cdb2205c"
+      },
+      {
+        "path": "backend/services/urlLexicalModel.js",
+        "sha256": "2aab72e77af368fedad1a2c227855bf28319ad6c1fcc6e5fcd5191eb09fb743c"
+      },
+      {
+        "path": "backend/services/urlScanner.js",
+        "sha256": "790821013f8cf65ac14ed66156f2dfa96bd834316c81bf28fd0aeb0f05b1492e"
+      },
+      {
+        "path": "node_modules/tldts/dist/cjs/index.js",
+        "sha256": "dcbb58d1c1903cde0bf3086a1ffe107b3ded61e0496fa8e1704727c603132dea"
+      },
+      {
+        "path": "node_modules/tldts/package.json",
+        "sha256": "ee6f509afc31ee935e7b68bb6d50c80a64cbeb31b0c8ad6bf38922f984c891da"
+      }
+    ]
+  },
+  "datasetHash": "49f78d2c9a91c1063477e439f49f5576590b5b5a3eb2e50813c093ec6d2e28d4",
+  "selectedSplit": "all",
+  "evidence": {
+    "syntheticRows": 60,
+    "externallyLabeledRows": 0,
+    "statement": "SYNTHETIC regression fixtures only. These metrics are not real-world accuracy estimates. Independent real-world evaluation is outstanding."
+  },
+  "thresholds": {
+    "warningBelow": 80,
+    "blockAtMost": 50
+  },
+  "policy": "Primary warning: Appears Safe (80–100) = Negative; Caution (>50 and <80) and Risk Detected (0–50) = Positive. Secondary block: Caution = Negative. Scores are safety scores, not probabilities.",
+  "latencyMethod": "One serial call per case using performance.now(), in milliseconds; imports, validation and reporting excluded. No warmup; order, JIT, host load and instrumentation affect timings. Not endpoint/network or throughput latency.",
+  "metrics": {
+    "overall": {
+      "count": 60,
+      "warning": {
+        "tp": 20,
+        "fp": 0,
+        "tn": 30,
+        "fn": 10,
+        "accuracy": 0.8333333333333334,
+        "precision": 1,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "fpr": 0,
+        "falsePositiveIds": [],
+        "falseNegativeIds": [
+          "H-url-10",
+          "H-message-08",
+          "H-url-09",
+          "H-message-09",
+          "H-email-10",
+          "H-email-09",
+          "H-message-10",
+          "T-message-09",
+          "T-url-10",
+          "T-email-08"
+        ]
+      },
+      "block": {
+        "tp": 19,
+        "fp": 0,
+        "tn": 30,
+        "fn": 11,
+        "accuracy": 0.8166666666666667,
+        "precision": 1,
+        "recall": 0.6333333333333333,
+        "f1": 0.7755102040816326,
+        "fpr": 0,
+        "falsePositiveIds": [],
+        "falseNegativeIds": [
+          "H-url-10",
+          "H-message-08",
+          "H-url-09",
+          "H-message-09",
+          "T-url-09",
+          "H-email-10",
+          "H-email-09",
+          "H-message-10",
+          "T-message-09",
+          "T-url-10",
+          "T-email-08"
+        ]
+      },
+      "latency": {
+        "count": 60,
+        "meanMs": 0.7250466666666493,
+        "p50Ms": 0.31799999999998363,
+        "p95Ms": 3.031600000000026,
+        "maxMs": 6.657100000000014
+      }
+    },
+    "bySplit": {
+      "tuning": {
+        "count": 30,
+        "warning": {
+          "tp": 12,
+          "fp": 0,
+          "tn": 15,
+          "fn": 3,
+          "accuracy": 0.9,
+          "precision": 1,
+          "recall": 0.8,
+          "f1": 0.8888888888888888,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09",
+            "T-url-10",
+            "T-email-08"
+          ]
+        },
+        "block": {
+          "tp": 11,
+          "fp": 0,
+          "tn": 15,
+          "fn": 4,
+          "accuracy": 0.8666666666666667,
+          "precision": 1,
+          "recall": 0.7333333333333333,
+          "f1": 0.8461538461538461,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-09",
+            "T-message-09",
+            "T-url-10",
+            "T-email-08"
+          ]
+        },
+        "latency": {
+          "count": 30,
+          "meanMs": 0.6010733333333178,
+          "p50Ms": 0.2700999999999567,
+          "p95Ms": 3.031600000000026,
+          "maxMs": 3.219500000000039
+        }
+      },
+      "held-out": {
+        "count": 30,
+        "warning": {
+          "tp": 8,
+          "fp": 0,
+          "tn": 15,
+          "fn": 7,
+          "accuracy": 0.7666666666666667,
+          "precision": 1,
+          "recall": 0.5333333333333333,
+          "f1": 0.6956521739130435,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-message-08",
+            "H-url-09",
+            "H-message-09",
+            "H-email-10",
+            "H-email-09",
+            "H-message-10"
+          ]
+        },
+        "block": {
+          "tp": 8,
+          "fp": 0,
+          "tn": 15,
+          "fn": 7,
+          "accuracy": 0.7666666666666667,
+          "precision": 1,
+          "recall": 0.5333333333333333,
+          "f1": 0.6956521739130435,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-message-08",
+            "H-url-09",
+            "H-message-09",
+            "H-email-10",
+            "H-email-09",
+            "H-message-10"
+          ]
+        },
+        "latency": {
+          "count": 30,
+          "meanMs": 0.8490199999999807,
+          "p50Ms": 0.31799999999998363,
+          "p95Ms": 4.049499999999966,
+          "maxMs": 6.657100000000014
+        }
+      }
+    },
+    "byKind": {
+      "url": {
+        "count": 20,
+        "warning": {
+          "tp": 7,
+          "fp": 0,
+          "tn": 10,
+          "fn": 3,
+          "accuracy": 0.85,
+          "precision": 1,
+          "recall": 0.7,
+          "f1": 0.8235294117647058,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09",
+            "T-url-10"
+          ]
+        },
+        "block": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09",
+            "T-url-09",
+            "T-url-10"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 0.8621449999999754,
+          "p50Ms": 0.25130000000001473,
+          "p95Ms": 3.219500000000039,
+          "maxMs": 6.657100000000014
+        }
+      },
+      "message": {
+        "count": 20,
+        "warning": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "T-message-09"
+          ]
+        },
+        "block": {
+          "tp": 6,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09",
+            "H-message-10",
+            "T-message-09"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 0.5249249999999961,
+          "p50Ms": 0.1349999999999909,
+          "p95Ms": 2.60349999999994,
+          "maxMs": 3.031600000000026
+        }
+      },
+      "email": {
+        "count": 20,
+        "warning": {
+          "tp": 7,
+          "fp": 0,
+          "tn": 10,
+          "fn": 3,
+          "accuracy": 0.85,
+          "precision": 1,
+          "recall": 0.7,
+          "f1": 0.8235294117647058,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-email-10",
+            "H-email-09",
+            "T-email-08"
+          ]
+        },
+        "block": {
+          "tp": 7,
+          "fp": 0,
+          "tn": 10,
+          "fn": 3,
+          "accuracy": 0.85,
+          "precision": 1,
+          "recall": 0.7,
+          "f1": 0.8235294117647058,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-email-10",
+            "H-email-09",
+            "T-email-08"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 0.7880699999999763,
+          "p50Ms": 0.4027999999999565,
+          "p95Ms": 2.9799999999999045,
+          "maxMs": 4.049499999999966
+        }
+      }
+    },
+    "bySplitAndKind": {
+      "tuning/url": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "accuracy": 0.9,
+          "precision": 1,
+          "recall": 0.8,
+          "f1": 0.8888888888888888,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-10"
+          ]
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-url-09",
+            "T-url-10"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.6809099999999717,
+          "p50Ms": 0.21079999999994925,
+          "p95Ms": 3.219500000000039,
+          "maxMs": 3.219500000000039
+        }
+      },
+      "tuning/message": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "accuracy": 0.9,
+          "precision": 1,
+          "recall": 0.8,
+          "f1": 0.8888888888888888,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09"
+          ]
+        },
+        "block": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "accuracy": 0.9,
+          "precision": 1,
+          "recall": 0.8,
+          "f1": 0.8888888888888888,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-message-09"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.4815800000000081,
+          "p50Ms": 0.1349999999999909,
+          "p95Ms": 3.031600000000026,
+          "maxMs": 3.031600000000026
+        }
+      },
+      "tuning/email": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "accuracy": 0.9,
+          "precision": 1,
+          "recall": 0.8,
+          "f1": 0.8888888888888888,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-email-08"
+          ]
+        },
+        "block": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "accuracy": 0.9,
+          "precision": 1,
+          "recall": 0.8,
+          "f1": 0.8888888888888888,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "T-email-08"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.6407299999999736,
+          "p50Ms": 0.36029999999993834,
+          "p95Ms": 2.9799999999999045,
+          "maxMs": 2.9799999999999045
+        }
+      },
+      "held-out/url": {
+        "count": 10,
+        "warning": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09"
+          ]
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 1.043379999999979,
+          "p50Ms": 0.25130000000001473,
+          "p95Ms": 6.657100000000014,
+          "maxMs": 6.657100000000014
+        }
+      },
+      "held-out/message": {
+        "count": 10,
+        "warning": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 5,
+          "fn": 3,
+          "accuracy": 0.7,
+          "precision": 1,
+          "recall": 0.4,
+          "f1": 0.5714285714285714,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09",
+            "H-message-10"
+          ]
+        },
+        "block": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 5,
+          "fn": 3,
+          "accuracy": 0.7,
+          "precision": 1,
+          "recall": 0.4,
+          "f1": 0.5714285714285714,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09",
+            "H-message-10"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.5682699999999841,
+          "p50Ms": 0.12800000000004275,
+          "p95Ms": 2.60349999999994,
+          "maxMs": 2.60349999999994
+        }
+      },
+      "held-out/email": {
+        "count": 10,
+        "warning": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-email-10",
+            "H-email-09"
+          ]
+        },
+        "block": {
+          "tp": 3,
+          "fp": 0,
+          "tn": 5,
+          "fn": 2,
+          "accuracy": 0.8,
+          "precision": 1,
+          "recall": 0.6,
+          "f1": 0.75,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-email-10",
+            "H-email-09"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 0.935409999999979,
+          "p50Ms": 0.4027999999999565,
+          "p95Ms": 4.049499999999966,
+          "maxMs": 4.049499999999966
+        }
+      }
+    }
+  },
+  "predictions": [
+    {
+      "id": "H-url-10",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 6.657100000000014
+    },
+    {
+      "id": "T-url-01",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 3.219500000000039
+    },
+    {
+      "id": "T-url-06",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 1.1360999999999422
+    },
+    {
+      "id": "T-message-03",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 3.031600000000026
+    },
+    {
+      "id": "H-message-08",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 2.60349999999994
+    },
+    {
+      "id": "H-url-02",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1.6820999999999913
+    },
+    {
+      "id": "T-email-06",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 2.9799999999999045
+    },
+    {
+      "id": "H-email-01",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1.4839999999999236
+    },
+    {
+      "id": "T-url-08",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 40,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.6786999999999352
+    },
+    {
+      "id": "H-email-05",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.3605000000000018
+    },
+    {
+      "id": "H-url-09",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.4844999999999118
+    },
+    {
+      "id": "T-email-02",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.36029999999993834
+    },
+    {
+      "id": "H-url-06",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 25,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.2858999999999696
+    },
+    {
+      "id": "T-email-01",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.46649999999999636
+    },
+    {
+      "id": "H-url-07",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 50,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.21269999999992706
+    },
+    {
+      "id": "H-message-05",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.4111000000000331
+    },
+    {
+      "id": "H-message-09",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.19049999999992906
+    },
+    {
+      "id": "T-message-01",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.1066000000000713
+    },
+    {
+      "id": "T-message-07",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 0,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.5088000000000648
+    },
+    {
+      "id": "T-email-04",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.33140000000003056
+    },
+    {
+      "id": "T-url-07",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 50,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.4615000000000009
+    },
+    {
+      "id": "H-url-04",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.20069999999998345
+    },
+    {
+      "id": "T-url-09",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 65,
+      "status": "Suspicious",
+      "warning": true,
+      "block": false,
+      "latencyMs": 0.16550000000006548
+    },
+    {
+      "id": "T-email-03",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.2700999999999567
+    },
+    {
+      "id": "T-message-06",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 18,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.1349999999999909
+    },
+    {
+      "id": "H-email-03",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.4294999999999618
+    },
+    {
+      "id": "H-email-10",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.31799999999998363
+    },
+    {
+      "id": "T-url-04",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.20069999999998345
+    },
+    {
+      "id": "H-url-08",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 35,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.2717000000000098
+    },
+    {
+      "id": "T-message-04",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.10630000000003292
+    },
+    {
+      "id": "H-message-07",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 1.630899999999997
+    },
+    {
+      "id": "H-url-05",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.25130000000001473
+    },
+    {
+      "id": "T-message-08",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.3380000000000791
+    },
+    {
+      "id": "H-message-04",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.08309999999994488
+    },
+    {
+      "id": "H-email-09",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.4027999999999565
+    },
+    {
+      "id": "H-email-02",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.3530000000000655
+    },
+    {
+      "id": "T-message-10",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.08590000000003783
+    },
+    {
+      "id": "T-message-05",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.2398999999999205
+    },
+    {
+      "id": "H-message-10",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.080600000000004
+    },
+    {
+      "id": "H-url-01",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.20420000000001437
+    },
+    {
+      "id": "H-message-06",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.4151000000000522
+    },
+    {
+      "id": "H-message-03",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.12800000000004275
+    },
+    {
+      "id": "T-email-07",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.6123999999999796
+    },
+    {
+      "id": "H-email-04",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.6619000000000597
+    },
+    {
+      "id": "T-message-09",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.08209999999996853
+    },
+    {
+      "id": "T-url-03",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.3748999999999114
+    },
+    {
+      "id": "H-email-08",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.9820999999999458
+    },
+    {
+      "id": "H-message-01",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.10349999999993997
+    },
+    {
+      "id": "H-email-06",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 4.049499999999966
+    },
+    {
+      "id": "T-email-05",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.5137999999999465
+    },
+    {
+      "id": "H-email-07",
+      "split": "held-out",
+      "kind": "email",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.3127999999999247
+    },
+    {
+      "id": "H-url-03",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.1835999999999558
+    },
+    {
+      "id": "T-url-10",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.1555999999999358
+    },
+    {
+      "id": "T-message-02",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.1815999999998894
+    },
+    {
+      "id": "T-email-10",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.23029999999994288
+    },
+    {
+      "id": "T-url-02",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.2057999999999538
+    },
+    {
+      "id": "T-email-09",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.47460000000000946
+    },
+    {
+      "id": "T-url-05",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.21079999999994925
+    },
+    {
+      "id": "T-email-08",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.16790000000003147
+    },
+    {
+      "id": "H-message-02",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.0363999999999578
+    }
+  ],
+  "dataset": "synthetic",
+  "mode": "local",
+  "execution": "Same production local detector functions only. Online reputation, page inspection and email authentication were NOT run.",
+  "sample": {
+    "imported": 60,
+    "eligible": 60,
+    "requested": 60,
+    "selected": 60,
+    "evaluated": 60,
+    "phishing": 30,
+    "legitimate": 30,
+    "excludedTuning": 0,
+    "notSelected": 0,
+    "failed": 0,
+    "invalidLoadedRows": 0,
+    "sourceImportSkipped": 0,
+    "sourceImportSkippedNote": "Validated internal fixtures",
+    "unreachablePageChecks": 0,
+    "sampling": "Deterministic alternating labels, ordered within label by SHA-256(case ID); no PRNG seed. Existing PhiUSIIL importer used SHA-256(URL), one URL per domain group.",
+    "seed": null,
+    "source": "evaluation/fixtures"
+  },
+  "limitations": [
+    "No new ML or threshold tuning. Existing active lexical model was trained on PhiUSIIL tuning rows; held-out rows were previously examined and are not a fresh blind test.",
+    "Unavailable reputation/page checks do not remove a prediction from metrics and never count as successful clean checks.",
+    "Original PhiUSIIL source import exclusions are unknown. Only the selected validated sample is evaluated."
+  ],
+  "failures": [],
+  "analyses": [
+    {
+      "id": "H-url-10",
+      "inputReference": "Dataset case H-url-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-url-01",
+      "inputReference": "Dataset case T-url-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-url-06",
+      "inputReference": "Dataset case T-url-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible paypal impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Possible paypal impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "An already concerning URL also uses unencrypted HTTP",
+        "URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-message-03",
+      "inputReference": "Dataset case T-message-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-08",
+      "inputReference": "Dataset case H-message-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-02",
+      "inputReference": "Dataset case H-url-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-06",
+      "inputReference": "Dataset case T-email-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Sender: Possible microsoft impersonation on an unrelated registrable domain",
+          "deduction": 30
+        },
+        {
+          "code": "account-request-link",
+          "label": "Content: Account or identity action is requested alongside a link",
+          "deduction": 12
+        },
+        {
+          "code": "request-pressure",
+          "label": "Content: Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Content: Possible microsoft impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Content: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "Content: An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "Content: URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Sender: Possible microsoft impersonation on an unrelated registrable domain",
+        "Content: Account or identity action is requested alongside a link",
+        "Content: Urgency accompanies a sensitive request or concerning link",
+        "Content: Possible microsoft impersonation on an unrelated registrable domain",
+        "Content: Credential wording accompanies destination deception or an IP address",
+        "Content: An already concerning URL also uses unencrypted HTTP",
+        "Content: URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-01",
+      "inputReference": "Dataset case H-email-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-08",
+      "inputReference": "Dataset case T-url-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 40,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible amazon impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "Possible amazon impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-email-05",
+      "inputReference": "Dataset case H-email-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-09",
+      "inputReference": "Dataset case H-url-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-02",
+      "inputReference": "Dataset case T-email-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-06",
+      "inputReference": "Dataset case H-url-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 25,
+      "triggeredIndicators": [
+        {
+          "code": "url-userinfo",
+          "label": "URL includes credentials or text before @ that can conceal the destination",
+          "deduction": 30
+        },
+        {
+          "code": "deceptive-userinfo",
+          "label": "URL username resembles a trusted destination but the actual host follows @",
+          "deduction": 25
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "URL includes credentials or text before @ that can conceal the destination",
+        "URL username resembles a trusted destination but the actual host follows @",
+        "Credential wording accompanies destination deception or an IP address"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-01",
+      "inputReference": "Dataset case T-email-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-07",
+      "inputReference": "Dataset case H-url-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 50,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible facebook impersonation on an unrelated registrable domain",
+          "deduction": 30
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "Possible facebook impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-message-05",
+      "inputReference": "Dataset case H-message-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-09",
+      "inputReference": "Dataset case H-message-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-01",
+      "inputReference": "Dataset case T-message-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-07",
+      "inputReference": "Dataset case T-message-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 0,
+      "triggeredIndicators": [
+        {
+          "code": "secret-request",
+          "label": "Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        },
+        {
+          "code": "advance-fee",
+          "label": "Requests payment to obtain a prize or reward",
+          "deduction": 50
+        },
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        }
+      ],
+      "warnings": [
+        "Directly asks the recipient to disclose a secret",
+        "Requests payment to obtain a prize or reward",
+        "Urgency accompanies a sensitive request or concerning link"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-email-04",
+      "inputReference": "Dataset case T-email-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-07",
+      "inputReference": "Dataset case T-url-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 50,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible google impersonation on an unrelated registrable domain",
+          "deduction": 30
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "Possible google impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-url-04",
+      "inputReference": "Dataset case H-url-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-url-09",
+      "inputReference": "Dataset case T-url-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Suspicious",
+      "score": 65,
+      "triggeredIndicators": [
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "ip-destination",
+          "label": "URL uses an IP address; its owner cannot be inferred from a domain",
+          "deduction": 10
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        }
+      ],
+      "warnings": [
+        "Credential wording accompanies destination deception or an IP address",
+        "URL uses an IP address; its owner cannot be inferred from a domain",
+        "An already concerning URL also uses unencrypted HTTP"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "contextual-idn",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-03",
+      "inputReference": "Dataset case T-email-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-06",
+      "inputReference": "Dataset case T-message-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 18,
+      "triggeredIndicators": [
+        {
+          "code": "secret-request",
+          "label": "Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        },
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "account-threat",
+          "label": "Threatens account loss alongside a sensitive request or concerning link",
+          "deduction": 15
+        }
+      ],
+      "warnings": [
+        "Directly asks the recipient to disclose a secret",
+        "Urgency accompanies a sensitive request or concerning link",
+        "Threatens account loss alongside a sensitive request or concerning link"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-03",
+      "inputReference": "Dataset case H-email-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-10",
+      "inputReference": "Dataset case H-email-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [
+        {
+          "code": "secret-entry",
+          "label": "Content: Asks for secret entry; verify the destination before proceeding",
+          "deduction": 12
+        }
+      ],
+      "warnings": [
+        "Content: Asks for secret entry; verify the destination before proceeding"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-04",
+      "inputReference": "Dataset case T-url-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-url-08",
+      "inputReference": "Dataset case H-url-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 35,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible bpi impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        }
+      ],
+      "warnings": [
+        "Possible bpi impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "An already concerning URL also uses unencrypted HTTP"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-message-04",
+      "inputReference": "Dataset case T-message-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-07",
+      "inputReference": "Dataset case H-message-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Possible apple impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Urgency accompanies a sensitive request or concerning link",
+        "Possible apple impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "An already concerning URL also uses unencrypted HTTP",
+        "URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-05",
+      "inputReference": "Dataset case H-url-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-message-08",
+      "inputReference": "Dataset case T-message-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Possible gcash impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Urgency accompanies a sensitive request or concerning link",
+        "Possible gcash impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "An already concerning URL also uses unencrypted HTTP",
+        "URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-04",
+      "inputReference": "Dataset case H-message-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-09",
+      "inputReference": "Dataset case H-email-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-02",
+      "inputReference": "Dataset case H-email-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-10",
+      "inputReference": "Dataset case T-message-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [
+        {
+          "code": "secret-request",
+          "label": "Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        },
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        }
+      ],
+      "warnings": [
+        "Directly asks the recipient to disclose a secret",
+        "Urgency accompanies a sensitive request or concerning link"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-05",
+      "inputReference": "Dataset case T-message-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-10",
+      "inputReference": "Dataset case H-message-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-01",
+      "inputReference": "Dataset case H-url-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-message-06",
+      "inputReference": "Dataset case H-message-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "secret-entry",
+          "label": "Asks for secret entry; verify the destination before proceeding",
+          "deduction": 12
+        },
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "account-threat",
+          "label": "Threatens account loss alongside a sensitive request or concerning link",
+          "deduction": 15
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Possible bdo impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Asks for secret entry; verify the destination before proceeding",
+        "Urgency accompanies a sensitive request or concerning link",
+        "Threatens account loss alongside a sensitive request or concerning link",
+        "Possible bdo impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "An already concerning URL also uses unencrypted HTTP",
+        "URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-03",
+      "inputReference": "Dataset case H-message-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-email-07",
+      "inputReference": "Dataset case T-email-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Sender: Possible paypal impersonation on an unrelated registrable domain",
+          "deduction": 30
+        },
+        {
+          "code": "secret-request",
+          "label": "Content: Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        },
+        {
+          "code": "request-pressure",
+          "label": "Content: Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Content: Possible paypal impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Content: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "Content: An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "Content: URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Sender: Possible paypal impersonation on an unrelated registrable domain",
+        "Content: Directly asks the recipient to disclose a secret",
+        "Content: Urgency accompanies a sensitive request or concerning link",
+        "Content: Possible paypal impersonation on an unrelated registrable domain",
+        "Content: Credential wording accompanies destination deception or an IP address",
+        "Content: An already concerning URL also uses unencrypted HTTP",
+        "Content: URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-04",
+      "inputReference": "Dataset case H-email-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-09",
+      "inputReference": "Dataset case T-message-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-03",
+      "inputReference": "Dataset case T-url-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-email-08",
+      "inputReference": "Dataset case H-email-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "sender-brand-claim",
+          "label": "Sender: Sender claims facebook while requesting sensitive action from an unrelated domain",
+          "deduction": 25
+        },
+        {
+          "code": "request-pressure",
+          "label": "Content: Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Content: Possible facebook impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Content: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "Content: An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "Content: URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Sender: Sender claims facebook while requesting sensitive action from an unrelated domain",
+        "Content: Urgency accompanies a sensitive request or concerning link",
+        "Content: Possible facebook impersonation on an unrelated registrable domain",
+        "Content: Credential wording accompanies destination deception or an IP address",
+        "Content: An already concerning URL also uses unencrypted HTTP",
+        "Content: URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-01",
+      "inputReference": "Dataset case H-message-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-06",
+      "inputReference": "Dataset case H-email-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "sender-brand-claim",
+          "label": "Sender: Sender claims apple while requesting sensitive action from an unrelated domain",
+          "deduction": 25
+        },
+        {
+          "code": "secret-entry",
+          "label": "Content: Asks for secret entry; verify the destination before proceeding",
+          "deduction": 12
+        },
+        {
+          "code": "request-pressure",
+          "label": "Content: Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "account-threat",
+          "label": "Content: Threatens account loss alongside a sensitive request or concerning link",
+          "deduction": 15
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Content: Possible apple impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Content: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "Content: An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "Content: URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Sender: Sender claims apple while requesting sensitive action from an unrelated domain",
+        "Content: Asks for secret entry; verify the destination before proceeding",
+        "Content: Urgency accompanies a sensitive request or concerning link",
+        "Content: Threatens account loss alongside a sensitive request or concerning link",
+        "Content: Possible apple impersonation on an unrelated registrable domain",
+        "Content: Credential wording accompanies destination deception or an IP address",
+        "Content: An already concerning URL also uses unencrypted HTTP",
+        "Content: URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-email-05",
+      "inputReference": "Dataset case T-email-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-07",
+      "inputReference": "Dataset case H-email-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [
+        {
+          "code": "sender-brand-claim",
+          "label": "Sender: Sender claims shopee while requesting sensitive action from an unrelated domain",
+          "deduction": 25
+        },
+        {
+          "code": "secret-request",
+          "label": "Content: Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        }
+      ],
+      "warnings": [
+        "Sender: Sender claims shopee while requesting sensitive action from an unrelated domain",
+        "Content: Directly asks the recipient to disclose a secret"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-03",
+      "inputReference": "Dataset case H-url-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-url-10",
+      "inputReference": "Dataset case T-url-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-message-02",
+      "inputReference": "Dataset case T-message-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-email-10",
+      "inputReference": "Dataset case T-email-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [
+        {
+          "code": "secret-request",
+          "label": "Content: Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        }
+      ],
+      "warnings": [
+        "Content: Directly asks the recipient to disclose a secret"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-02",
+      "inputReference": "Dataset case T-url-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-09",
+      "inputReference": "Dataset case T-email-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Sender: Possible netflix impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Sender: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "sender-brand-claim",
+          "label": "Sender: Sender claims netflix while requesting sensitive action from an unrelated domain",
+          "deduction": 25
+        },
+        {
+          "code": "request-pressure",
+          "label": "Content: Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Content: Possible netflix impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Content: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "Content: An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "Content: URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Sender: Possible netflix impersonation on an unrelated registrable domain",
+        "Sender: Credential wording accompanies destination deception or an IP address",
+        "Sender: Sender claims netflix while requesting sensitive action from an unrelated domain",
+        "Content: Urgency accompanies a sensitive request or concerning link",
+        "Content: Possible netflix impersonation on an unrelated registrable domain",
+        "Content: Credential wording accompanies destination deception or an IP address",
+        "Content: An already concerning URL also uses unencrypted HTTP",
+        "Content: URL pattern resembles labeled phishing URLs"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-05",
+      "inputReference": "Dataset case T-url-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-08",
+      "inputReference": "Dataset case T-email-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-02",
+      "inputReference": "Dataset case H-message-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    }
+  ],
+  "errorAnalysis": [
+    {
+      "id": "H-url-10",
+      "inputReference": "Dataset case H-url-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-message-08",
+      "inputReference": "Dataset case H-message-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-url-09",
+      "inputReference": "Dataset case H-url-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-message-09",
+      "inputReference": "Dataset case H-message-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-09",
+      "inputReference": "Dataset case T-url-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Suspicious",
+      "score": 65,
+      "triggeredIndicators": [
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "ip-destination",
+          "label": "URL uses an IP address; its owner cannot be inferred from a domain",
+          "deduction": 10
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        }
+      ],
+      "warnings": [
+        "Credential wording accompanies destination deception or an IP address",
+        "URL uses an IP address; its owner cannot be inferred from a domain",
+        "An already concerning URL also uses unencrypted HTTP"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "contextual-idn",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "H-email-10",
+      "inputReference": "Dataset case H-email-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [
+        {
+          "code": "secret-entry",
+          "label": "Content: Asks for secret entry; verify the destination before proceeding",
+          "deduction": 12
+        }
+      ],
+      "warnings": [
+        "Content: Asks for secret entry; verify the destination before proceeding"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-email-09",
+      "inputReference": "Dataset case H-email-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "H-message-10",
+      "inputReference": "Dataset case H-message-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-message-09",
+      "inputReference": "Dataset case T-message-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    },
+    {
+      "id": "T-url-10",
+      "inputReference": "Dataset case T-url-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Page content, redirects, and domain registration were not checked."
+        ]
+      }
+    },
+    {
+      "id": "T-email-08",
+      "inputReference": "Dataset case T-email-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched."
+        ]
+      }
+    }
+  ]
+}

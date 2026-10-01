@@ -1,16 +1,8 @@
 import { dbPromise, fromJson, toJson } from '../db/database.js'
-import { analyzeEmail } from '../services/emailAnalyzer.js'
-import { scanFile } from '../services/fileScanner.js'
-import { scanMessage } from '../services/messageScanner.js'
+import { detectUrl, detectMessage, detectEmail, detectFile } from '../services/detectionPipeline.js'
 import { sendScanReport } from '../services/mailReporter.js'
-import { enrichPageInspection, enrichPageSnapshot } from '../services/pageInspector.js'
-import { enrichEmailAuthentication } from '../services/emailAuthentication.js'
-import { extractLinks } from '../services/messageScanner.js'
 import { isMarkedSafeUrlTarget } from '../services/safeHosts.js'
-import { enrichUrlAnalysis } from '../services/threatIntel.js'
-import { enrichContentLinks } from '../services/linkReputation.js'
 import { localCoverage } from '../services/coverage.js'
-import { scanUrl } from '../services/urlScanner.js'
 import {
   completeScanSubmission,
   createScanSubmission,
@@ -457,9 +449,7 @@ export async function createUrlScan(target, source = 'api', clientId = null, pri
       })
     }
 
-    const baseAnalysis = scanUrl(target)
-    const remoteAnalysis = await enrichPageInspection(target, await enrichUrlAnalysis(target, baseAnalysis))
-    const analysis = await enrichPageSnapshot(pageSnapshot, remoteAnalysis)
+    const analysis = await detectUrl(target, { pageSnapshot })
     return persistScan({
       type: 'URL',
       target,
@@ -494,8 +484,7 @@ export async function previewUrlScan(target) {
     }
   }
 
-  const baseAnalysis = scanUrl(target)
-  const analysis = await enrichUrlAnalysis(target, baseAnalysis)
+  const analysis = await detectUrl(target, { preview: true })
 
   return {
     type: 'URL',
@@ -527,7 +516,7 @@ export async function createMessageScan(
   return runWithSubmission(
     { type: 'Message', target, content, source, clientId },
     async (submissionId) => {
-      const analysis = await enrichContentLinks(content, scanMessage(content))
+      const analysis = await detectMessage(content)
       const storedTarget = shouldStoreScanContent() ? target : 'Public message scan'
       const scan = await persistScan({
         type: 'Message',
@@ -564,11 +553,7 @@ export async function createEmailScan(
   return runWithSubmission(
     { type: 'Email', target, content, source, clientId },
     async (submissionId) => {
-      const linkAnalysis = await enrichContentLinks(content, analyzeEmail({ sender, subject, body }))
-      const analysis = await enrichEmailAuthentication(
-        { rawEmail, smtpClientIp, smtpHelo, envelopeFrom },
-        linkAnalysis,
-      )
+      const analysis = await detectEmail({ sender, subject, body, rawEmail, smtpClientIp, smtpHelo, envelopeFrom })
       const storedSender = shouldStoreScanContent()
         ? sender || 'Unknown sender'
         : getEmailDomain(sender) || 'Sender redacted'
@@ -599,10 +584,7 @@ export async function createFileScan(
   return runWithSubmission(
     { type: 'File', target, content, source, clientId },
     async (submissionId) => {
-      const baseAnalysis = await scanFile({ fileName, mimeType, size, content, sha256 })
-      const analysis = extractLinks(content).length > 0
-        ? await enrichContentLinks(content, baseAnalysis)
-        : baseAnalysis
+      const analysis = await detectFile({ fileName, mimeType, size, content, sha256 })
       return persistScan({
         type: 'File',
         target,

@@ -63,6 +63,7 @@ function backendEnvironment(port) {
     RESEND_API_KEY: '', RESEND_FROM: '', REPUTATION_ENABLED: 'false',
     URLHAUS_AUTH_KEY: '', VIRUSTOTAL_API_KEY: '', GOOGLE_SAFE_BROWSING_API_KEY: '',
     PHISHTANK_APP_KEY: '', ABUSEIPDB_API_KEY: '',
+    ADMIN_API_TOKEN: 'isolated-browser-audit-admin',
     FRONTEND_ORIGIN: `http://127.0.0.1:${port}`, CORS_ALLOW_NO_ORIGIN: 'true',
   }
 }
@@ -302,8 +303,8 @@ async function run() {
         await expect(preview.getByText(item, { exact: true }).first()).toBeVisible()
       }
       await expect(preview).toContainText(label)
-      await expect(preview).toContainText('Appears safe')
-      await expect(preview).toContainText('not a guarantee of safety')
+      await expect(preview).toContainText('No phishing indicators')
+      await expect(preview).toContainText('content warning found')
       await expect(preview).toContainText('These content categories do not establish phishing.')
       await expect(preview).toContainText('It has not been saved to scan history.')
       if (snapshot.coverage) {
@@ -338,8 +339,53 @@ async function run() {
     await expect(page.getByRole('heading', { name: /Scan a URL/i })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     assert.ok(overflow <= 1, `Mobile page overflows horizontally by ${overflow}px`)
-    evidence.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, overflow }))
+    evidence.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }))
     await screenshot(page, 'mobile-manual-scan')
+  })
+
+  test('admin evaluation runs real samples, displays counts and restores saved history', async ({ page, evidence }) => {
+    await open(page, 'admin')
+    await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.getByRole('tab', { name: 'Evaluation', exact: true }).click()
+    await page.getByLabel('Detector', { exact: true }).selectOption('local')
+    await page.getByLabel('Maximum samples').fill('60')
+    await page.getByRole('button', { name: 'Run evaluation', exact: true }).click()
+    await expect(page.getByText(/60 evaluated: 30 phishing, 30 legitimate/)).toBeVisible({ timeout: 30000 })
+    await expect(page.getByRole('cell', { name: 'TP: 20', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'FN: 10', exact: true })).toBeVisible()
+    await expect(page.getByText('83.33%', { exact: true })).toBeVisible()
+    evidence.synthetic = { evaluated: 60, tp: 20, tn: 30, fp: 0, fn: 10 }
+    await screenshot(page, 'admin-evaluation')
+    await page.reload()
+    await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.getByRole('tab', { name: 'Evaluation', exact: true }).click()
+    await page.getByRole('button', { name: /synthetic.*local.*completed/ }).first().click()
+    await expect(page.getByText(/60 evaluated: 30 phishing, 30 legitimate/)).toBeVisible()
+  })
+
+  test('production OCR assets recognize text in an uploaded image', async ({ page, evidence }) => {
+    await open(page, 'manual')
+    await page.getByRole('button', { name: 'File', exact: true }).click()
+    const png = await page.evaluate(() => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 1000; canvas.height = 200
+      const context = canvas.getContext('2d')
+      context.fillStyle = 'white'; context.fillRect(0, 0, 1000, 200)
+      context.fillStyle = 'black'; context.font = '48px Arial'
+      context.fillText('Meeting tomorrow at noon', 35, 100)
+      return canvas.toDataURL('image/png').split(',')[1]
+    })
+    await page.locator('input[type=file]').setInputFiles({ name: 'ocr-audit.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') })
+    await page.getByRole('checkbox', { name: /I am authorized to scan this item/ }).check()
+    const request = page.waitForRequest((req) => new URL(req.url()).pathname === '/api/scan/file' && req.method() === 'POST', { timeout: 60000 })
+    await page.getByRole('button', { name: 'Run Scan', exact: true }).click()
+    const payload = (await request).postDataJSON()
+    assert.match(payload.content, /Meeting tomorrow at noon/i)
+    evidence.recognizedText = payload.content
+    await expect(output(page)).toContainText('Safety score', { timeout: 30000 })
+    await screenshot(page, 'ocr-file-output')
   })
 
   for (const { name, fn } of cases) {

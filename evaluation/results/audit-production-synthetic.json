@@ -1,0 +1,2872 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-01T09:00:14.636Z",
+  "nodeVersion": "v24.21.0",
+  "scanner": "production-shared/production",
+  "source": {
+    "files": [
+      {
+        "path": "backend/services/coverage.js",
+        "sha256": "cbbb22927a7ee8378a7e06c1b8e45d61d809fc842442713e9e4f9dc31c1ffdf1"
+      },
+      {
+        "path": "backend/services/detectionPipeline.js",
+        "sha256": "3e9c5dd058a24aa04dc4377d9b35b4336e2522f7b1b1d6fb55bd8cadb27f3431"
+      },
+      {
+        "path": "backend/services/emailAnalyzer.js",
+        "sha256": "5813c313a8e90f829459692e00eeeeca92fe69a4cc1543f594dbe7ae6139c0e7"
+      },
+      {
+        "path": "backend/services/emailAuthentication.js",
+        "sha256": "cf5af4a962898aa1a98f97015bb455ab570cf02f57fa46fbd0ea347c2bc96120"
+      },
+      {
+        "path": "backend/services/fileScanner.js",
+        "sha256": "075c77c0cf0fa807aac3e03fee5a811b2b57e8b0989bcacf526e0a00c019c00b"
+      },
+      {
+        "path": "backend/services/linkReputation.js",
+        "sha256": "87b8d70aec8c281a51fa6f9172e72501de67635bf12bc04aafe54740714481f5"
+      },
+      {
+        "path": "backend/services/messageScanner.js",
+        "sha256": "97ded1a3e40855086401fa4e5a4ed2539c5d1fb2964c19be4c0f8b3bd0c4d2ff"
+      },
+      {
+        "path": "backend/services/pageInspector.js",
+        "sha256": "45ddac73de38ab38f7c10790a8d35b4f7eaa6698f70468637a56c1ec0a39903d"
+      },
+      {
+        "path": "backend/services/providerRequest.js",
+        "sha256": "be7bd9fb674c0c15ce006037e7f66e011bacd237a7e3fcddbbe93a18a6d9f05b"
+      },
+      {
+        "path": "backend/services/riskScorer.js",
+        "sha256": "7f5fbb8b871c978fd46e66e0d3e98a410c427f5ba79942e9d5e003baeda33ff6"
+      },
+      {
+        "path": "backend/services/threatIntel.js",
+        "sha256": "d5531a104462e99a17e8c5256cb629d4d9c79572a7969f985140f7f6259adcff"
+      },
+      {
+        "path": "backend/services/urlLexicalFeatures.js",
+        "sha256": "1a1cbef0c725911f69fdf648ab4bc523613d5bb7aaaf79305be6ace8cdb2205c"
+      },
+      {
+        "path": "backend/services/urlLexicalModel.js",
+        "sha256": "2aab72e77af368fedad1a2c227855bf28319ad6c1fcc6e5fcd5191eb09fb743c"
+      },
+      {
+        "path": "backend/services/urlScanner.js",
+        "sha256": "790821013f8cf65ac14ed66156f2dfa96bd834316c81bf28fd0aeb0f05b1492e"
+      },
+      {
+        "path": "node_modules/tldts/dist/cjs/index.js",
+        "sha256": "dcbb58d1c1903cde0bf3086a1ffe107b3ded61e0496fa8e1704727c603132dea"
+      },
+      {
+        "path": "node_modules/tldts/package.json",
+        "sha256": "ee6f509afc31ee935e7b68bb6d50c80a64cbeb31b0c8ad6bf38922f984c891da"
+      }
+    ]
+  },
+  "datasetHash": "8c7cd35eef38fe8bad69a7913b11b5e1622828669c2309335d23e3c84157132d",
+  "selectedSplit": "all",
+  "evidence": {
+    "syntheticRows": 20,
+    "externallyLabeledRows": 0,
+    "statement": "SYNTHETIC regression fixtures only. These metrics are not real-world accuracy estimates. Independent real-world evaluation is outstanding."
+  },
+  "thresholds": {
+    "warningBelow": 80,
+    "blockAtMost": 50
+  },
+  "policy": "Primary warning: Appears Safe (80–100) = Negative; Caution (>50 and <80) and Risk Detected (0–50) = Positive. Secondary block: Caution = Negative. Scores are safety scores, not probabilities.",
+  "latencyMethod": "One serial call per case using performance.now(), in milliseconds; imports, validation and reporting excluded. No warmup; order, JIT, host load and instrumentation affect timings. Not endpoint/network or throughput latency.",
+  "metrics": {
+    "overall": {
+      "count": 20,
+      "warning": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "accuracy": 0.8,
+        "precision": 1,
+        "recall": 0.6,
+        "f1": 0.75,
+        "fpr": 0,
+        "falsePositiveIds": [],
+        "falseNegativeIds": [
+          "H-url-10",
+          "H-message-08",
+          "H-url-09",
+          "H-message-09"
+        ]
+      },
+      "block": {
+        "tp": 6,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "accuracy": 0.8,
+        "precision": 1,
+        "recall": 0.6,
+        "f1": 0.75,
+        "fpr": 0,
+        "falsePositiveIds": [],
+        "falseNegativeIds": [
+          "H-url-10",
+          "H-message-08",
+          "H-url-09",
+          "H-message-09"
+        ]
+      },
+      "latency": {
+        "count": 20,
+        "meanMs": 707.28456,
+        "p50Ms": 403.1244999999999,
+        "p95Ms": 1574.0693999999999,
+        "maxMs": 5491.378099999999
+      }
+    },
+    "bySplit": {
+      "tuning": {
+        "count": 10,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 6,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 6,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 338.93573000000015,
+          "p50Ms": 0.7008000000005268,
+          "p95Ms": 1574.0693999999999,
+          "maxMs": 1574.0693999999999
+        }
+      },
+      "held-out": {
+        "count": 10,
+        "warning": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 4,
+          "fn": 4,
+          "accuracy": 0.6,
+          "precision": 1,
+          "recall": 0.3333333333333333,
+          "f1": 0.5,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-message-08",
+            "H-url-09",
+            "H-message-09"
+          ]
+        },
+        "block": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 4,
+          "fn": 4,
+          "accuracy": 0.6,
+          "precision": 1,
+          "recall": 0.3333333333333333,
+          "f1": 0.5,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-message-08",
+            "H-url-09",
+            "H-message-09"
+          ]
+        },
+        "latency": {
+          "count": 10,
+          "meanMs": 1075.6333899999997,
+          "p50Ms": 410.0572000000011,
+          "p95Ms": 5491.378099999999,
+          "maxMs": 5491.378099999999
+        }
+      }
+    },
+    "byKind": {
+      "url": {
+        "count": 8,
+        "warning": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 2,
+          "fn": 2,
+          "accuracy": 0.75,
+          "precision": 1,
+          "recall": 0.6666666666666666,
+          "f1": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09"
+          ]
+        },
+        "block": {
+          "tp": 4,
+          "fp": 0,
+          "tn": 2,
+          "fn": 2,
+          "accuracy": 0.75,
+          "precision": 1,
+          "recall": 0.6666666666666666,
+          "f1": 0.8,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09"
+          ]
+        },
+        "latency": {
+          "count": 8,
+          "meanMs": 1337.1349999999998,
+          "p50Ms": 495.5975000000003,
+          "p95Ms": 5491.378099999999,
+          "maxMs": 5491.378099999999
+        }
+      },
+      "message": {
+        "count": 6,
+        "warning": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 3,
+          "fn": 2,
+          "accuracy": 0.6666666666666666,
+          "precision": 1,
+          "recall": 0.3333333333333333,
+          "f1": 0.5,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09"
+          ]
+        },
+        "block": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 3,
+          "fn": 2,
+          "accuracy": 0.6666666666666666,
+          "precision": 1,
+          "recall": 0.3333333333333333,
+          "f1": 0.5,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09"
+          ]
+        },
+        "latency": {
+          "count": 6,
+          "meanMs": 317.02751666666717,
+          "p50Ms": 0.30600000000049477,
+          "p95Ms": 1088.7697000000007,
+          "maxMs": 1088.7697000000007
+        }
+      },
+      "email": {
+        "count": 6,
+        "warning": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 5,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 5,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 6,
+          "meanMs": 257.74101666666655,
+          "p50Ms": 0.5895000000000437,
+          "p95Ms": 777.7174999999988,
+          "maxMs": 777.7174999999988
+        }
+      }
+    },
+    "bySplitAndKind": {
+      "tuning/url": {
+        "count": 3,
+        "warning": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 1,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 1,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 3,
+          "meanMs": 872.6556333333332,
+          "p50Ms": 548.2999999999993,
+          "p95Ms": 1574.0693999999999,
+          "maxMs": 1574.0693999999999
+        }
+      },
+      "tuning/message": {
+        "count": 3,
+        "warning": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 2,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 2,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 3,
+          "meanMs": 1.08376666666724,
+          "p50Ms": 0.30600000000049477,
+          "p95Ms": 2.8245999999999185,
+          "maxMs": 2.8245999999999185
+        }
+      },
+      "tuning/email": {
+        "count": 4,
+        "warning": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 3,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 1,
+          "fp": 0,
+          "tn": 3,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": 1,
+          "recall": 1,
+          "f1": 1,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 4,
+          "meanMs": 192.03477500000008,
+          "p50Ms": 0.5213999999996304,
+          "p95Ms": 766.3958000000002,
+          "maxMs": 766.3958000000002
+        }
+      },
+      "held-out/url": {
+        "count": 5,
+        "warning": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 1,
+          "fn": 2,
+          "accuracy": 0.6,
+          "precision": 1,
+          "recall": 0.5,
+          "f1": 0.6666666666666666,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09"
+          ]
+        },
+        "block": {
+          "tp": 2,
+          "fp": 0,
+          "tn": 1,
+          "fn": 2,
+          "accuracy": 0.6,
+          "precision": 1,
+          "recall": 0.5,
+          "f1": 0.6666666666666666,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-url-10",
+            "H-url-09"
+          ]
+        },
+        "latency": {
+          "count": 5,
+          "meanMs": 1615.8226199999997,
+          "p50Ms": 410.0572000000011,
+          "p95Ms": 5491.378099999999,
+          "maxMs": 5491.378099999999
+        }
+      },
+      "held-out/message": {
+        "count": 3,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 1,
+          "fn": 2,
+          "accuracy": 0.3333333333333333,
+          "precision": null,
+          "recall": 0,
+          "f1": 0,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09"
+          ]
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 1,
+          "fn": 2,
+          "accuracy": 0.3333333333333333,
+          "precision": null,
+          "recall": 0,
+          "f1": 0,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": [
+            "H-message-08",
+            "H-message-09"
+          ]
+        },
+        "latency": {
+          "count": 3,
+          "meanMs": 632.971266666667,
+          "p50Ms": 809.9594999999999,
+          "p95Ms": 1088.7697000000007,
+          "maxMs": 1088.7697000000007
+        }
+      },
+      "held-out/email": {
+        "count": 2,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 2,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 2,
+          "fn": 0,
+          "accuracy": 1,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": 0,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 2,
+          "meanMs": 389.15349999999944,
+          "p50Ms": 0.5895000000000437,
+          "p95Ms": 777.7174999999988,
+          "maxMs": 777.7174999999988
+        }
+      }
+    }
+  },
+  "predictions": [
+    {
+      "id": "H-url-10",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1382.0282
+    },
+    {
+      "id": "T-url-01",
+      "split": "tuning",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1574.0693999999999
+    },
+    {
+      "id": "T-url-06",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 495.5975000000003
+    },
+    {
+      "id": "T-message-03",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 2.8245999999999185
+    },
+    {
+      "id": "H-message-08",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 809.9594999999999
+    },
+    {
+      "id": "H-url-02",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 5491.378099999999
+    },
+    {
+      "id": "T-email-06",
+      "split": "tuning",
+      "kind": "email",
+      "label": "phishing",
+      "score": 10,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 766.3958000000002
+    },
+    {
+      "id": "H-email-01",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 777.7174999999988
+    },
+    {
+      "id": "T-url-08",
+      "split": "tuning",
+      "kind": "url",
+      "label": "phishing",
+      "score": 40,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 548.2999999999993
+    },
+    {
+      "id": "H-email-05",
+      "split": "held-out",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.5895000000000437
+    },
+    {
+      "id": "H-url-09",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 392.52509999999893
+    },
+    {
+      "id": "T-email-02",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.5210999999999331
+    },
+    {
+      "id": "H-url-06",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 25,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 410.0572000000011
+    },
+    {
+      "id": "T-email-01",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.7008000000005268
+    },
+    {
+      "id": "H-url-07",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 50,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 403.1244999999999
+    },
+    {
+      "id": "H-message-05",
+      "split": "held-out",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1088.7697000000007
+    },
+    {
+      "id": "H-message-09",
+      "split": "held-out",
+      "kind": "message",
+      "label": "phishing",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.18460000000050059
+    },
+    {
+      "id": "T-message-01",
+      "split": "tuning",
+      "kind": "message",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.12070000000130676
+    },
+    {
+      "id": "T-message-07",
+      "split": "tuning",
+      "kind": "message",
+      "label": "phishing",
+      "score": 0,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 0.30600000000049477
+    },
+    {
+      "id": "T-email-04",
+      "split": "tuning",
+      "kind": "email",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 0.5213999999996304
+    }
+  ],
+  "dataset": "synthetic",
+  "mode": "production",
+  "execution": "Same production detection pipeline including configured providers, page inspection, and email authentication. Administrative allowlist overrides and persistence/notification side effects are excluded.",
+  "sample": {
+    "imported": 60,
+    "eligible": 60,
+    "requested": 20,
+    "selected": 20,
+    "evaluated": 20,
+    "phishing": 10,
+    "legitimate": 10,
+    "excludedTuning": 0,
+    "notSelected": 40,
+    "failed": 0,
+    "invalidLoadedRows": 0,
+    "sourceImportSkipped": 0,
+    "sourceImportSkippedNote": "Validated internal fixtures",
+    "unreachablePageChecks": 8,
+    "sampling": "Deterministic alternating labels, ordered within label by SHA-256(case ID); no PRNG seed. Existing PhiUSIIL importer used SHA-256(URL), one URL per domain group.",
+    "seed": null,
+    "source": "evaluation/fixtures"
+  },
+  "limitations": [
+    "No new ML or threshold tuning. Existing active lexical model was trained on PhiUSIIL tuning rows; held-out rows were previously examined and are not a fresh blind test.",
+    "Unavailable reputation/page checks do not remove a prediction from metrics and never count as successful clean checks.",
+    "Original PhiUSIIL source import exclusions are unknown. Only the selected validated sample is evaluated."
+  ],
+  "failures": [],
+  "analyses": [
+    {
+      "id": "H-url-10",
+      "inputReference": "Dataset case H-url-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND collaborationfiles.test",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-url-01",
+      "inputReference": "Dataset case T-url-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page response exceeded 512 KB",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-url-06",
+      "inputReference": "Dataset case T-url-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible paypal impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Possible paypal impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "An already concerning URL also uses unencrypted HTTP",
+        "URL pattern resembles labeled phishing URLs",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-message-03",
+      "inputReference": "Dataset case T-message-03 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks."
+        ]
+      }
+    },
+    {
+      "id": "H-message-08",
+      "inputReference": "Dataset case H-message-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Embedded link: Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 7,
+        "limitations": [
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "Links were checked using URL rules and reputation; message authenticity and linked page content were not verified.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ],
+        "linksChecked": 1,
+        "totalLinks": 1
+      }
+    },
+    {
+      "id": "H-url-02",
+      "inputReference": "Dataset case H-url-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection timed out",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-email-06",
+      "inputReference": "Dataset case T-email-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 10,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Sender: Possible microsoft impersonation on an unrelated registrable domain",
+          "deduction": 30
+        },
+        {
+          "code": "account-request-link",
+          "label": "Content: Account or identity action is requested alongside a link",
+          "deduction": 12
+        },
+        {
+          "code": "request-pressure",
+          "label": "Content: Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        },
+        {
+          "code": "brand-impersonation",
+          "label": "Content: Possible microsoft impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Content: Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        },
+        {
+          "code": "unencrypted-context",
+          "label": "Content: An already concerning URL also uses unencrypted HTTP",
+          "deduction": 5
+        },
+        {
+          "code": "external-url-model",
+          "label": "Content: URL pattern resembles labeled phishing URLs",
+          "deduction": 25
+        }
+      ],
+      "warnings": [
+        "Sender: Possible microsoft impersonation on an unrelated registrable domain",
+        "Content: Account or identity action is requested alongside a link",
+        "Content: Urgency accompanies a sensitive request or concerning link",
+        "Content: Possible microsoft impersonation on an unrelated registrable domain",
+        "Content: Credential wording accompanies destination deception or an IP address",
+        "Content: An already concerning URL also uses unencrypted HTTP",
+        "Content: URL pattern resembles labeled phishing URLs",
+        "Embedded link: Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Email authentication",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Raw RFC 822 message source was not supplied",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "Links were checked using URL rules and reputation; message authenticity and linked page content were not verified.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety.",
+          "Email authentication requires the raw RFC 822 source; ordinary copied message text is not enough.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-email-01",
+      "inputReference": "Dataset case H-email-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Embedded link: Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Email authentication",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Raw RFC 822 message source was not supplied",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "Links were checked using URL rules and reputation; message authenticity and linked page content were not verified.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety.",
+          "Email authentication requires the raw RFC 822 source; ordinary copied message text is not enough.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-url-08",
+      "inputReference": "Dataset case T-url-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 40,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible amazon impersonation on an unrelated registrable domain",
+          "deduction": 40
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "Possible amazon impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND amazon.com.parcelreview.test",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-email-05",
+      "inputReference": "Dataset case H-email-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "Email authentication",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Raw RFC 822 message source was not supplied",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "unavailable",
+        "checkedProviders": 0,
+        "totalProviders": 1,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks.",
+          "Email authentication requires the raw RFC 822 source; ordinary copied message text is not enough.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-url-09",
+      "inputReference": "Dataset case H-url-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND sessionrenewal.test",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-email-02",
+      "inputReference": "Dataset case T-email-02 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "Email authentication",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Raw RFC 822 message source was not supplied",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "unavailable",
+        "checkedProviders": 0,
+        "totalProviders": 1,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks.",
+          "Email authentication requires the raw RFC 822 source; ordinary copied message text is not enough.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-url-06",
+      "inputReference": "Dataset case H-url-06 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 25,
+      "triggeredIndicators": [
+        {
+          "code": "url-userinfo",
+          "label": "URL includes credentials or text before @ that can conceal the destination",
+          "deduction": 30
+        },
+        {
+          "code": "deceptive-userinfo",
+          "label": "URL username resembles a trusted destination but the actual host follows @",
+          "deduction": 25
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "URL includes credentials or text before @ that can conceal the destination",
+        "URL username resembles a trusted destination but the actual host follows @",
+        "Credential wording accompanies destination deception or an IP address",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "T-email-01",
+      "inputReference": "Dataset case T-email-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "Email authentication",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Raw RFC 822 message source was not supplied",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "unavailable",
+        "checkedProviders": 0,
+        "totalProviders": 1,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks.",
+          "Email authentication requires the raw RFC 822 source; ordinary copied message text is not enough.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-url-07",
+      "inputReference": "Dataset case H-url-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 50,
+      "triggeredIndicators": [
+        {
+          "code": "brand-impersonation",
+          "label": "Possible facebook impersonation on an unrelated registrable domain",
+          "deduction": 30
+        },
+        {
+          "code": "credential-lure",
+          "label": "Credential wording accompanies destination deception or an IP address",
+          "deduction": 20
+        }
+      ],
+      "warnings": [
+        "Possible facebook impersonation on an unrelated registrable domain",
+        "Credential wording accompanies destination deception or an IP address",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND faceb00k.test",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-message-05",
+      "inputReference": "Dataset case H-message-05 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Embedded link: Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 7,
+        "limitations": [
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "Links were checked using URL rules and reputation; message authenticity and linked page content were not verified.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ],
+        "linksChecked": 1,
+        "totalLinks": 1
+      }
+    },
+    {
+      "id": "H-message-09",
+      "inputReference": "Dataset case H-message-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks."
+        ]
+      }
+    },
+    {
+      "id": "T-message-01",
+      "inputReference": "Dataset case T-message-01 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks."
+        ]
+      }
+    },
+    {
+      "id": "T-message-07",
+      "inputReference": "Dataset case T-message-07 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 0,
+      "triggeredIndicators": [
+        {
+          "code": "secret-request",
+          "label": "Directly asks the recipient to disclose a secret",
+          "deduction": 55
+        },
+        {
+          "code": "advance-fee",
+          "label": "Requests payment to obtain a prize or reward",
+          "deduction": 50
+        },
+        {
+          "code": "request-pressure",
+          "label": "Urgency accompanies a sensitive request or concerning link",
+          "deduction": 12
+        }
+      ],
+      "warnings": [
+        "Directly asks the recipient to disclose a secret",
+        "Requests payment to obtain a prize or reward",
+        "Urgency accompanies a sensitive request or concerning link"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks."
+        ]
+      }
+    },
+    {
+      "id": "T-email-04",
+      "inputReference": "Dataset case T-email-04 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "Email authentication",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Raw RFC 822 message source was not supplied",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "unavailable",
+        "checkedProviders": 0,
+        "totalProviders": 1,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Sender authentication (SPF, DKIM, DMARC) was not checked.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks.",
+          "Email authentication requires the raw RFC 822 source; ordinary copied message text is not enough.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    }
+  ],
+  "errorAnalysis": [
+    {
+      "id": "H-url-10",
+      "inputReference": "Dataset case H-url-10 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND collaborationfiles.test",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-message-08",
+      "inputReference": "Dataset case H-message-08 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Embedded link: Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 7,
+        "limitations": [
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "Links were checked using URL rules and reputation; message authenticity and linked page content were not verified.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ],
+        "linksChecked": 1,
+        "totalLinks": 1
+      }
+    },
+    {
+      "id": "H-url-09",
+      "inputReference": "Dataset case H-url-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND sessionrenewal.test",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "H-message-09",
+      "inputReference": "Dataset case H-message-09 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [],
+      "notTriggeredNote": "This detector does not expose an exhaustive non-triggered rule trace.",
+      "providers": [],
+      "coverage": {
+        "status": "local-only",
+        "checkedProviders": 0,
+        "totalProviders": 0,
+        "limitations": [
+          "Reputation not checked.",
+          "Local heuristics cannot establish safety or verify ownership.",
+          "Message intent and sender identity were not verified.",
+          "Linked pages were not fetched.",
+          "No extracted links were available for reputation checks."
+        ]
+      }
+    }
+  ]
+}

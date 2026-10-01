@@ -5,9 +5,10 @@ import cors from 'cors'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
-import { databaseProvider, initDatabase } from './db/database.js'
+import { databaseProvider, dbPromise, initDatabase } from './db/database.js'
 import { dataRoutes } from './routes/dataRoutes.js'
 import { adminRoutes } from './routes/adminRoutes.js'
+import { recoverInterruptedEvaluations } from './routes/evaluationRoutes.js'
 import { clientRoutes } from './routes/clientRoutes.js'
 import { scanRoutes } from './routes/scanRoutes.js'
 import { startAutoMonitor } from './services/autoMonitor.js'
@@ -55,7 +56,11 @@ const corsOptions = {
 
 app.disable('x-powered-by')
 app.set('trust proxy', 1)
-app.use(helmet())
+app.use(helmet({ contentSecurityPolicy: { directives: {
+  // Bundled, same-origin OCR compiles WebAssembly in a dedicated local worker.
+  scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+  workerSrc: ["'self'"],
+} } }))
 app.use('/api', cors(corsOptions))
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? '512kb' }))
 app.use('/api', (_req, res, next) => {
@@ -89,8 +94,13 @@ app.use(
   }),
 )
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, systemActive: true, repository: databaseProvider })
+app.get('/api/health', async (_req, res) => {
+  try {
+    await (await dbPromise).get('SELECT 1 AS healthy')
+    res.json({ ok: true, systemActive: true, repository: databaseProvider })
+  } catch {
+    res.status(503).json({ ok: false, systemActive: false, repository: databaseProvider })
+  }
 })
 
 app.use('/api', clientRoutes)
@@ -115,6 +125,7 @@ app.use((error, _req, res, _next) => {
 })
 
 await initDatabase()
+await recoverInterruptedEvaluations()
 await purgeExpiredData()
 
 const retentionInterval = setInterval(

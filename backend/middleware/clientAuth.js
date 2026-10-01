@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import { dbPromise } from '../db/database.js'
+import { isClientCredentialExpired } from '../services/scanRepository.js'
 
 const publicDeployment = () => process.env.PUBLIC_DEPLOYMENT === 'true'
 const clientIdPattern = /^cl_[a-f0-9]{32}$/
@@ -31,12 +32,12 @@ export async function requireClient(req, res, next) {
   try {
     const db = await dbPromise
     const row = await db.get(
-      'SELECT token_hash FROM client_credentials WHERE client_id = ?',
+      'SELECT token_hash, created_at, last_seen_at, extension_seen_at FROM client_credentials WHERE client_id = ?',
       clientId,
     )
     const candidate = crypto.createHash('sha256').update(token).digest()
     const expected = Buffer.from(row?.token_hash ?? '0'.repeat(64), 'hex')
-    if (!crypto.timingSafeEqual(candidate, expected) || !row) {
+    if (!crypto.timingSafeEqual(candidate, expected) || !row || isClientCredentialExpired(row)) {
       return res.status(403).json({ error: 'Client access denied', code: 'CLIENT_ACCESS_DENIED' })
     }
     req.clientId = clientId

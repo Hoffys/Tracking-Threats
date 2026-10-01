@@ -14,12 +14,15 @@ inspectPage.addEventListener('click', () => {
       return
     }
     const scan = response.scan
+    pill.classList.remove('error', 'warning')
     const hasContentWarning = scan.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
     const label = scan.status === 'Safe' && scan.categories?.includes('piracy-content') ? 'Download risk unknown'
       : scan.status === 'Safe' && hasContentWarning ? 'Content warning'
       : scan.status === 'Safe' ? 'Appears safe' : scan.status === 'Dangerous' ? 'Risk detected' : 'Caution'
     inspectionNote.textContent = `${label} - score ${scan.score}/100. Scan finished.`
     pill.textContent = `${label} - ${scan.score}/100`
+    if (['Dangerous', 'Blocked'].includes(scan.status)) pill.classList.add('error')
+    if (scan.status === 'Suspicious') pill.classList.add('warning')
     if (scan.status === 'Safe' && hasContentWarning) pill.classList.add('warning')
   })
 })
@@ -32,8 +35,9 @@ chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
   }
 })
 
-chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => {
+function renderStatus(threattrackStatus) {
   if (!threattrackStatus) return
+  pill.classList.remove('error', 'warning')
 
   if (threattrackStatus.appUrl) {
     openApp.href = threattrackStatus.appUrl
@@ -62,8 +66,14 @@ chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => {
   if (status === 'Safe' && hasContentWarning) pill.classList.add('warning')
   message.textContent += ` - Scan finished; no further checks are pending. Rule-based score, not a probability. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
   if (coverage) message.textContent += ` ${coverage.checkedProviders}/${coverage.totalProviders} providers checked. ${(coverage.limitations ?? []).join(' ')}`
+  if (threattrackStatus.downloadWarning) message.textContent += ` ${threattrackStatus.downloadWarning}`
   if (threattrackStatus.categories?.length) message.textContent += ` Categories: ${threattrackStatus.categories.join(', ')}. Content categories do not establish phishing.`
   if (threattrackStatus.categories?.includes('piracy-content')) message.textContent += ' No strong phishing indicators were found, but the download risk is unknown. Piracy-related sources may involve malware, fake mirrors, tampered files, or copyright risk.'
+}
+
+chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => renderStatus(threattrackStatus))
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.threattrackStatus) renderStatus(changes.threattrackStatus.newValue)
 })
 const devicePairCodeInput = document.getElementById('devicePairCode')
 const linkDeviceButton = document.getElementById('linkDeviceButton')

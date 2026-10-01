@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit'
 import { dbPromise } from '../db/database.js'
 import { requireAdminStrict } from '../middleware/adminAuth.js'
 import { deleteClientScanData } from '../services/scanRepository.js'
+import { evaluationRoutes } from './evaluationRoutes.js'
 
 export const adminRoutes = Router()
 
@@ -15,6 +16,8 @@ adminRoutes.use(
   }),
   requireAdminStrict,
 )
+
+adminRoutes.use('/evaluations', evaluationRoutes)
 
 adminRoutes.get('/overview', async (_req, res, next) => {
   try {

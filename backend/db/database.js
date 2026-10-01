@@ -96,6 +96,18 @@ export const dbPromise = openDatabase()
 export async function initDatabase() {
   const db = await dbPromise
   await db.exec(`
+    CREATE TABLE IF NOT EXISTS evaluation_runs (
+      id TEXT PRIMARY KEY,
+      dataset TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      status TEXT NOT NULL,
+      processed INTEGER NOT NULL DEFAULT 0,
+      total INTEGER NOT NULL,
+      report TEXT,
+      error TEXT,
+      created_at TEXT NOT NULL,
+      completed_at TEXT
+    );
     CREATE TABLE IF NOT EXISTS usage_counters (
       name TEXT PRIMARY KEY,
       count INTEGER NOT NULL DEFAULT 0,

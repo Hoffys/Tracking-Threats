@@ -1,0 +1,54 @@
+{
+  "at": "2026-10-01T09:02:17.136Z",
+  "base": "https://tracking-threats-production.up.railway.app",
+  "checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "type": "application/json; charset=utf-8",
+      "bytes": 57,
+      "sha256": "60923370589edeb18d55245613a34aa70696570e6aec7e97534f8080e113be85",
+      "body": {
+        "ok": true,
+        "systemActive": true,
+        "repository": "postgresql"
+      }
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "type": "text/html; charset=utf-8",
+      "bytes": 864,
+      "sha256": "3c980b8254b472a3fc4858a45f5c2ebe35169044281d83c2eb13c0727e430879",
+      "assets": [
+        "/assets/index-COfUBQge.js"
+      ],
+      "csp": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests"
+    },
+    {
+      "path": "/ocr/worker.min.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8",
+      "bytes": 111307,
+      "sha256": "576b7df7e3393e137e51849357c9adb53fe7ac1bb69bfa06cf3d61520f182c6d",
+      "matchesLocal": true
+    },
+    {
+      "path": "/ocr/eng.traineddata.gz",
+      "status": 200,
+      "type": "application/gzip",
+      "bytes": 1984273,
+      "sha256": "18c1ac52b75e35d44735fb6c2a60acfaf23033524653200738e98f0243edb75b",
+      "matchesLocal": true
+    },
+    {
+      "path": "/ocr/tesseract-core-simd-lstm.wasm.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8",
+      "bytes": 3899472,
+      "sha256": "c58b46a4c796c0b8afccf77591d5b875b6896b45d402bbce8caa6f5362447b38",
+      "matchesLocal": true
+    }
+  ],
+  "note": "Read-only check of existing deployment. Local audit changes are not deployed."
+}

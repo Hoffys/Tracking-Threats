@@ -144,6 +144,9 @@ export const apiService = {
   deletePublicClientData: (clientId) =>
     clientRequest(`/public/data/${encodeURIComponent(clientId)}`, clientId, { method: 'DELETE' }),
   getAdminOverview: (token) => adminRequest('/admin/overview', token),
+  getEvaluations: (token) => adminRequest('/admin/evaluations', token),
+  getEvaluation: (token, id) => adminRequest(`/admin/evaluations/${encodeURIComponent(id)}`, token),
+  runEvaluation: (token, settings) => adminRequest('/admin/evaluations', token, { method: 'POST', body: JSON.stringify(settings) }),
   getAdminClients: (token) => adminRequest('/admin/clients', token),
   getAdminClient: (token, clientId) =>
     adminRequest(`/admin/clients/${encodeURIComponent(clientId)}`, token),

@@ -34,8 +34,8 @@ test('warning and block boundary decisions use safety score direction', () => {
 
 test('hand-calculated confusion counts, denominators and separate policies', () => {
   const rows = [prediction('p1', 'phishing', 20), prediction('p2', 'phishing', 60), prediction('p3', 'phishing', 90), prediction('n1', 'legitimate', 40), prediction('n2', 'legitimate', 70), prediction('n3', 'legitimate', 100)]
-  assert.deepEqual(confusion(rows, 'warning'), { tp: 2, fp: 2, tn: 1, fn: 1, precision: 0.5, recall: 2 / 3, fpr: 2 / 3, falsePositiveIds: ['n1', 'n2'], falseNegativeIds: ['p3'] })
-  assert.deepEqual(confusion(rows, 'block'), { tp: 1, fp: 1, tn: 2, fn: 2, precision: 0.5, recall: 1 / 3, fpr: 1 / 3, falsePositiveIds: ['n1'], falseNegativeIds: ['p2', 'p3'] })
+  assert.deepEqual(confusion(rows, 'warning'), { tp: 2, fp: 2, tn: 1, fn: 1, accuracy: 0.5, precision: 0.5, recall: 2 / 3, f1: 4 / 7, fpr: 2 / 3, falsePositiveIds: ['n1', 'n2'], falseNegativeIds: ['p3'] })
+  assert.deepEqual(confusion(rows, 'block'), { tp: 1, fp: 1, tn: 2, fn: 2, accuracy: 0.5, precision: 0.5, recall: 1 / 3, f1: 2 / 5, fpr: 1 / 3, falsePositiveIds: ['n1'], falseNegativeIds: ['p2', 'p3'] })
   assert.equal(summarize(rows).overall.count, 6)
 })
 
@@ -44,12 +44,15 @@ test('undefined ratios stay null for empty, no-positive and no-negative groups',
   assert.equal(empty.precision, null)
   assert.equal(empty.recall, null)
   assert.equal(empty.fpr, null)
+  assert.equal(empty.accuracy, null)
+  assert.equal(empty.f1, null)
   const allNegative = confusion([prediction('a', 'legitimate', 100)], 'warning')
   assert.equal(allNegative.precision, null)
   assert.equal(allNegative.recall, null)
   assert.equal(allNegative.fpr, 0)
   const allPositive = confusion([prediction('a', 'phishing', 100)], 'warning')
   assert.equal(allPositive.recall, 0)
+  assert.equal(allPositive.f1, 0)
   assert.equal(allPositive.fpr, null)
 })
 
@@ -127,7 +130,10 @@ test('frozen source and fixtures match recorded baseline; baseline is preserved'
   verifyFrozenSources()
   const report = JSON.parse(readFileSync(new URL('./baseline/report.json', import.meta.url), 'utf8'))
   assert.equal(report.datasetHash, datasetHash(loadDatasets(fixturePaths)))
-  assert.deepEqual(report.metrics, summarize(report.predictions, report.thresholds))
+  // Historical artifact predates accuracy/F1; preserve its bytes and verify all
+  // originally recorded fields against freshly recomputed predictions.
+  const legacyMetrics = JSON.parse(JSON.stringify(summarize(report.predictions, report.thresholds), (key, value) => ['accuracy', 'f1'].includes(key) ? undefined : value))
+  assert.deepEqual(report.metrics, legacyMetrics)
   const result = cli(['--scanner', 'baseline', '--split', 'all', '--baseline', 'evaluation/baseline/report.json'])
   assert.equal(result.status, 0, result.stderr)
   assert.ok(result.stdout.includes('0 cases changed score or status'))

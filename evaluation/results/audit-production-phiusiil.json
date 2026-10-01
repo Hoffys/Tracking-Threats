@@ -1,0 +1,3619 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-01T08:59:59.374Z",
+  "nodeVersion": "v24.21.0",
+  "scanner": "production-shared/production",
+  "source": {
+    "files": [
+      {
+        "path": "backend/services/coverage.js",
+        "sha256": "cbbb22927a7ee8378a7e06c1b8e45d61d809fc842442713e9e4f9dc31c1ffdf1"
+      },
+      {
+        "path": "backend/services/detectionPipeline.js",
+        "sha256": "3e9c5dd058a24aa04dc4377d9b35b4336e2522f7b1b1d6fb55bd8cadb27f3431"
+      },
+      {
+        "path": "backend/services/emailAnalyzer.js",
+        "sha256": "5813c313a8e90f829459692e00eeeeca92fe69a4cc1543f594dbe7ae6139c0e7"
+      },
+      {
+        "path": "backend/services/emailAuthentication.js",
+        "sha256": "cf5af4a962898aa1a98f97015bb455ab570cf02f57fa46fbd0ea347c2bc96120"
+      },
+      {
+        "path": "backend/services/fileScanner.js",
+        "sha256": "075c77c0cf0fa807aac3e03fee5a811b2b57e8b0989bcacf526e0a00c019c00b"
+      },
+      {
+        "path": "backend/services/linkReputation.js",
+        "sha256": "87b8d70aec8c281a51fa6f9172e72501de67635bf12bc04aafe54740714481f5"
+      },
+      {
+        "path": "backend/services/messageScanner.js",
+        "sha256": "97ded1a3e40855086401fa4e5a4ed2539c5d1fb2964c19be4c0f8b3bd0c4d2ff"
+      },
+      {
+        "path": "backend/services/pageInspector.js",
+        "sha256": "45ddac73de38ab38f7c10790a8d35b4f7eaa6698f70468637a56c1ec0a39903d"
+      },
+      {
+        "path": "backend/services/providerRequest.js",
+        "sha256": "be7bd9fb674c0c15ce006037e7f66e011bacd237a7e3fcddbbe93a18a6d9f05b"
+      },
+      {
+        "path": "backend/services/riskScorer.js",
+        "sha256": "7f5fbb8b871c978fd46e66e0d3e98a410c427f5ba79942e9d5e003baeda33ff6"
+      },
+      {
+        "path": "backend/services/threatIntel.js",
+        "sha256": "d5531a104462e99a17e8c5256cb629d4d9c79572a7969f985140f7f6259adcff"
+      },
+      {
+        "path": "backend/services/urlLexicalFeatures.js",
+        "sha256": "1a1cbef0c725911f69fdf648ab4bc523613d5bb7aaaf79305be6ace8cdb2205c"
+      },
+      {
+        "path": "backend/services/urlLexicalModel.js",
+        "sha256": "2aab72e77af368fedad1a2c227855bf28319ad6c1fcc6e5fcd5191eb09fb743c"
+      },
+      {
+        "path": "backend/services/urlScanner.js",
+        "sha256": "790821013f8cf65ac14ed66156f2dfa96bd834316c81bf28fd0aeb0f05b1492e"
+      },
+      {
+        "path": "node_modules/tldts/dist/cjs/index.js",
+        "sha256": "dcbb58d1c1903cde0bf3086a1ffe107b3ded61e0496fa8e1704727c603132dea"
+      },
+      {
+        "path": "node_modules/tldts/package.json",
+        "sha256": "ee6f509afc31ee935e7b68bb6d50c80a64cbeb31b0c8ad6bf38922f984c891da"
+      }
+    ]
+  },
+  "datasetHash": "b5a413514353d28312c6c6c314a52729f30e7ef6e674ef17939d1741827f99bd",
+  "selectedSplit": "held-out",
+  "evidence": {
+    "syntheticRows": 0,
+    "externallyLabeledRows": 20,
+    "statement": "External label independence is asserted by the importer, not verified by tooling. Dataset-specific metrics do not establish real-world accuracy; review sampling, provenance and temporal/organizational leakage."
+  },
+  "thresholds": {
+    "warningBelow": 80,
+    "blockAtMost": 50
+  },
+  "policy": "Primary warning: Appears Safe (80–100) = Negative; Caution (>50 and <80) and Risk Detected (0–50) = Positive. Secondary block: Caution = Negative. Scores are safety scores, not probabilities.",
+  "latencyMethod": "One serial call per case using performance.now(), in milliseconds; imports, validation and reporting excluded. No warmup; order, JIT, host load and instrumentation affect timings. Not endpoint/network or throughput latency.",
+  "metrics": {
+    "overall": {
+      "count": 20,
+      "warning": {
+        "tp": 9,
+        "fp": 3,
+        "tn": 7,
+        "fn": 1,
+        "accuracy": 0.8,
+        "precision": 0.75,
+        "recall": 0.9,
+        "f1": 0.8181818181818182,
+        "fpr": 0.3,
+        "falsePositiveIds": [
+          "phiusiil-1290",
+          "phiusiil-1454",
+          "phiusiil-0984"
+        ],
+        "falseNegativeIds": [
+          "phiusiil-1916"
+        ]
+      },
+      "block": {
+        "tp": 9,
+        "fp": 3,
+        "tn": 7,
+        "fn": 1,
+        "accuracy": 0.8,
+        "precision": 0.75,
+        "recall": 0.9,
+        "f1": 0.8181818181818182,
+        "fpr": 0.3,
+        "falsePositiveIds": [
+          "phiusiil-1290",
+          "phiusiil-1454",
+          "phiusiil-0984"
+        ],
+        "falseNegativeIds": [
+          "phiusiil-1916"
+        ]
+      },
+      "latency": {
+        "count": 20,
+        "meanMs": 1217.80289,
+        "p50Ms": 915.8397000000004,
+        "p95Ms": 2503.2207000000003,
+        "maxMs": 2689.464
+      }
+    },
+    "bySplit": {
+      "tuning": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      },
+      "held-out": {
+        "count": 20,
+        "warning": {
+          "tp": 9,
+          "fp": 3,
+          "tn": 7,
+          "fn": 1,
+          "accuracy": 0.8,
+          "precision": 0.75,
+          "recall": 0.9,
+          "f1": 0.8181818181818182,
+          "fpr": 0.3,
+          "falsePositiveIds": [
+            "phiusiil-1290",
+            "phiusiil-1454",
+            "phiusiil-0984"
+          ],
+          "falseNegativeIds": [
+            "phiusiil-1916"
+          ]
+        },
+        "block": {
+          "tp": 9,
+          "fp": 3,
+          "tn": 7,
+          "fn": 1,
+          "accuracy": 0.8,
+          "precision": 0.75,
+          "recall": 0.9,
+          "f1": 0.8181818181818182,
+          "fpr": 0.3,
+          "falsePositiveIds": [
+            "phiusiil-1290",
+            "phiusiil-1454",
+            "phiusiil-0984"
+          ],
+          "falseNegativeIds": [
+            "phiusiil-1916"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 1217.80289,
+          "p50Ms": 915.8397000000004,
+          "p95Ms": 2503.2207000000003,
+          "maxMs": 2689.464
+        }
+      }
+    },
+    "byKind": {
+      "url": {
+        "count": 20,
+        "warning": {
+          "tp": 9,
+          "fp": 3,
+          "tn": 7,
+          "fn": 1,
+          "accuracy": 0.8,
+          "precision": 0.75,
+          "recall": 0.9,
+          "f1": 0.8181818181818182,
+          "fpr": 0.3,
+          "falsePositiveIds": [
+            "phiusiil-1290",
+            "phiusiil-1454",
+            "phiusiil-0984"
+          ],
+          "falseNegativeIds": [
+            "phiusiil-1916"
+          ]
+        },
+        "block": {
+          "tp": 9,
+          "fp": 3,
+          "tn": 7,
+          "fn": 1,
+          "accuracy": 0.8,
+          "precision": 0.75,
+          "recall": 0.9,
+          "f1": 0.8181818181818182,
+          "fpr": 0.3,
+          "falsePositiveIds": [
+            "phiusiil-1290",
+            "phiusiil-1454",
+            "phiusiil-0984"
+          ],
+          "falseNegativeIds": [
+            "phiusiil-1916"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 1217.80289,
+          "p50Ms": 915.8397000000004,
+          "p95Ms": 2503.2207000000003,
+          "maxMs": 2689.464
+        }
+      },
+      "message": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      },
+      "email": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      }
+    },
+    "bySplitAndKind": {
+      "tuning/url": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      },
+      "tuning/message": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      },
+      "tuning/email": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      },
+      "held-out/url": {
+        "count": 20,
+        "warning": {
+          "tp": 9,
+          "fp": 3,
+          "tn": 7,
+          "fn": 1,
+          "accuracy": 0.8,
+          "precision": 0.75,
+          "recall": 0.9,
+          "f1": 0.8181818181818182,
+          "fpr": 0.3,
+          "falsePositiveIds": [
+            "phiusiil-1290",
+            "phiusiil-1454",
+            "phiusiil-0984"
+          ],
+          "falseNegativeIds": [
+            "phiusiil-1916"
+          ]
+        },
+        "block": {
+          "tp": 9,
+          "fp": 3,
+          "tn": 7,
+          "fn": 1,
+          "accuracy": 0.8,
+          "precision": 0.75,
+          "recall": 0.9,
+          "f1": 0.8181818181818182,
+          "fpr": 0.3,
+          "falsePositiveIds": [
+            "phiusiil-1290",
+            "phiusiil-1454",
+            "phiusiil-0984"
+          ],
+          "falseNegativeIds": [
+            "phiusiil-1916"
+          ]
+        },
+        "latency": {
+          "count": 20,
+          "meanMs": 1217.80289,
+          "p50Ms": 915.8397000000004,
+          "p95Ms": 2503.2207000000003,
+          "maxMs": 2689.464
+        }
+      },
+      "held-out/message": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      },
+      "held-out/email": {
+        "count": 0,
+        "warning": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "block": {
+          "tp": 0,
+          "fp": 0,
+          "tn": 0,
+          "fn": 0,
+          "accuracy": null,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "fpr": null,
+          "falsePositiveIds": [],
+          "falseNegativeIds": []
+        },
+        "latency": {
+          "count": 0,
+          "meanMs": null,
+          "p50Ms": null,
+          "p95Ms": null,
+          "maxMs": null
+        }
+      }
+    }
+  },
+  "predictions": [
+    {
+      "id": "phiusiil-1553",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 1563.2312000000002
+    },
+    {
+      "id": "phiusiil-0779",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 2503.2207000000003
+    },
+    {
+      "id": "phiusiil-1916",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 88,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 889.6468000000004
+    },
+    {
+      "id": "phiusiil-1027",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 2360.656499999999
+    },
+    {
+      "id": "phiusiil-1930",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 735.6800999999996
+    },
+    {
+      "id": "phiusiil-0933",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1223.8634000000002
+    },
+    {
+      "id": "phiusiil-1777",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 828.7477999999992
+    },
+    {
+      "id": "phiusiil-1290",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 854.8071
+    },
+    {
+      "id": "phiusiil-1582",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 422.72320000000036
+    },
+    {
+      "id": "phiusiil-0854",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 2689.464
+    },
+    {
+      "id": "phiusiil-1957",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 923.3361999999997
+    },
+    {
+      "id": "phiusiil-1454",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 915.8397000000004
+    },
+    {
+      "id": "phiusiil-1950",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 418.16149999999834
+    },
+    {
+      "id": "phiusiil-0984",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 1266.6980000000003
+    },
+    {
+      "id": "phiusiil-1663",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 435.2690999999977
+    },
+    {
+      "id": "phiusiil-1176",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1541.357
+    },
+    {
+      "id": "phiusiil-1618",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 33,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 391.9930000000022
+    },
+    {
+      "id": "phiusiil-1161",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 2046.1458999999995
+    },
+    {
+      "id": "phiusiil-1499",
+      "split": "held-out",
+      "kind": "url",
+      "label": "phishing",
+      "score": 45,
+      "status": "Dangerous",
+      "warning": true,
+      "block": true,
+      "latencyMs": 439.8318999999974
+    },
+    {
+      "id": "phiusiil-1145",
+      "split": "held-out",
+      "kind": "url",
+      "label": "legitimate",
+      "score": 100,
+      "status": "Safe",
+      "warning": false,
+      "block": false,
+      "latencyMs": 1905.3847000000023
+    }
+  ],
+  "dataset": "phiusiil",
+  "mode": "production",
+  "execution": "Same production detection pipeline including configured providers, page inspection, and email authentication. Administrative allowlist overrides and persistence/notification side effects are excluded.",
+  "sample": {
+    "imported": 2000,
+    "eligible": 1000,
+    "requested": 20,
+    "selected": 20,
+    "evaluated": 20,
+    "phishing": 10,
+    "legitimate": 10,
+    "excludedTuning": 1000,
+    "notSelected": 980,
+    "failed": 0,
+    "invalidLoadedRows": 0,
+    "sourceImportSkipped": null,
+    "sourceImportSkippedNote": "Original importer did not retain source skip counts; unknown, not zero.",
+    "unreachablePageChecks": 13,
+    "sampling": "Deterministic alternating labels, ordered within label by SHA-256(case ID); no PRNG seed. Existing PhiUSIIL importer used SHA-256(URL), one URL per domain group.",
+    "seed": null,
+    "source": "https://archive.ics.uci.edu/dataset/967/phiusiil+phishing+url+dataset"
+  },
+  "limitations": [
+    "No new ML or threshold tuning. Existing active lexical model was trained on PhiUSIIL tuning rows; held-out rows were previously examined and are not a fresh blind test.",
+    "Unavailable reputation/page checks do not remove a prediction from metrics and never count as successful clean checks.",
+    "Original PhiUSIIL source import exclusions are unknown. Only the selected validated sample is evaluated."
+  ],
+  "failures": [],
+  "analyses": [
+    {
+      "id": "phiusiil-1553",
+      "inputReference": "Dataset case phiusiil-1553 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 7 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 7 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-0779",
+      "inputReference": "Dataset case phiusiil-0779 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 2,
+            "hiddenFrames": 0,
+            "obfuscatedScripts": false,
+            "formCount": 2
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1916",
+      "inputReference": "Dataset case phiusiil-1916 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1027",
+      "inputReference": "Dataset case phiusiil-1027 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 0,
+            "hiddenFrames": 0,
+            "obfuscatedScripts": false,
+            "formCount": 2
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1930",
+      "inputReference": "Dataset case phiusiil-1930 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 1 malicious engine detection",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 1 malicious engine detection",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-0933",
+      "inputReference": "Dataset case phiusiil-0933 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page response exceeded 512 KB",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1777",
+      "inputReference": "Dataset case phiusiil-1777 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 12 malicious engine detections",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 12 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1290",
+      "inputReference": "Dataset case phiusiil-1290 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 3 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 3 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page returned HTTP 403",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1582",
+      "inputReference": "Dataset case phiusiil-1582 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 1 malicious engine detection",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 1 malicious engine detection",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-0854",
+      "inputReference": "Dataset case phiusiil-0854 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 0,
+            "hiddenFrames": 1,
+            "obfuscatedScripts": false,
+            "formCount": 2
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1957",
+      "inputReference": "Dataset case phiusiil-1957 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 3 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 3 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1454",
+      "inputReference": "Dataset case phiusiil-1454 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 1 malicious engine detection",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 1 malicious engine detection",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND www.betrana.com",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1950",
+      "inputReference": "Dataset case phiusiil-1950 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 8 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 8 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-0984",
+      "inputReference": "Dataset case phiusiil-0984 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 3 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 3 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 0,
+            "hiddenFrames": 0,
+            "obfuscatedScripts": false,
+            "formCount": 0
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1663",
+      "inputReference": "Dataset case phiusiil-1663 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 1 malicious engine detection",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 1 malicious engine detection",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1176",
+      "inputReference": "Dataset case phiusiil-1176 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 0,
+            "hiddenFrames": 0,
+            "obfuscatedScripts": false,
+            "formCount": 0
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1618",
+      "inputReference": "Dataset case phiusiil-1618 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 2 malicious engine detections",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 2 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1161",
+      "inputReference": "Dataset case phiusiil-1161 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [
+            {
+              "from": "[origin redacted]",
+              "to": "[origin redacted]"
+            }
+          ],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 0,
+            "hiddenFrames": 0,
+            "obfuscatedScripts": false,
+            "formCount": 4
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1499",
+      "inputReference": "Dataset case phiusiil-1499 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 5 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 5 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": false,
+          "found": null,
+          "error": "other side closed (UND_ERR_SOCKET)",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": false,
+          "found": null,
+          "error": "other side closed (UND_ERR_SOCKET)",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Destination resolved to a private or reserved address",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1145",
+      "inputReference": "Dataset case phiusiil-1145 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Safe",
+      "score": 100,
+      "triggeredIndicators": [],
+      "warnings": [],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 2,
+            "hiddenFrames": 1,
+            "obfuscatedScripts": false,
+            "formCount": 3
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    }
+  ],
+  "errorAnalysis": [
+    {
+      "id": "phiusiil-1916",
+      "inputReference": "Dataset case phiusiil-1916 (raw input omitted)",
+      "expected": "phishing",
+      "prediction": "Safe",
+      "score": 88,
+      "triggeredIndicators": [],
+      "warnings": [
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "URL is not in the provider database",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page inspection requires a standard HTTPS URL without credentials",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 4,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1290",
+      "inputReference": "Dataset case phiusiil-1290 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 3 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 3 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "Page returned HTTP 403",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 6,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-1454",
+      "inputReference": "Dataset case phiusiil-1454 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Dangerous",
+      "score": 33,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 1 malicious engine detection",
+        "Domain has no public A or AAAA DNS records"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 1 malicious engine detection",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "Domain has no public A or AAAA DNS records",
+          "deduction": 12,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "Not configured or not applicable to this URL",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": false,
+          "found": null,
+          "error": "getaddrinfo ENOTFOUND www.betrana.com",
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 5,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    },
+    {
+      "id": "phiusiil-0984",
+      "inputReference": "Dataset case phiusiil-0984 (raw input omitted)",
+      "expected": "legitimate",
+      "prediction": "Dangerous",
+      "score": 45,
+      "triggeredIndicators": [],
+      "warnings": [
+        "VirusTotal reports 3 malicious engine detections"
+      ],
+      "notTriggered": [
+        "invalid-url",
+        "brand-impersonation",
+        "url-userinfo",
+        "deceptive-userinfo",
+        "credential-lure",
+        "ip-destination",
+        "contextual-idn",
+        "unencrypted-context",
+        "external-url-model"
+      ],
+      "notTriggeredNote": "Local rule codes absent from actual findings; absence does not establish safety.",
+      "providers": [
+        {
+          "provider": "VirusTotal",
+          "checked": true,
+          "found": true,
+          "error": null,
+          "skipped": null,
+          "warning": "VirusTotal reports 3 malicious engine detections",
+          "deduction": 55,
+          "inspection": null
+        },
+        {
+          "provider": "Google Safe Browsing",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus URL",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "URLhaus Host",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "PhishTank",
+          "checked": false,
+          "found": null,
+          "error": null,
+          "skipped": "PhishTank API key is not configured",
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "DNS Reputation",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "AbuseIPDB",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "inspection": null
+        },
+        {
+          "provider": "Page inspection",
+          "checked": true,
+          "found": false,
+          "error": null,
+          "skipped": null,
+          "warning": null,
+          "deduction": 0,
+          "redirects": [],
+          "inspection": {
+            "passwordFields": 0,
+            "externalFormActions": 0,
+            "hiddenFrames": 0,
+            "obfuscatedScripts": false,
+            "formCount": 0
+          }
+        }
+      ],
+      "coverage": {
+        "status": "partial",
+        "checkedProviders": 7,
+        "totalProviders": 8,
+        "limitations": [
+          "Static HTML inspection only; client-rendered behavior is checked separately by the browser extension when the user requests it.",
+          "Some reputation checks were unavailable or skipped. No match is not proof of safety."
+        ]
+      }
+    }
+  ]
+}
