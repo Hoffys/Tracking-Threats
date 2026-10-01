@@ -13,10 +13,13 @@ function extension(fetch) {
   const sandbox = {
     URL, fetch, importScripts() {},
     TRACKING_THREATS_CONFIG: { API_BASE_URL: 'https://api.example', APP_URL: 'https://app.example' },
-    chrome: { storage: { local: {
-      get: async () => ({ ...stored }),
-      set: async (values) => Object.assign(stored, values),
-    } } },
+    chrome: {
+      runtime: { onMessage: { addListener() {} } },
+      storage: { local: {
+        get: async () => ({ ...stored }),
+        set: async (values) => Object.assign(stored, values),
+      } },
+    },
   }
   vm.runInNewContext(source.slice(0, source.indexOf('async function hasEmailScanConsent')), sandbox)
   return { scan: sandbox.scanFetch, stored }
