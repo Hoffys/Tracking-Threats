@@ -20,7 +20,9 @@ export function addWarning(warnings, condition, label, deduction) {
   }
 }
 
-export function recommendationsFor(status) {
+export const PIRACY_DOWNLOAD_CAUTION = 'Download risk is unknown. Piracy-related sources can expose you to malware, fake mirrors, tampered files, and copyright risk. Scan the actual file before opening it.'
+
+export function recommendationsFor(status, categories = []) {
   const recommendations = {
     Safe: [
       'Proceed with normal caution.',
@@ -37,5 +39,8 @@ export function recommendationsFor(status) {
     ],
   }
 
-  return recommendations[status] ?? recommendations.Suspicious
+  const result = recommendations[status] ?? recommendations.Suspicious
+  return status === 'Safe' && categories.includes('piracy-content')
+    ? [PIRACY_DOWNLOAD_CAUTION, ...result]
+    : result
 }

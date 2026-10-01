@@ -550,7 +550,16 @@ export function combineUrlReputation(baseAnalysis, providerResults) {
   ])
   const finalScore = Math.min(baseAnalysis.score, score)
   const risk = getRiskFromScore(finalScore)
-  const recommendations = recommendationsFor(risk.status)
+  const categories = [...new Set([
+    ...(baseAnalysis.details?.categories ?? []),
+    ...activeResults.filter((result) => result.checked && !result.error && !result.skipped && result.found).flatMap((result) =>
+      result.provider === 'PhishTank' ? ['phishing-indicators']
+        : result.provider.startsWith('URLhaus') ? ['malware-reputation']
+          : result.provider === 'Google Safe Browsing' ? (result.threatTypes ?? []).map((type) => type === 'SOCIAL_ENGINEERING' ? 'phishing-indicators' : 'malware-reputation')
+            : result.provider === 'AbuseIPDB' ? ['ip-reputation']
+              : result.provider === 'VirusTotal' ? ['malware-reputation'] : []),
+  ])]
+  const recommendations = recommendationsFor(risk.status, categories)
   const warningSigns = [
     ...(baseAnalysis.warningSigns ?? []),
     ...externalWarnings.map((warning) => warning.label),
@@ -571,15 +580,7 @@ export function combineUrlReputation(baseAnalysis, providerResults) {
       ...(baseAnalysis.details ?? {}),
       threatIntel: activeResults,
       coverage: providerCoverage(activeResults, ['URL reputation and local rules only; page content and redirects were not inspected.']),
-      categories: [...new Set([
-        ...(baseAnalysis.details?.categories ?? []),
-        ...activeResults.filter((result) => result.checked && !result.error && !result.skipped && result.found).flatMap((result) =>
-          result.provider === 'PhishTank' ? ['phishing-indicators']
-            : result.provider.startsWith('URLhaus') ? ['malware-reputation']
-              : result.provider === 'Google Safe Browsing' ? (result.threatTypes ?? []).map((type) => type === 'SOCIAL_ENGINEERING' ? 'phishing-indicators' : 'malware-reputation')
-                : result.provider === 'AbuseIPDB' ? ['ip-reputation']
-                  : result.provider === 'VirusTotal' ? ['malware-reputation'] : []),
-      ])],
+      categories,
     },
   }
 }

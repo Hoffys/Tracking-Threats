@@ -68,7 +68,7 @@ export async function enrichEmailAuthentication(input, baseAnalysis, verify = ve
   const score = Math.min(baseAnalysis.score, 100 - Number(result.deduction ?? 0))
   const risk = getRiskFromScore(score)
   const warningSigns = [...new Set([...baseAnalysis.warningSigns, ...(result.warning ? [result.warning] : [])])]
-  const recommendations = recommendationsFor(risk.status)
+  const recommendations = recommendationsFor(risk.status, baseAnalysis.details?.categories)
   return {
     ...baseAnalysis, ...risk, score, warningSigns, recommendations, recommendation: recommendations.join(' '),
     details: {

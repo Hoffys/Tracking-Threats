@@ -79,11 +79,11 @@ export function contentCategories(text) {
 export function localResult(findings, details, kind, score = scoreWarnings(findings)) {
   const risk = getRiskFromScore(score)
   const categoryWarnings = details.categoryWarnings ?? []
-  const piracyWarning = categoryWarnings.some((item) => item.category === 'piracy-content')
-  const recommendations = [
-    ...(piracyWarning ? ['Download risk is unknown. Piracy-related sources can expose you to malware, fake mirrors, tampered files, and copyright risk. Scan the actual file before opening it.'] : []),
-    ...recommendationsFor(risk.status),
-  ]
+  const categories = [...new Set([
+    ...(findings.some((item) => item.deduction > 0) ? ['phishing-indicators'] : []),
+    ...categoryWarnings.map((item) => item.category),
+  ])]
+  const recommendations = recommendationsFor(risk.status, categories)
   return {
     ...risk, score,
     summary: findings.length ? `Found ${findings.length} local ${kind} warning sign${findings.length === 1 ? '' : 's'}.` : `No strong local ${kind} phishing indicators were found. Reputation was not checked.`,
@@ -91,10 +91,7 @@ export function localResult(findings, details, kind, score = scoreWarnings(findi
     recommendations, recommendation: recommendations.join(' '),
     details: {
       ...details, findings, categoryWarnings,
-      categories: [...new Set([
-        ...(findings.some((item) => item.deduction > 0) ? ['phishing-indicators'] : []),
-        ...categoryWarnings.map((item) => item.category),
-      ])],
+      categories,
     },
   }
 }

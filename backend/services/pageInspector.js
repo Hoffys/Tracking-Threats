@@ -194,7 +194,7 @@ export async function enrichPageInspection(target, baseAnalysis, inspect = inspe
   const score = Math.min(baseAnalysis.score, pageScore)
   const risk = getRiskFromScore(score)
   const warningSigns = [...new Set([...baseAnalysis.warningSigns, ...(result.warning ? [result.warning] : [])])]
-  const recommendations = recommendationsFor(risk.status)
+  const recommendations = recommendationsFor(risk.status, baseAnalysis.details?.categories)
   return {
     ...baseAnalysis, ...risk, score, warningSigns, recommendations,
     recommendation: recommendations.join(' '),

@@ -30,6 +30,13 @@ test('known phishing evidence remains dangerous when other providers fail', () =
   assert.ok(result.details.categories.includes('phishing-indicators'))
 })
 
+test('piracy-only results retain the download caution after reputation checks', () => {
+  const result = combineUrlReputation(scanUrl('https://example.com/torrent'), [clean])
+  assert.equal(result.status, 'Safe')
+  assert.ok(result.details.categories.includes('piracy-content'))
+  assert.match(result.recommendations[0], /Download risk is unknown/)
+})
+
 test('email and SMS inherit dangerous embedded-link reputation without averaging it away', async () => {
   for (const [text, base] of [
     ['Read https://example.com/info', scanMessage('Read https://example.com/info')],

@@ -45,7 +45,11 @@ export async function enrichContentLinks(content, baseAnalysis, lookup = enrichU
   if ((selected.length < links.length || content.length > MAX_TEXT_LENGTH) && coverage.status === 'complete') coverage.status = 'partial'
   const score = Math.min(baseAnalysis.score, ...analyses.map((analysis) => analysis.score))
   const risk = getRiskFromScore(score)
-  const recommendations = recommendationsFor(risk.status)
+  const categories = [...new Set([
+    ...(baseAnalysis.details?.categories ?? []),
+    ...analyses.flatMap((analysis) => analysis.details?.categories ?? []),
+  ])]
+  const recommendations = recommendationsFor(risk.status, categories)
   const warningSigns = [...new Set([
     ...baseAnalysis.warningSigns,
     ...providers.filter((result) => result.checked && !result.error && !result.skipped && result.warning)
@@ -59,10 +63,7 @@ export async function enrichContentLinks(content, baseAnalysis, lookup = enrichU
       ...baseAnalysis.details,
       threatIntel: providers,
       coverage: { ...coverage, linksChecked: selected.length, totalLinks: links.length },
-      categories: [...new Set([
-        ...(baseAnalysis.details?.categories ?? []),
-        ...analyses.flatMap((analysis) => analysis.details?.categories ?? []),
-      ])],
+      categories,
       ...(baseAnalysis.details?.emailBreakdown ? {
         emailBreakdown: {
           ...baseAnalysis.details.emailBreakdown,
