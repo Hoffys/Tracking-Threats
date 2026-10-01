@@ -17,7 +17,7 @@ function getUrlText(url = '', host = '') {
 function inferThreatFromUrl(url = '', host = '') {
   const text = getUrlText(url, host)
 
-  if (/torrent|pirate|crack|cracked|keygen|warez|fitgirl|dodi|elamigos|gog-games|igg-games|igggames|oceanofgames|ovagames|steamrip|steamunlocked|online-fix|repack|repacks/.test(text)) {
+  if (/torrent|pirate|crack|cracked|keygen|warez|fitgirl|dodi|elamigos|game3rb|gamedrive|gog-games|igg-games|igggames|kisskh|oceanofgames|ovagames|repack-games|steamrip|steamunlocked|online-fix|thepiratebay|repack|repacks/.test(text)) {
     return {
       threatType: 'Piracy or illegal download risk',
       primaryWarning: 'This site matches piracy, cracked software, torrent, or repack indicators.',

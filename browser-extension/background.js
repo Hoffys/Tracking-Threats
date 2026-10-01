@@ -765,6 +765,7 @@ function getScanNotification(scan, rawUrl) {
   const status = scan?.status === 'Dangerous' || scan?.blocked ? 'Blocked' : scan?.status
   const host = getHost(rawUrl) || rawUrl
   const piracyCaution = status === 'Safe' && scan?.categories?.includes('piracy-content')
+  const contentCaution = status === 'Safe' && scan?.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
 
   if (status === 'Blocked') {
     return {
@@ -784,6 +785,13 @@ function getScanNotification(scan, rawUrl) {
     return {
       title: 'Tracking Threats: download risk unknown',
       message: `${host}: no strong phishing indicators were found, but piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.`,
+    }
+  }
+
+  if (contentCaution) {
+    return {
+      title: 'Tracking Threats: content warning',
+      message: `${host}: no strong phishing indicators were found, but a separate content-risk category needs review before continuing.`,
     }
   }
 

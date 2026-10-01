@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { scanUrl, MAX_LINKS, MAX_TEXT_LENGTH, MAX_URL_LENGTH } from './urlScanner.js'
+import { scanUrl, MAX_LINKS, MAX_TEXT_LENGTH, MAX_URL_LENGTH, piracySiteIndicators } from './urlScanner.js'
 import { scanMessage, extractLinks } from './messageScanner.js'
 import { analyzeEmail } from './emailAnalyzer.js'
 
@@ -81,6 +81,18 @@ test('gambling and piracy are separate categories with no phishing deductions', 
   const mixed = scanUrl('https://paypal.example/login/casino/torrent')
   assert.equal(mixed.status, 'Dangerous')
   assert(mixed.details.categories.includes('phishing-indicators'))
+})
+
+test('piracy warnings cover named torrent, repack and cracked-software sources', () => {
+  for (const indicator of piracySiteIndicators) {
+    const result = scanUrl(`https://example.com/download/${indicator}`)
+    assert.equal(result.status, 'Safe', indicator)
+    assert(result.details.categories.includes('piracy-content'), indicator)
+    assert.match(result.recommendations[0], /Download risk is unknown/, indicator)
+  }
+  for (const path of ['torrent', 'magnet-link', 'software-keygen', 'game-repack', 'cracked-software']) {
+    assert(scanUrl(`https://example.com/${path}`).details.categories.includes('piracy-content'), path)
+  }
 })
 
 test('normal banking, login instructions and security education remain benign', () => {

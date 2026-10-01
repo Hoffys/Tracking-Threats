@@ -70,3 +70,8 @@ A result with no strong phishing indicators now shows **Download risk unknown**
 when piracy content is detected, along with malware, fake-mirror, tampered-file,
 and copyright-risk guidance. The phishing score is unchanged because piracy
 content alone is not proof of phishing.
+
+Version 1.0.32 expands the piracy warning to named torrent, repack, cracked-
+software, and mirror indicators instead of treating FitGirl as a special case.
+All separate content-risk categories now use an amber content warning rather
+than the ordinary green safe presentation.

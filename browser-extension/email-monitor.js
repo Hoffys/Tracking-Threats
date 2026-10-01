@@ -508,7 +508,7 @@ function getInboxBadgeStyle(scan) {
   }
   if (level === 'content') {
     return {
-      text: 'DOWNLOAD RISK UNKNOWN',
+      text: hasPiracyContent(scan) ? 'DOWNLOAD RISK UNKNOWN' : 'CONTENT WARNING',
       border: 'rgba(245,158,11,.7)',
       background: '#fef3c7',
       color: '#92400e',
@@ -601,7 +601,7 @@ function showInboxStatus() {
   } else if (inboxPending === 0 && hasRisk) {
     statusText = `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
   } else if (inboxPending === 0 && hasContentWarnings) {
-    statusText = `${inboxStats.content} email${inboxStats.content === 1 ? '' : 's'} with download-risk content warnings`
+    statusText = `${inboxStats.content} email${inboxStats.content === 1 ? '' : 's'} with content warnings`
   } else if (inboxPending === 0 && inboxStats.checked === 0 && inboxStats.failed > 0) {
     statusText = 'Could not assess these messages. Try scanning again.'
   } else if (inboxPending === 0 && hasGaps) {
@@ -643,7 +643,7 @@ function showInboxStatus() {
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   const totals = document.createElement('p')
-  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe + inboxStats.incomplete} appear safe (${inboxStats.incomplete} with limited verification) - ${inboxStats.content} download-risk warning - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
+  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe + inboxStats.incomplete} appear safe (${inboxStats.incomplete} with limited verification) - ${inboxStats.content} content warning - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
   totals.style.cssText = 'margin:3px 0 0;color:#cbd5e1;font-size:11px'
 
   const header = document.createElement('div')
@@ -922,16 +922,21 @@ function hasPiracyContent(scan) {
   return scan?.categories?.includes('piracy-content') === true
 }
 
+function hasContentWarnings(scan) {
+  return scan?.categories?.some((category) => typeof category === 'string' && category.endsWith('-content')) === true
+}
+
 function getScanLevel(scan) {
   if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
   if (scan?.status === 'Suspicious') return 'caution'
-  if (scan?.status === 'Safe' && hasPiracyContent(scan)) return 'content'
+  if (scan?.status === 'Safe' && hasContentWarnings(scan)) return 'content'
   if (hasIncompleteChecks(scan)) return 'incomplete'
   return 'safe'
 }
 
 function getStatusLabel(status, _coverage, categories = []) {
   if (status === 'Safe' && categories.includes('piracy-content')) return 'Download risk unknown'
+  if (status === 'Safe' && categories.some((category) => typeof category === 'string' && category.endsWith('-content'))) return 'Content warning'
   if (status === 'Safe') return 'Appears safe'
   if (status === 'Dangerous') return 'Risk detected'
   return status === 'Suspicious' ? 'Caution' : status
@@ -957,8 +962,8 @@ function showEmailWarning(scan, email) {
   const banner = existing ?? document.createElement('aside')
   const warnings = scan.warningSigns?.slice(0, 4) ?? []
   const recommendations = scan.recommendations?.slice(0, 2) ?? []
-  const isSafe = scan.status === 'Safe' && !hasPiracyContent(scan)
-  const isContentWarning = hasPiracyContent(scan)
+  const isContentWarning = scan.status === 'Safe' && hasContentWarnings(scan)
+  const isSafe = scan.status === 'Safe' && !isContentWarning
   const isDangerous = scan.status === 'Dangerous' || scan.blocked
   const borderColor = isDangerous ? 'rgba(225,29,72,.45)' : isSafe ? 'rgba(16,185,129,.45)' : 'rgba(245,158,11,.45)'
   const accentColor = isDangerous ? '#fecdd3' : isSafe ? '#6ee7b7' : '#fde68a'
@@ -1030,7 +1035,9 @@ function showEmailWarning(scan, email) {
 
   if (isContentWarning) {
     const cautionText = document.createElement('p')
-    cautionText.textContent = 'No strong phishing indicators were found, but download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
+    cautionText.textContent = hasPiracyContent(scan)
+      ? 'No strong phishing indicators were found, but download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
+      : 'No strong phishing indicators were found, but a separate content-risk category needs review before continuing.'
     cautionText.style.cssText = 'margin:10px 0 0;color:#fde68a;font-weight:700'
     banner.appendChild(cautionText)
   }

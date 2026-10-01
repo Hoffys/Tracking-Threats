@@ -124,10 +124,14 @@ function hasPiracyContent(scan) {
   return scan?.categories?.includes('piracy-content') === true
 }
 
+function hasContentWarnings(scan) {
+  return scan?.categories?.some((category) => typeof category === 'string' && category.endsWith('-content')) === true
+}
+
 function getScanLevel(scan) {
   if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
   if (scan?.status === 'Suspicious') return 'caution'
-  if (scan?.status === 'Safe' && hasPiracyContent(scan)) return 'content'
+  if (scan?.status === 'Safe' && hasContentWarnings(scan)) return 'content'
   if (hasIncompleteChecks(scan)) return 'incomplete'
   return 'safe'
 }
@@ -154,7 +158,7 @@ function getResultStyle(scan) {
   }
   if (level === 'content') {
     return {
-      label: 'DOWNLOAD RISK UNKNOWN',
+      label: hasPiracyContent(scan) ? 'DOWNLOAD RISK UNKNOWN' : 'CONTENT WARNING',
       border: 'rgba(245,158,11,.55)',
       background: '#fef3c7',
       color: '#92400e',
@@ -323,7 +327,7 @@ function showSearchStatus() {
       : hasRisk
         ? `${riskyCount} risky search result${riskyCount === 1 ? '' : 's'} found`
         : hasContentWarnings
-          ? `${scanStats.content} result${scanStats.content === 1 ? '' : 's'} with download-risk content warnings`
+          ? `${scanStats.content} result${scanStats.content === 1 ? '' : 's'} with content warnings`
         : hasGaps ? 'Checked results appear safe. Some verification services or result scans were unavailable.' : 'Checked results appear safe based on available checks'
 
   banner.id = 'threattrack-search-status'
@@ -355,7 +359,7 @@ function showSearchStatus() {
   body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
 
   const counts = document.createElement('p')
-  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe + scanStats.incomplete} appear safe (${scanStats.incomplete} with limited verification) - ${scanStats.content} download-risk warning - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
+  counts.textContent = `${scanStats.checked} checked - ${scanStats.safe + scanStats.incomplete} appear safe (${scanStats.incomplete} with limited verification) - ${scanStats.content} content warning - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   banner.append(title, body, counts)
@@ -448,6 +452,11 @@ function showResultPopup(url, scan) {
   if (hasPiracyContent(topScan)) {
     const cautionText = document.createElement('p')
     cautionText.textContent = 'No strong phishing indicators were found, but download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
+    cautionText.style.cssText = 'margin:10px 0 0;color:#fde68a;font-weight:700'
+    popup.appendChild(cautionText)
+  } else if (hasContentWarnings(topScan)) {
+    const cautionText = document.createElement('p')
+    cautionText.textContent = 'No strong phishing indicators were found, but a separate content-risk category needs review before continuing.'
     cautionText.style.cssText = 'margin:10px 0 0;color:#fde68a;font-weight:700'
     popup.appendChild(cautionText)
   }

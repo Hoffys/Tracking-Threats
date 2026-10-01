@@ -199,7 +199,7 @@ const detectionLayers = [
     icon: Globe2,
     detail:
       'Checks domains and text for risky terms, suspicious top-level domains, piracy, gambling, rewards, account, login, and verification wording.',
-    examples: ['.site, .zip, .top', 'fitgirl, torrent, crack', 'verify, reward, billing'],
+    examples: ['.site, .zip, .top', 'torrent, repack, keygen, cracked software', 'verify, reward, billing'],
     coverage: 'URL, email, SMS, search results',
     accent: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300',
   },

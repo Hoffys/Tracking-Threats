@@ -14,11 +14,13 @@ inspectPage.addEventListener('click', () => {
       return
     }
     const scan = response.scan
+    const hasContentWarning = scan.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
     const label = scan.status === 'Safe' && scan.categories?.includes('piracy-content') ? 'Download risk unknown'
+      : scan.status === 'Safe' && hasContentWarning ? 'Content warning'
       : scan.status === 'Safe' ? 'Appears safe' : scan.status === 'Dangerous' ? 'Risk detected' : 'Caution'
     inspectionNote.textContent = `${label} - score ${scan.score}/100. Scan finished.`
     pill.textContent = `${label} - ${scan.score}/100`
-    if (scan.categories?.includes('piracy-content')) pill.classList.add('warning')
+    if (scan.status === 'Safe' && hasContentWarning) pill.classList.add('warning')
   })
 })
 
@@ -50,12 +52,14 @@ chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => {
   const status = threattrackStatus.lastStatus
   // The compact activity record may predate coverage reporting.
   const coverage = threattrackStatus.coverage
+  const hasContentWarning = threattrackStatus.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
   const label = status === 'Safe' && threattrackStatus.categories?.includes('piracy-content') ? 'Download risk unknown'
+    : status === 'Safe' && hasContentWarning ? 'Content warning'
     : status === 'Safe' ? 'Appears safe'
     : status === 'Dangerous' ? 'Risk detected' : status === 'Suspicious' ? 'Caution' : status
   pill.textContent = `${label} - ${threattrackStatus.lastScore}/100`
   if (['Suspicious', 'Dangerous', 'Blocked'].includes(status)) pill.classList.add('error')
-  if (status === 'Safe' && threattrackStatus.categories?.includes('piracy-content')) pill.classList.add('warning')
+  if (status === 'Safe' && hasContentWarning) pill.classList.add('warning')
   message.textContent += ` - Scan finished; no further checks are pending. Rule-based score, not a probability. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
   if (coverage) message.textContent += ` ${coverage.checkedProviders}/${coverage.totalProviders} providers checked. ${(coverage.limitations ?? []).join(' ')}`
   if (threattrackStatus.categories?.length) message.textContent += ` Categories: ${threattrackStatus.categories.join(', ')}. Content categories do not establish phishing.`

@@ -66,6 +66,16 @@ test('rendered results distinguish incomplete checks, content categories and man
     assert.match(piracyExplanation, /download risk unknown/i)
     assert.match(piracyExplanation, /malware, fake mirrors, tampered files, and copyright risk/i)
     assert.doesNotMatch(piracyExplanation, /Appears safe based on this scan/)
+    const gamblingScan = {
+      status: 'Safe', score: 100, coverage: complete,
+      categories: ['gambling-content'], categoryWarnings: ['Contains gambling-related references.'],
+    }
+    const gamblingBadge = renderToStaticMarkup(createElement(RiskBadge, { risk: 'Safe', categories: gamblingScan.categories }))
+    assert.match(gamblingBadge, /No phishing indicators/)
+    assert.match(gamblingBadge, /amber/)
+    const gamblingExplanation = renderToStaticMarkup(createElement(ScanExplanation, { scan: gamblingScan }))
+    assert.match(gamblingExplanation, /content warning found/i)
+    assert.doesNotMatch(gamblingExplanation, /Appears safe based on this scan/)
     const html = renderToStaticMarkup(createElement(ScanExplanation, { manual: true, scan: {
       status: 'Dangerous', blocked: true, score: 20, coverage: { ...complete, status: 'partial', checkedProviders: 1,
         linksChecked: 2, totalLinks: 7, limitations: ['Some links were not checked.'] },

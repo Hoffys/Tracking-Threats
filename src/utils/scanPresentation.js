@@ -17,6 +17,10 @@ export function hasPiracyContent(categories) {
   return normalizeCategories(categories).includes('piracy-content')
 }
 
+export function hasContentWarnings(categories) {
+  return normalizeCategories(categories).some((category) => category.endsWith('-content'))
+}
+
 export function normalizeCoverage(coverage) {
   const count = (value) => Number.isSafeInteger(value) && value >= 0
   if (!coverage || !['complete', 'partial', 'unavailable', 'local-only'].includes(coverage.status) ||
@@ -45,7 +49,7 @@ export function hasIncompleteChecks(coverage) {
 }
 
 export function riskLabel(risk, categories = []) {
-  if (risk === 'Safe' && hasPiracyContent(categories)) return 'No phishing indicators'
+  if (risk === 'Safe' && hasContentWarnings(categories)) return 'No phishing indicators'
   if (risk === 'Safe') return 'Appears safe'
   if (risk === 'Dangerous') return 'Risk detected'
   if (risk === 'Suspicious') return 'Caution'

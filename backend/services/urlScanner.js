@@ -9,6 +9,33 @@ export const MAX_TEXT_LENGTH = 100000
 export const MAX_LINKS = 100
 const pslOptions = { allowPrivateDomains: true }
 
+export const piracySiteIndicators = [
+  'dodi',
+  'dodi-repacks',
+  'elamigos',
+  'elamigos-games',
+  'fitgirl',
+  'fitgirl-repacks',
+  'fitgirlrepacks',
+  'game3rb',
+  'gamedrive',
+  'gog-games',
+  'igg-games',
+  'igggames',
+  'kisskh',
+  'oceanofgames',
+  'online-fix',
+  'ovagames',
+  'repack-games',
+  'steamrip',
+  'steamunlocked',
+  'thepiratebay',
+]
+
+const piracyTerms = /\b(?:piracy|pirated|torrents?|keygens?|warez|magnet[\s-]+links?|cracked[\s-]+(?:games?|software)|games?[\s-]+cracks?|repacks?)\b/i
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const piracySitePattern = new RegExp(`(?:^|[^a-z0-9])(?:${piracySiteIndicators.map(escapeRegExp).join('|')})(?:[^a-z0-9]|$)`, 'i')
+
 // Ownership suppresses only that brand's impersonation finding, never other rules.
 export const officialDomains = {
   amazon: ['amazon.com', 'amazon.co.uk', 'amazon.co.jp', 'amazon.de', 'amazon.ca'],
@@ -70,7 +97,7 @@ export function contentCategories(text) {
   if (/\b(?:casino|gambling|betting|sportsbook|roulette|baccarat|sabong|bet365|1xbet|bingoplus)\b/i.test(text)) {
     categoryWarnings.push({ category: 'gambling-content', label: 'Contains gambling-related references; this is not a phishing determination.' })
   }
-  if (/\b(?:piracy|pirated|torrent|torrents|keygen|warez|cracked[\s-]+software|fitgirl(?:-repacks)?|steamunlocked|thepiratebay|dodi-repacks)\b/i.test(text)) {
+  if (piracyTerms.test(text) || piracySitePattern.test(text)) {
     categoryWarnings.push({ category: 'piracy-content', label: 'Contains piracy-related references; this is not a phishing determination.' })
   }
   return categoryWarnings
