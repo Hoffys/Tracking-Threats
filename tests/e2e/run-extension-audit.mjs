@@ -132,7 +132,7 @@ try {
     await historyPage.locator(`#scan-${scanId}`).waitFor({ timeout: 25000 })
     await historyPage.getByRole('button', { name: 'Monitor', exact: true }).first().click()
     await historyPage.getByText('browser-extension', { exact: false }).first().waitFor()
-    await historyPage.getByText('https://paypal.audit-danger.test/verify-password', { exact: true }).first().waitFor()
+    await historyPage.getByText('paypal.audit-danger.test', { exact: true }).first().waitFor()
     await historyPage.close()
     return { recoveredScanId: scanId, liveMonitor: true }
   })

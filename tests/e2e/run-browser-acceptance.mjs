@@ -142,7 +142,11 @@ async function run() {
   const screenshot = (page, name) => page.screenshot({ path: path.join(artifacts, `${name}.png`), fullPage: true })
   async function responseJson(pending) {
     const response = await pending
-    assert.ok(response.ok(), `${response.request().method()} ${new URL(response.url()).pathname}: ${response.status()} ${await response.text()}`)
+    if (!response.ok()) {
+      let body = '<response body unavailable>'
+      try { body = await response.text() } catch { /* Navigation can dispose the response body. */ }
+      assert.fail(`${response.request().method()} ${new URL(response.url()).pathname}: ${response.status()} ${body}`)
+    }
     return response.json()
   }
   async function open(page, route, reload = false) {
@@ -266,7 +270,7 @@ async function run() {
     await expect(row(page, own)).toHaveCount(0)
     await open(page, 'history', true)
     await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
-    await expect(page.getByText('No scan yet. New email and manual scans will be saved.', { exact: true })).toBeVisible()
+    await expect(page.getByText('No saved scans loaded. Automatic browser scans, email scans, and manual scans appear here when synced with this browser.', { exact: true })).toBeVisible()
     await open(otherPage, 'history', true)
     await expect(row(otherPage, other)).toBeVisible()
     evidence.preservedOtherScanId = other.id
@@ -303,7 +307,7 @@ async function run() {
         await expect(preview.getByText(item, { exact: true }).first()).toBeVisible()
       }
       await expect(preview).toContainText(label)
-      await expect(preview).toContainText('No phishing indicators')
+      await expect(preview).toContainText('Content warning - separate from phishing')
       await expect(preview).toContainText('content warning found')
       await expect(preview).toContainText('These content categories do not establish phishing.')
       await expect(preview).toContainText('It has not been saved to scan history.')
@@ -331,7 +335,7 @@ async function run() {
     await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
   })
 
-  test('mobile viewport keeps primary navigation and scan form usable', async ({ newPage, evidence }) => {
+  test('phone, tablet and short laptop navigation stay usable', async ({ newPage, evidence }) => {
     const page = await newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await open(page, 'dashboard')
     await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden()
@@ -342,8 +346,34 @@ async function run() {
     await expect(page.getByRole('heading', { name: /Scan a URL/i })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     assert.ok(overflow <= 1, `Mobile page overflows horizontally by ${overflow}px`)
-    evidence.viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }))
+    evidence.phone = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }))
     await screenshot(page, 'mobile-manual-scan')
+
+    const tablet = await newPage({ viewport: { width: 820, height: 1180 }, hasTouch: true })
+    await open(tablet, 'dashboard')
+    await expect(tablet.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible()
+    const tabletOverflow = await tablet.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    assert.ok(tabletOverflow <= 1, `Tablet page overflows horizontally by ${tabletOverflow}px`)
+    evidence.tablet = { width: 820, height: 1180, overflow: tabletOverflow }
+
+    const laptop = await newPage({ viewport: { width: 1366, height: 650 } })
+    await open(laptop, 'dashboard')
+    const sidebar = laptop.locator('aside').first()
+    await expect(sidebar).toBeVisible()
+    const sidebarMetrics = await sidebar.evaluate((element) => {
+      const style = getComputedStyle(element)
+      element.scrollTop = element.scrollHeight
+      return {
+        overflowY: style.overflowY,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        reachedBottom: Math.ceil(element.scrollTop + element.clientHeight) >= element.scrollHeight,
+      }
+    })
+    assert.equal(sidebarMetrics.overflowY, 'auto')
+    assert.ok(sidebarMetrics.scrollHeight > sidebarMetrics.clientHeight, 'Short laptop sidebar should need vertical scrolling.')
+    assert.equal(sidebarMetrics.reachedBottom, true)
+    evidence.shortLaptop = { width: 1366, height: 650, ...sidebarMetrics }
   })
 
   test('admin evaluation runs real samples, displays counts and restores saved history', async ({ page, evidence }) => {
