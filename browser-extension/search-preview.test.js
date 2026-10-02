@@ -97,6 +97,10 @@ test('coverage, categories and content warnings survive linked-app preview round
     assert.match(app.getCoverageText(expected), /Scan finished/)
     assert.match(app.getCoverageText(expected), /No further checks are pending/)
   }
+  const piracy = { ...scan, status: 'Safe', score: 100, categories: ['piracy-content'] }
+  assert.equal(app.getResultStyle(piracy).label, 'PIRACY WARNING - FILE NOT SCANNED')
+  assert.match(app.getScoreText(piracy), /URL phishing safety score: 100\/100/)
+  assert.match(app.getScoreText(piracy), /Downloaded files were not scanned/)
 })
 
 test('malformed coverage and forged category values cannot advertise complete checks', () => {
@@ -112,6 +116,18 @@ test('malformed coverage and forged category values cannot advertise complete ch
   assert.equal(app.getResultStyle(result).label, 'CONTENT WARNING')
   assert.match(app.getCoverageText(result), /Check details were not recorded/)
   assert.equal(app.getResultStyle({ ...scan, status: 'Dangerous' }).label, 'RISK DETECTED')
+})
+
+test('search result dialogs stay inside the viewport and scroll their own content', () => {
+  const resultPopup = source.slice(source.indexOf('function showResultPopup('), source.indexOf('function createPreviewButton('))
+  const clickPreview = source.slice(source.indexOf('function showClickPreview('), source.indexOf('function scanGoogleResults('))
+
+  for (const dialogSource of [resultPopup, clickPreview]) {
+    assert.match(dialogSource, /max-height:calc\(100dvh - \d+px\)/)
+    assert.match(dialogSource, /overflow-y:auto/)
+    assert.match(dialogSource, /overscroll-behavior:contain/)
+    assert.match(dialogSource, /-webkit-overflow-scrolling:touch/)
+  }
 })
 
 test('missing and failed preview replies produce an amber unavailable message', () => {

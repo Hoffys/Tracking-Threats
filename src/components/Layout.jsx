@@ -3,9 +3,11 @@ import {
   Bell,
   BookOpenCheck,
   CircleX,
+  ChevronDown,
   History,
   Info,
   LayoutDashboard,
+  Menu,
   Moon,
   Radar,
   ScanLine,
@@ -15,6 +17,7 @@ import {
   Sun,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useState } from 'react'
 import { isPublicDeployment } from '../config/deployment'
 import { useThreats } from '../hooks/useThreats'
 import { GetExtension } from './GetExtension'
@@ -37,6 +40,7 @@ const publicNavItems = allNavItems.filter((item) =>
 const navItems = isPublicDeployment ? publicNavItems : allNavItems
 
 export function Layout({ activePage, children, onNavigate }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const {
     activeNotification,
     darkMode,
@@ -57,7 +61,10 @@ export function Layout({ activePage, children, onNavigate }) {
         key={item.id}
         type="button"
         title={item.label}
-        onClick={() => onNavigate(item.id)}
+        onClick={() => {
+          onNavigate(item.id)
+          if (!isSidebar) setMobileNavOpen(false)
+        }}
         className={`group flex min-w-0 items-center transition ${
           isSidebar
             ? `gap-3 rounded-lg px-3 py-3 text-sm font-semibold ${
@@ -92,7 +99,7 @@ export function Layout({ activePage, children, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-emerald-50 text-slate-950 transition-colors dark:bg-slate-950 dark:text-slate-100">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-emerald-100 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 md:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col overflow-y-auto overscroll-contain border-r border-emerald-100 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 lg:flex">
         <button
           className="flex min-w-0 items-center gap-3 rounded-lg p-2 text-left transition hover:bg-emerald-50 dark:hover:bg-slate-800"
           type="button"
@@ -166,11 +173,11 @@ export function Layout({ activePage, children, onNavigate }) {
         </div>
       </aside>
 
-      <div className="md:pl-72">
+      <div className="min-w-0 lg:pl-72">
         <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-6">
           <button
-            className="flex min-w-0 items-center gap-2 text-left md:hidden"
+            className="flex min-w-0 items-center gap-2 text-left lg:hidden"
             type="button"
             onClick={() => onNavigate('dashboard')}
           >
@@ -229,7 +236,7 @@ export function Layout({ activePage, children, onNavigate }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-5 md:pb-8 lg:px-6">
+        <main className="mx-auto w-full max-w-7xl px-4 pb-20 pt-5 sm:pb-24 lg:px-6 lg:pb-8">
           {children}
         </main>
       </div>
@@ -241,7 +248,7 @@ export function Layout({ activePage, children, onNavigate }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-x-4 bottom-24 z-40 mx-auto max-w-md rounded-lg border border-rose-400/50 bg-rose-600 p-4 text-white shadow-2xl md:bottom-6 md:right-6 md:left-auto md:mx-0"
+            className="fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md rounded-lg border border-rose-400/50 bg-rose-600 p-4 text-white shadow-2xl sm:bottom-24 lg:bottom-6 lg:right-6 lg:left-auto lg:mx-0"
             role="alert"
           >
             <div className="flex items-start gap-3">
@@ -273,7 +280,27 @@ export function Layout({ activePage, children, onNavigate }) {
         )}
       </AnimatePresence>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-emerald-100 bg-white/95 shadow-[0_-4px_18px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 md:hidden" aria-label="Mobile navigation">
+      <button
+        type="button"
+        aria-controls="mobile-navigation"
+        aria-expanded={mobileNavOpen}
+        aria-label={mobileNavOpen ? 'Hide navigation' : 'Show navigation'}
+        onClick={() => setMobileNavOpen((open) => !open)}
+        className={`fixed right-4 z-40 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-lg transition dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-200 sm:hidden ${
+          mobileNavOpen ? 'bottom-20' : 'bottom-4'
+        }`}
+      >
+        {mobileNavOpen ? <ChevronDown size={18} /> : <Menu size={18} />}
+        {mobileNavOpen ? 'Hide' : 'Menu'}
+      </button>
+
+      <nav
+        id="mobile-navigation"
+        className={`fixed inset-x-0 bottom-0 z-30 border-t border-emerald-100 bg-white/95 shadow-[0_-4px_18px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:block lg:hidden ${
+          mobileNavOpen ? 'block' : 'hidden'
+        }`}
+        aria-label="Mobile navigation"
+      >
         <div className="mx-auto flex max-w-full overflow-x-auto px-2 py-1">
           {navItems.map((item) => renderNavItem(item, 'bottom'))}
         </div>

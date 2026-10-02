@@ -334,8 +334,11 @@ async function run() {
   test('mobile viewport keeps primary navigation and scan form usable', async ({ newPage, evidence }) => {
     const page = await newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await open(page, 'dashboard')
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden()
+    await page.getByRole('button', { name: 'Show navigation' }).click()
     await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeVisible()
     await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: 'Scan', exact: true }).click()
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden()
     await expect(page.getByRole('heading', { name: /Scan a URL/i })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     assert.ok(overflow <= 1, `Mobile page overflows horizontally by ${overflow}px`)

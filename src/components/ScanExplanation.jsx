@@ -44,10 +44,10 @@ const getExplanation = (scan) => {
 
   if (status === 'Safe' && hasPiracyContent(scan?.categories)) {
     return {
-      title: 'No strong phishing indicators; download risk unknown',
+      title: 'Piracy content warning; file not scanned',
       icon: AlertTriangle,
       tone: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
-      summary: 'This result contains piracy-related references. That is separate from the phishing verdict and does not make downloads safe. Files may still involve malware, fake mirrors, tampering, or copyright risk.',
+      summary: 'The URL did not show strong phishing indicators, but that result does not rate any downloadable file. Piracy-related files may still involve malware, fake mirrors, tampering, or copyright risk.',
       mainSignal: 'Piracy-related content detected',
       matchedIntel,
       unavailableIntel,
@@ -142,7 +142,9 @@ export function ScanExplanation({ scan, manual = false }) {
       )}
 
       <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-        Rule-based score: {scan.score}/100. This is not a calibrated probability.
+        {hasPiracyContent(categories)
+          ? `URL phishing safety score: ${scan.score}/100. This score does not rate downloadable files.`
+          : `Rule-based safety score: ${scan.score}/100. This is not a calibrated probability.`}
       </p>
       <p className={`mt-2 text-sm ${hasIncompleteChecks(scan.coverage) ? 'text-amber-700 dark:text-amber-300' : 'text-slate-600 dark:text-slate-300'}`}>
         {coverageLabel(scan.coverage)}
@@ -174,7 +176,9 @@ export function ScanExplanation({ scan, manual = false }) {
       )}
       <div className="mt-4 grid gap-3 md:grid-cols-4">
         <div>
-          <p className="text-xs font-semibold uppercase text-slate-400">Score band</p>
+          <p className="text-xs font-semibold uppercase text-slate-400">
+            {contentCategories.length > 0 ? 'Phishing indicator band' : 'Score band'}
+          </p>
           <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
             {getScoreBand(scan.score)}
           </p>

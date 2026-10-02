@@ -143,6 +143,16 @@ function hasContentWarnings(scan) {
   return scan?.categories?.some((category) => typeof category === 'string' && category.endsWith('-content')) === true
 }
 
+function getScoreText(scan) {
+  if (hasPiracyContent(scan)) {
+    return `URL phishing safety score: ${scan.score}/100. Downloaded files were not scanned.`
+  }
+  if (scan?.status === 'Safe' && hasContentWarnings(scan)) {
+    return `Phishing safety score: ${scan.score}/100. A separate content warning applies.`
+  }
+  return `Rule-based safety score: ${scan.score}/100`
+}
+
 function getScanLevel(scan) {
   if (scan?.status === 'Dangerous' || scan?.blocked) return 'dangerous'
   if (scan?.status === 'Suspicious') return 'caution'
@@ -173,7 +183,7 @@ function getResultStyle(scan) {
   }
   if (level === 'content') {
     return {
-      label: hasPiracyContent(scan) ? 'DOWNLOAD RISK UNKNOWN' : 'CONTENT WARNING',
+      label: hasPiracyContent(scan) ? 'PIRACY WARNING - FILE NOT SCANNED' : 'CONTENT WARNING',
       border: 'rgba(245,158,11,.55)',
       background: '#fef3c7',
       color: '#92400e',
@@ -240,7 +250,7 @@ function addBadge(anchor, scan) {
   const style = getResultStyle(scan)
   const badge = document.createElement('span')
   badge.className = 'threattrack-result-badge'
-  badge.textContent = `${style.label} ${scan.score}/100`
+  badge.textContent = getScanLevel(scan) === 'content' ? style.label : `${style.label} ${scan.score}/100`
   badge.style.cssText = [
     'all:initial',
     'box-sizing:border-box',
@@ -415,6 +425,13 @@ function showResultPopup(url, scan) {
     'z-index:2147483647',
     'box-sizing:border-box',
     'width:min(360px,calc(100vw - 32px))',
+    'max-height:calc(100vh - 112px)',
+    'max-height:calc(100dvh - 112px)',
+    'overflow-x:hidden',
+    'overflow-y:auto',
+    'overscroll-behavior:contain',
+    '-webkit-overflow-scrolling:touch',
+    'scrollbar-gutter:stable',
     `border:1px solid ${borderColor}`,
     'border-radius:8px',
     'background:#111827',
@@ -457,7 +474,7 @@ function showResultPopup(url, scan) {
   popup.appendChild(urlText)
 
   const score = document.createElement('p')
-  score.textContent = `Status: ${statusText} - Rule-based score ${topScan.score}/100`
+  score.textContent = `Status: ${statusText} - ${getScoreText(topScan)}`
   score.style.cssText = `margin:8px 0 0;color:${accentColor};font-weight:700`
   popup.appendChild(score)
   appendScanContext(popup, topScan)
@@ -575,6 +592,13 @@ function showClickPreview(url, scan, anchor) {
   card.style.cssText = [
     'box-sizing:border-box',
     'width:min(560px,calc(100vw - 32px))',
+    'max-height:calc(100vh - 32px)',
+    'max-height:calc(100dvh - 32px)',
+    'overflow-x:hidden',
+    'overflow-y:auto',
+    'overscroll-behavior:contain',
+    '-webkit-overflow-scrolling:touch',
+    'scrollbar-gutter:stable',
     `border:1px solid ${style.border}`,
     'border-radius:10px',
     'background:#111827',
@@ -605,7 +629,7 @@ function showClickPreview(url, scan, anchor) {
   card.appendChild(urlText)
 
   const score = document.createElement('p')
-  score.textContent = `Status: ${style.label} - Rule-based score ${scan.score}/100`
+  score.textContent = `Status: ${style.label} - ${getScoreText(scan)}`
   score.style.cssText = `margin:10px 0 0;color:${accentColor};font-weight:700`
   card.appendChild(score)
   appendScanContext(card, scan)

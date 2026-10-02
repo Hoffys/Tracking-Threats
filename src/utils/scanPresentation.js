@@ -49,7 +49,8 @@ export function hasIncompleteChecks(coverage) {
 }
 
 export function riskLabel(risk, categories = []) {
-  if (risk === 'Safe' && hasContentWarnings(categories)) return 'No phishing indicators'
+  if (risk === 'Safe' && hasPiracyContent(categories)) return 'Piracy warning - file not scanned'
+  if (risk === 'Safe' && hasContentWarnings(categories)) return 'Content warning - separate from phishing'
   if (risk === 'Safe') return 'Appears safe'
   if (risk === 'Dangerous') return 'Risk detected'
   if (risk === 'Suspicious') return 'Caution'

@@ -16,11 +16,14 @@ inspectPage.addEventListener('click', () => {
     const scan = response.scan
     pill.classList.remove('error', 'warning')
     const hasContentWarning = scan.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
-    const label = scan.status === 'Safe' && scan.categories?.includes('piracy-content') ? 'Download risk unknown'
+    const piracyWarning = scan.status === 'Safe' && scan.categories?.includes('piracy-content')
+    const label = piracyWarning ? 'Piracy warning'
       : scan.status === 'Safe' && hasContentWarning ? 'Content warning'
       : scan.status === 'Safe' ? 'Appears safe' : scan.status === 'Dangerous' ? 'Risk detected' : 'Caution'
-    inspectionNote.textContent = `${label} - score ${scan.score}/100. ${scan.threatName ? `Threat name: ${scan.threatName}. Threat type: ${scan.threatType}. ${scan.whyDetected?.[0] ?? ''}` : ''} Scan finished.`
-    pill.textContent = `${label} - ${scan.score}/100`
+    inspectionNote.textContent = piracyWarning
+      ? `Piracy-related content warning. URL phishing safety score ${scan.score}/100; this does not rate downloads. The file was not scanned. Scan the actual file before opening it. Scan finished.`
+      : `${label} - safety score ${scan.score}/100. ${scan.threatName ? `Threat name: ${scan.threatName}. Threat type: ${scan.threatType}. ${scan.whyDetected?.[0] ?? ''}` : ''} Scan finished.`
+    pill.textContent = piracyWarning ? 'Piracy warning - file not scanned' : `${label} - ${scan.score}/100`
     if (['Dangerous', 'Blocked'].includes(scan.status)) pill.classList.add('error')
     if (scan.status === 'Suspicious') pill.classList.add('warning')
     if (scan.status === 'Safe' && hasContentWarning) pill.classList.add('warning')
@@ -57,14 +60,17 @@ function renderStatus(threattrackStatus) {
   // The compact activity record may predate coverage reporting.
   const coverage = threattrackStatus.coverage
   const hasContentWarning = threattrackStatus.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
-  const label = status === 'Safe' && threattrackStatus.categories?.includes('piracy-content') ? 'Download risk unknown'
+  const piracyWarning = status === 'Safe' && threattrackStatus.categories?.includes('piracy-content')
+  const label = piracyWarning ? 'Piracy warning'
     : status === 'Safe' && hasContentWarning ? 'Content warning'
     : status === 'Safe' ? 'Appears safe'
     : status === 'Dangerous' ? 'Risk detected' : status === 'Suspicious' ? 'Caution' : status
-  pill.textContent = `${label} - ${threattrackStatus.lastScore}/100`
+  pill.textContent = piracyWarning ? 'Piracy warning - file not scanned' : `${label} - ${threattrackStatus.lastScore}/100`
   if (['Suspicious', 'Dangerous', 'Blocked'].includes(status)) pill.classList.add('error')
   if (status === 'Safe' && hasContentWarning) pill.classList.add('warning')
-  message.textContent += ` - Scan finished; no further checks are pending. Rule-based score, not a probability. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
+  message.textContent += piracyWarning
+    ? ` - URL phishing safety score ${threattrackStatus.lastScore}/100; this does not rate downloads. The file was not scanned. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
+    : ` - Scan finished; no further checks are pending. Rule-based safety score, not a probability. ${coverage ? 'Coverage: ' + coverage.status : 'Coverage not recorded.'}`
   if (coverage) message.textContent += ` ${coverage.checkedProviders}/${coverage.totalProviders} providers checked. ${(coverage.limitations ?? []).join(' ')}`
   if (threattrackStatus.downloadWarning) message.textContent += ` ${threattrackStatus.downloadWarning}`
   if (threattrackStatus.categories?.length) message.textContent += ` Categories: ${threattrackStatus.categories.join(', ')}. Content categories do not establish phishing.`
