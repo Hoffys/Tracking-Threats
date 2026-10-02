@@ -3,6 +3,7 @@ import { detectUrl, detectMessage, detectEmail, detectFile } from '../services/d
 import { sendScanReport } from '../services/mailReporter.js'
 import { isMarkedSafeUrlTarget } from '../services/safeHosts.js'
 import { localCoverage } from '../services/coverage.js'
+import { attachThreatClassification, buildThreatClassification } from '../services/threatClassification.js'
 import {
   completeScanSubmission,
   createScanSubmission,
@@ -81,6 +82,13 @@ const getEmailDomain = (sender = '') => {
 
 export const mapScan = (row) => {
   const details = fromJson(row.details, {})
+  const warningSigns = fromJson(row.warning_signs)
+  const classification = details.threatClassification ?? buildThreatClassification(row.type, {
+    status: row.status,
+    summary: row.summary,
+    warningSigns,
+    details,
+  })
   return {
     id: row.id,
     type: row.type,
@@ -91,7 +99,7 @@ export const mapScan = (row) => {
     risk: row.risk,
     action: row.action,
     summary: row.summary,
-    warningSigns: fromJson(row.warning_signs),
+    warningSigns,
     recommendations: fromJson(row.recommendations),
     recommendation: fromJson(row.recommendations).join(' '),
     source: details.source ?? 'api',
@@ -105,6 +113,7 @@ export const mapScan = (row) => {
     coverage: details.coverage ?? localCoverage('This older scan did not record which checks completed.'),
     categories: details.categories ?? [],
     categoryWarnings: (details.categoryWarnings ?? []).map((item) => typeof item === 'string' ? item : item.label).filter(Boolean),
+    ...classification,
     emailBreakdown: details.emailBreakdown,
     fileDetails: details.file,
     responseStatus: row.action === 'Blocked' ? 'Blocked' : null,
@@ -212,10 +221,11 @@ async function persistScan({
   const storedTarget = getStoredTarget(type, target)
   const storedClientId = normalizeClientId(clientId)
   const expiresAt = getScanExpiry(createdAt)
+  const classifiedAnalysis = attachThreatClassification(type, analysis)
   const storedAnalysis = {
-    ...analysis,
-    warningSigns: (analysis.warningSigns ?? []).map(redactSensitiveText),
-    details: sanitizeDetailsForStorage(analysis.details ?? {}),
+    ...classifiedAnalysis,
+    warningSigns: (classifiedAnalysis.warningSigns ?? []).map(redactSensitiveText),
+    details: sanitizeDetailsForStorage(classifiedAnalysis.details ?? {}),
   }
   const scan = {
     id: uuid(),
@@ -226,6 +236,7 @@ async function persistScan({
     createdAt,
     ...storedAnalysis,
   }
+  const classification = scan.details?.threatClassification ?? buildThreatClassification(type, scan)
 
   await db.run(
     `INSERT INTO scans
@@ -302,7 +313,7 @@ async function persistScan({
       scan.score,
       'Dangerous',
       'Blocked',
-      scan.summary,
+      `${classification.threatName}: ${classification.whyDetected?.[0] ?? scan.summary}`,
       recommendedAction,
       'active',
       1,
@@ -316,14 +327,14 @@ async function persistScan({
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       uuid(),
       scan.id,
-      'Dangerous Threat Detected',
+      classification.threatName,
       scan.target,
       'critical',
       'new',
-      scan.type,
+      classification.threatType,
       'Dangerous',
       recommendedAction,
-      `${scan.type} was automatically blocked.`,
+      classification.whyDetected?.[0] ?? `${scan.type} was automatically blocked.`,
       storedClientId,
       createdAt,
     )
@@ -340,14 +351,14 @@ async function persistScan({
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       uuid(),
       scan.id,
-      `Suspicious ${scan.type} detected`,
+      classification.threatName,
       scan.target,
       scan.risk,
       'new',
-      scan.type,
+      classification.threatType,
       scan.status,
       scan.recommendations?.[0] ?? 'Review before trusting.',
-      scan.summary,
+      classification.whyDetected?.[0] ?? scan.summary,
       storedClientId,
       createdAt,
     )
@@ -465,7 +476,7 @@ export async function createUrlScan(target, source = 'api', clientId = null, pri
 
 export async function previewUrlScan(target) {
   if (await isMarkedSafeUrlTarget(target)) {
-    return {
+    const preview = {
       type: 'URL',
       target,
       content: '',
@@ -482,6 +493,7 @@ export async function previewUrlScan(target) {
       responseStatus: null,
       blocked: false,
     }
+    return { ...preview, ...buildThreatClassification('URL', preview) }
   }
 
   const analysis = await detectUrl(target, { preview: true })
@@ -502,6 +514,7 @@ export async function previewUrlScan(target) {
     coverage: analysis.details?.coverage,
     categories: analysis.details?.categories ?? [],
     categoryWarnings: (analysis.details?.categoryWarnings ?? []).map((item) => typeof item === 'string' ? item : item.label).filter(Boolean),
+    ...(analysis.details?.threatClassification ?? buildThreatClassification('URL', analysis)),
     responseStatus: analysis.action === 'Blocked' ? 'Blocked' : null,
     blocked: analysis.action === 'Blocked',
   }

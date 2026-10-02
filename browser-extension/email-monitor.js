@@ -22,6 +22,21 @@ function getCategoryText(scan) {
 }
 
 function appendScanContext(parent, scan) {
+  if (scan?.threatName && scan?.threatType) {
+    const classification = document.createElement('div')
+    classification.style.cssText = 'margin:10px 0 0;border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:10px;color:#e2e8f0'
+    const heading = document.createElement('strong')
+    heading.textContent = `Threat name: ${scan.threatName}`
+    heading.style.cssText = 'display:block;color:#f8fafc'
+    const type = document.createElement('p')
+    type.textContent = `Threat type: ${scan.threatType}${scan.confidence ? ` - Confidence: ${scan.confidence}` : ''}`
+    type.style.cssText = 'margin:4px 0 0'
+    const reason = document.createElement('p')
+    reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
+    reason.style.cssText = 'margin:4px 0 0;color:#cbd5e1'
+    classification.append(heading, type, reason)
+    parent.appendChild(classification)
+  }
   const detail = document.createElement('p')
   detail.textContent = [getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
   detail.style.cssText = `margin:10px 0 0;color:${hasIncompleteChecks(scan) ? '#fde68a' : '#cbd5e1'}`

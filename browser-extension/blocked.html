@@ -127,7 +127,8 @@
       <div class="url" id="blocked-url"></div>
       <p id="score"></p>
       <div class="threat-kind">
-        <strong id="threat-type">Detected threat: Dangerous website risk</strong>
+        <strong id="threat-name">Threat name: Dangerous website</strong>
+        <span id="threat-type">Threat type: Website risk</span>
         <span id="threat-reason">The scanner found dangerous URL indicators.</span>
       </div>
       <p class="warning">
@@ -137,7 +138,7 @@
         <a
           class="secondary-link"
           id="details-link"
-          href="https://tracking-threats-production.up.railway.app/?page=history"
+          aria-disabled="true"
           target="_blank"
           rel="noreferrer"
         >
@@ -145,6 +146,8 @@
         </a>
         <button id="continue-button" type="button">Unblock and Continue</button>
       </div>
+      <p id="history-status" role="status">Connecting this result to your scan history...</p>
+      <button id="retry-history" type="button" hidden>Retry history connection</button>
     </main>
     <script src="config.js"></script>
     <script src="blocked.js"></script>

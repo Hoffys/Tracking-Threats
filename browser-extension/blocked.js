@@ -19,6 +19,7 @@ function inferThreatFromUrl(url = '', host = '') {
 
   if (/torrent|pirate|crack|cracked|keygen|warez|fitgirl|dodi|elamigos|game3rb|gamedrive|gog-games|igg-games|igggames|kisskh|oceanofgames|ovagames|repack-games|steamrip|steamunlocked|online-fix|thepiratebay|repack|repacks/.test(text)) {
     return {
+      threatName: 'Piracy-related content warning',
       threatType: 'Piracy or illegal download risk',
       primaryWarning: 'This site matches piracy, cracked software, torrent, or repack indicators.',
     }
@@ -26,6 +27,7 @@ function inferThreatFromUrl(url = '', host = '') {
 
   if (/casino|gambl(e|ing)|betting?|sportsbook|slots?|jackpot|poker|roulette|baccarat|sabong|freebet/.test(text)) {
     return {
+      threatName: 'Gambling-related content warning',
       threatType: 'Gambling or betting risk',
       primaryWarning: 'This site matches gambling, betting, or cash-out indicators.',
     }
@@ -33,12 +35,14 @@ function inferThreatFromUrl(url = '', host = '') {
 
   if (/secure|security|verify|verification|account|accounts|login|signin|password|billing|wallet|claim|reward|promo|bonus|update/.test(text)) {
     return {
+      threatName: 'Suspected credential phishing page',
       threatType: 'Phishing or credential theft risk',
       primaryWarning: 'This URL uses account, login, verification, or reward wording often used in phishing.',
     }
   }
 
   return {
+    threatName: 'Dangerous website',
     threatType: 'Dangerous website risk',
     primaryWarning: 'The scanner found dangerous URL indicators.',
   }
@@ -56,11 +60,27 @@ function getDetailsUrl({ appUrl = APP_URL, url = '', host = '', scanId = '' } = 
 
 function updateDetailsLink({ url = '', host = '', scanId = blockedScanId } = {}) {
   const detailsLink = document.getElementById('details-link')
-  detailsLink.href = getDetailsUrl({ url, host, scanId })
-
-  chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
-    if (chrome.runtime.lastError || !response?.ok || !response.appUrl) return
-    detailsLink.href = getDetailsUrl({ appUrl: response.appUrl, url, host, scanId })
+  const historyStatus = document.getElementById('history-status')
+  const retry = document.getElementById('retry-history')
+  detailsLink.removeAttribute('href')
+  detailsLink.setAttribute('aria-disabled', 'true')
+  retry.hidden = true
+  historyStatus.textContent = 'Connecting this result to your scan history...'
+  chrome.runtime.sendMessage({ type: 'prepare-blocked-details', url: url || `https://${host}/`, scanId }, (response) => {
+    const error = chrome.runtime.lastError
+    if (error || !response?.ok || !response.scan?.id || !response.appUrl) {
+      historyStatus.textContent = `History could not be synced: ${error?.message || response?.error || 'Extension unavailable'}. Retry when connected.`
+      retry.hidden = false
+      return
+    }
+    blockedScanId = response.scan.id
+    const reason = response.scan.whyDetected?.[0] || response.scan.warningSigns?.[0] || response.scan.summary
+    document.getElementById('threat-name').textContent = `Threat name: ${response.scan.threatName || 'Dangerous website'}`
+    document.getElementById('threat-type').textContent = `Threat type: ${response.scan.threatType || 'Website risk'}`
+    document.getElementById('threat-reason').textContent = reason || 'The scanner found dangerous URL indicators.'
+    detailsLink.href = getDetailsUrl({ appUrl: response.appUrl, url, host, scanId: blockedScanId })
+    detailsLink.removeAttribute('aria-disabled')
+    historyStatus.textContent = `Saved in this browser's History and Live Monitor. Latest scan: ${response.scan.status}, safety score ${response.scan.score}/100.`
   })
 }
 
@@ -69,6 +89,7 @@ function renderBlockedPage({
   host = '',
   status = 'Blocked',
   score = '0',
+  threatName = '',
   threatType = '',
   primaryWarning = '',
   scanId = '',
@@ -76,13 +97,15 @@ function renderBlockedPage({
   blockedUrl = url
   blockedScanId = scanId || blockedScanId
   const inferredThreat = inferThreatFromUrl(blockedUrl, host)
+  const displayedThreatName = threatName || inferredThreat.threatName
   const displayedThreatType = threatType || inferredThreat.threatType
   const displayedPrimaryWarning = primaryWarning || inferredThreat.primaryWarning
 
   document.getElementById('blocked-url').textContent =
     blockedUrl || (host ? `Blocked host: ${host}` : 'Unknown URL')
   document.getElementById('score').textContent = `Status: ${status} - Safety score ${score}/100`
-  document.getElementById('threat-type').textContent = `Detected threat: ${displayedThreatType}`
+  document.getElementById('threat-name').textContent = `Threat name: ${displayedThreatName}`
+  document.getElementById('threat-type').textContent = `Threat type: ${displayedThreatType}`
   document.getElementById('threat-reason').textContent = displayedPrimaryWarning
   updateDetailsLink({ url: blockedUrl, host, scanId: blockedScanId })
 }
@@ -93,6 +116,7 @@ async function loadBlockedContext() {
       url: blockedUrl,
       status: params.get('status') || 'Blocked',
       score: params.get('score') || '0',
+      threatName: params.get('name') || undefined,
       threatType: params.get('threat') || undefined,
       primaryWarning: params.get('warning') || undefined,
       scanId: params.get('scan') || '',
@@ -106,12 +130,6 @@ async function loadBlockedContext() {
 
   if (context?.expiresAt && Date.now() <= context.expiresAt) {
     renderBlockedPage(context)
-    chrome.runtime.sendMessage({ type: 'record-blocked-visit', url: context.url }, (response) => {
-      if (response?.scan?.id) {
-        blockedScanId = response.scan.id
-        updateDetailsLink({ url: context.url, host: context.host, scanId: blockedScanId })
-      }
-    })
     return
   }
 
@@ -121,15 +139,10 @@ async function loadBlockedContext() {
     host: blockedHost,
     status: params.get('status') || 'Blocked',
     score: params.get('score') || '0',
+    threatName: params.get('name') || undefined,
     threatType: params.get('threat') || undefined,
     primaryWarning: params.get('warning') || undefined,
     scanId: params.get('scan') || '',
-  })
-  chrome.runtime.sendMessage({ type: 'record-blocked-visit', url: fallbackUrl }, (response) => {
-    if (response?.scan?.id) {
-      blockedScanId = response.scan.id
-      updateDetailsLink({ url: fallbackUrl, host: blockedHost, scanId: blockedScanId })
-    }
   })
 }
 
@@ -154,77 +167,11 @@ document.getElementById('continue-button').addEventListener('click', () => {
   )
 })
 
-const devicePairCodeInput = document.getElementById('devicePairCode')
-const linkDeviceButton = document.getElementById('linkDeviceButton')
-const devicePairStatus = document.getElementById('devicePairStatus')
-const linkedDeviceInfo = document.getElementById('linkedDeviceInfo')
-const devicePairForm = document.getElementById('devicePairForm')
+document.getElementById('retry-history').addEventListener('click', () => {
+  updateDetailsLink({ url: blockedUrl, host: blockedHost })
+})
 
-async function loadLinkedDeviceInfo() {
-  const stored = await chrome.storage.local.get([
-    'linkedDeviceId',
-    'linkedDeviceName',
-    'linkedBrowserName',
-  ])
-
-  if (!stored.linkedDeviceId) {
-    linkedDeviceInfo.style.display = 'none'
-    devicePairForm.style.display = 'block'
-    return
-  }
-
-  linkedDeviceInfo.style.display = 'block'
-  linkedDeviceInfo.textContent =
-    `Linked to: ${stored.linkedDeviceName || 'Device'} (${stored.linkedBrowserName || 'Browser'})`
-
-  devicePairForm.style.display = 'none'
-}
-
-if (linkDeviceButton) {
-  linkDeviceButton.addEventListener('click', async () => {
-    const pairCode = String(devicePairCodeInput?.value ?? '')
-      .trim()
-      .toUpperCase()
-
-    if (!/^[A-F0-9]{8}$/.test(pairCode)) {
-      devicePairStatus.textContent =
-        'Enter a valid 8-character device code.'
-      return
-    }
-
-    linkDeviceButton.disabled = true
-    devicePairStatus.textContent = 'Linking device...'
-
-    try {
-      const result = await chrome.runtime.sendMessage({
-        type: 'PAIR_DEVICE',
-        pairCode,
-      })
-
-      if (!result?.ok) {
-        devicePairStatus.textContent =
-          result?.error || 'Unable to link this browser.'
-        return
-      }
-
-      devicePairStatus.textContent = 'Device linked successfully.'
-
-      if (devicePairCodeInput) {
-        devicePairCodeInput.value = ''
-      }
-
-      await loadLinkedDeviceInfo()
-    } catch (error) {
-      console.error('Pair device popup error:', error)
-
-      devicePairStatus.textContent =
-        'Unable to communicate with the extension.'
-    } finally {
-      linkDeviceButton.disabled = false
-    }
-  })
-}
-
-loadLinkedDeviceInfo()
-
-loadBlockedContext()
+loadBlockedContext().catch((error) => {
+  document.getElementById('history-status').textContent = 'History could not be synced: ' + error.message
+  document.getElementById('retry-history').hidden = false
+})

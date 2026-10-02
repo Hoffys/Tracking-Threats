@@ -27,12 +27,16 @@ test('public history persists detection context through JSON storage', () => {
   const sandbox = { scan: { id: 'scan-1', type: 'URL', status: 'Safe', score: 100,
     coverage: { ...complete, status: 'partial', checkedProviders: 1, limitations: ['Missing key'] },
     categories: ['gambling-content'], categoryWarnings: ['Content category warning'],
+    threatName: 'Gambling-related content warning', threatType: 'Content risk',
+    confidence: 'Informational', whyDetected: ['Gambling category detected'], evidenceSources: ['Content category rules'],
     date: '2026-09-30T00:00:00.000Z' } }
   vm.runInNewContext(source.slice(start, end) + '\nglobalThis.record = toPublicScanRecord(scan)', sandbox)
   const stored = JSON.parse(JSON.stringify(sandbox.record))
   assert.deepEqual(stored.coverage, sandbox.scan.coverage)
   assert.deepEqual(stored.categories, sandbox.scan.categories)
   assert.deepEqual(stored.categoryWarnings, sandbox.scan.categoryWarnings)
+  assert.equal(stored.threatName, sandbox.scan.threatName)
+  assert.deepEqual(stored.whyDetected, sandbox.scan.whyDetected)
   assert.equal(stored.status, 'Safe')
 })
 
@@ -80,6 +84,8 @@ test('rendered results distinguish incomplete checks, content categories and man
       status: 'Dangerous', blocked: true, score: 20, coverage: { ...complete, status: 'partial', checkedProviders: 1,
         linksChecked: 2, totalLinks: 7, limitations: ['Some links were not checked.'] },
       categories: ['gambling-content', 'ip-reputation'], categoryWarnings: ['Gambling category warning'],
+      threatName: 'Suspected credential phishing page', threatType: 'Phishing / credential theft',
+      confidence: 'Medium', whyDetected: ['Password form submits to a different host'], evidenceSources: ['Page inspection'],
     } }))
     assert.match(html, /Why risk was detected/)
     assert.match(html, /not a calibrated probability/)
@@ -87,6 +93,11 @@ test('rendered results distinguish incomplete checks, content categories and man
     assert.match(html, /Content warnings: Gambling content/)
     assert.match(html, /Risk categories: IP reputation/)
     assert.match(html, /Gambling category warning/)
+    assert.match(html, /Threat name/)
+    assert.match(html, /Suspected credential phishing page/)
+    assert.match(html, /Threat type/)
+    assert.match(html, /Password form submits to a different host/)
+    assert.match(html, /Evidence sources.*Page inspection/)
     assert.doesNotMatch(html, /Why this was blocked|confirmed phishing|Threat Blocked Automatically/)
     const intel = renderToStaticMarkup(createElement(ThreatIntelSummary, { providers: [
       { provider: 'Skipped', checked: false }, { provider: 'Failed', error: 'timeout' },

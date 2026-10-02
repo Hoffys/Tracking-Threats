@@ -28,15 +28,15 @@ const normalizeClientId = (clientId) => {
 const mapScanToPublicAlert = (scan) => ({
   id: scan.id,
   scanId: scan.id,
-  title: `${scan.type} risk found`,
+  title: scan.threatName ?? `${scan.type} risk found`,
   source: scan.target,
   severity: scan.status,
   status: 'new',
-  threatType: scan.type,
+  threatType: scan.threatType ?? scan.type,
   riskLevel: scan.status,
   recommendedAction:
     scan.recommendations?.[0] ?? scan.recommendation ?? 'Review before trusting this item.',
-  message: scan.summary,
+  message: scan.whyDetected?.[0] ?? scan.summary,
   time: scan.date,
 })
 
@@ -208,6 +208,11 @@ export async function getPublicActivity(req, res, next) {
       riskStatus: scan.status,
       timestamp: scan.date,
       warningSigns: scan.warningSigns ?? [],
+      threatName: scan.threatName,
+      threatType: scan.threatType,
+      whyDetected: scan.whyDetected,
+      confidence: scan.confidence,
+      evidenceSources: scan.evidenceSources,
     }))
     const riskyScans = scans.filter((scan) => scan.status === 'Dangerous' || scan.blocked)
 
@@ -360,31 +365,37 @@ export async function getLiveFeed(_req, res, next) {
     const db = await dbPromise
     await syncLiveMonitorActivity(db)
     const rows = await db.all(`
-      SELECT * FROM live_monitor_activity
-      WHERE history_visible = 1
-      ORDER BY created_at DESC
+      SELECT live_monitor_activity.*, scans.details AS scan_details
+      FROM live_monitor_activity
+      LEFT JOIN scans ON scans.id = live_monitor_activity.scan_id
+      WHERE live_monitor_activity.history_visible = 1
+      ORDER BY live_monitor_activity.created_at DESC
       LIMIT 50
     `)
     res.json(
-      rows.map((row) => ({
-        id: row.scan_id,
-        activityType: row.activity_type,
-        source:
-          row.source === 'browser-extension'
-            ? 'browser-extension'
-            : row.activity_type === 'Email'
-              ? 'email-background-analyzer'
-              : row.source,
-        target: row.target,
-        domain: row.domain,
-        title: row.title,
-        detail: row.detail,
-        score: row.score,
-        status: row.status,
-        riskStatus: row.risk_status,
-        timestamp: row.created_at,
-        warningSigns: fromJson(row.warning_signs),
-      })),
+      rows.map((row) => {
+        const classification = fromJson(row.scan_details, {}).threatClassification ?? {}
+        return {
+          id: row.scan_id,
+          activityType: row.activity_type,
+          source:
+            row.source === 'browser-extension'
+              ? 'browser-extension'
+              : row.activity_type === 'Email'
+                ? 'email-background-analyzer'
+                : row.source,
+          target: row.target,
+          domain: row.domain,
+          title: row.title,
+          detail: row.detail,
+          score: row.score,
+          status: row.status,
+          riskStatus: row.risk_status,
+          timestamp: row.created_at,
+          warningSigns: fromJson(row.warning_signs),
+          ...classification,
+        }
+      }),
     )
   } catch (error) {
     next(error)

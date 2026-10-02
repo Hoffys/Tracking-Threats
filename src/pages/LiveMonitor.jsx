@@ -62,6 +62,7 @@ export function LiveMonitor({ onNavigate }) {
     liveScanCount,
     systemActive,
     systemLogs,
+    activitySyncError,
   } = useThreats()
   const [showSystemLogs, setShowSystemLogs] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
@@ -142,6 +143,7 @@ export function LiveMonitor({ onNavigate }) {
 
   return (
     <div className="space-y-5">
+      {activitySyncError && <p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm">Live activity could not be synced: {activitySyncError}. Displayed events may be out of date. Reconnecting automatically.</p>}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Live Monitor</p>
@@ -491,6 +493,33 @@ export function LiveMonitor({ onNavigate }) {
                     </p>
                   </div>
                 </div>
+
+                {selectedEvent.threatName && selectedEvent.threatType && (
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-slate-400">Threat name</p>
+                        <p className="mt-1 text-sm font-semibold">{selectedEvent.threatName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-slate-400">Threat type</p>
+                        <p className="mt-1 text-sm font-semibold">{selectedEvent.threatType}</p>
+                      </div>
+                    </div>
+                    {selectedEvent.whyDetected?.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold uppercase text-slate-400">Why detected</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
+                          {selectedEvent.whyDetected.map((reason, index) => <li key={`${reason}-${index}`}>{reason}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                      Confidence: {selectedEvent.confidence || 'Not rated'}
+                      {selectedEvent.evidenceSources?.length > 0 ? ` • Evidence: ${selectedEvent.evidenceSources.join(', ')}` : ''}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">

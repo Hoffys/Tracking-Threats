@@ -471,6 +471,7 @@ function getBlockContextKey(host) {
 }
 
 function getDetectedThreat(scan = {}) {
+  if (scan.threatType) return scan.threatType
   const warningText = (scan.warningSigns ?? []).join(' ').toLowerCase()
 
   if (/piracy|torrent|cracked|keygen|warez|streaming|repack/.test(warningText)) {
@@ -496,8 +497,27 @@ function getDetectedThreat(scan = {}) {
   return scan.status === 'Dangerous' ? 'Dangerous website risk' : 'Suspicious website risk'
 }
 
+function getThreatName(scan = {}) {
+  if (scan.threatName) return scan.threatName
+  const detectedType = getDetectedThreat(scan)
+  if (detectedType === 'Phishing or credential theft risk') return 'Suspected credential phishing page'
+  if (detectedType === 'Malware or abuse reputation risk') return 'Malicious website reputation'
+  if (detectedType === 'Suspicious DNS or network risk') return 'Suspicious network destination'
+  return scan.status === 'Dangerous' ? 'Dangerous website' : 'Suspicious website'
+}
+
 function getPrimaryWarning(scan = {}) {
-  return scan.warningSigns?.[0] ?? scan.summary ?? 'The scanner found dangerous URL indicators.'
+  return scan.whyDetected?.[0] ?? scan.warningSigns?.[0] ?? scan.summary ?? 'The scanner found dangerous URL indicators.'
+}
+
+function getCompactThreatDetails(scan = {}) {
+  return {
+    threatName: scan.threatName ?? getThreatName(scan),
+    threatType: scan.threatType ?? getDetectedThreat(scan),
+    whyDetected: scan.whyDetected ?? (getPrimaryWarning(scan) ? [getPrimaryWarning(scan)] : []),
+    confidence: scan.confidence,
+    evidenceSources: scan.evidenceSources,
+  }
 }
 
 async function saveBlockedContext(host, rawUrl, scan) {
@@ -508,6 +528,7 @@ async function saveBlockedContext(host, rawUrl, scan) {
       scanId: scan?.id ?? '',
       status: scan?.status ?? 'Blocked',
       score: scan?.score ?? 0,
+      threatName: getThreatName(scan),
       threatType: getDetectedThreat(scan),
       primaryWarning: getPrimaryWarning(scan),
       expiresAt: Date.now() + BLOCK_CONTEXT_TTL_MS,
@@ -777,15 +798,15 @@ function getScanNotification(scan, rawUrl) {
 
   if (status === 'Blocked') {
     return {
-      title: 'Tracking Threats risk detected',
-      message: `${host} has risk indicators. Rule-based score ${score}/100; not a probability.`,
+      title: `Tracking Threats: ${scan?.threatName || 'risk detected'}`,
+      message: `${host}: ${scan?.threatType || getDetectedThreat(scan)}. ${getPrimaryWarning(scan)} Rule-based score ${score}/100; not a probability.`,
     }
   }
 
   if (status === 'Suspicious') {
     return {
-      title: 'Tracking Threats caution',
-      message: `${host} has warning signs. Rule-based score ${score}/100; not a probability.`,
+      title: `Tracking Threats: ${scan?.threatName || 'caution'}`,
+      message: `${host}: ${scan?.threatType || getDetectedThreat(scan)}. ${getPrimaryWarning(scan)} Rule-based score ${score}/100; not a probability.`,
     }
   }
 
@@ -840,7 +861,7 @@ function openBlockedPage(tabId, rawUrl, scan) {
       scan.score,
     )}&status=${encodeURIComponent(scan.status)}&threat=${encodeURIComponent(
       getDetectedThreat(scan),
-    )}&warning=${encodeURIComponent(getPrimaryWarning(scan))}&scan=${encodeURIComponent(
+    )}&name=${encodeURIComponent(getThreatName(scan))}&warning=${encodeURIComponent(getPrimaryWarning(scan))}&scan=${encodeURIComponent(
       scan.id ?? '',
     )}`,
   )
@@ -924,6 +945,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       lastScore: scan.score,
       coverage: scan.coverage,
       categories: scan.categories,
+      ...getCompactThreatDetails(scan),
     })
     if (!previewOnly) {
       await notifyScanResult(rawUrl, scan)
@@ -978,6 +1000,33 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
   return response.json()
 }
 
+const blockedDetailsRequests = new Map()
+
+async function prepareBlockedDetails(rawUrl, scanId = '') {
+  if (!isTrackableUrl(rawUrl)) throw new Error('This URL cannot be scanned.')
+  const key = `${rawUrl}:${scanId}`
+  if (blockedDetailsRequests.has(key)) return blockedDetailsRequests.get(key)
+  const pending = (async () => {
+    const credential = await getVerifiedClientCredentials()
+    let scan
+    if (scanId) {
+      // A persisted block rule can outlive its scan or the client credential.
+      // Only reuse a record still visible to this authenticated browser.
+      const response = await fetch(`${API_BASE_URL}/api/public/activity/${credential.clientId}`, {
+        headers: { 'X-Client-Token': credential.token }, cache: 'no-store',
+      })
+      if (!response.ok) throw new Error(await getScannerError(response))
+      const activity = await response.json()
+      scan = activity.scans?.find((item) => item.id === scanId && item.target === rawUrl)
+    }
+    if (!scan) scan = await recordBlockedVisit(rawUrl)
+    if (!scan?.id || scan.ok === false) throw new Error(scan?.error || 'No saved scan is available. The site may have a local allow exception.')
+    return { scan, appUrl: getLinkedAppUrl(await getClientId()) }
+  })()
+  blockedDetailsRequests.set(key, pending)
+  try { return await pending } finally { blockedDetailsRequests.delete(key) }
+}
+
 async function recordBlockedVisit(rawUrl) {
   if (!isTrackableUrl(rawUrl)) return null
   await syncSafeHosts()
@@ -991,10 +1040,6 @@ async function recordBlockedVisit(rawUrl) {
     await unblockSite({ rawUrl, host })
     return { status: 'Safe', score: 100, blocked: false, coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [] }
   }
-
-  const cooldownKey = `blocked-visit:${rawUrl}`
-  if (getRecentScan(cooldownKey)) return null
-  remember(cooldownKey, { status: 'recording' })
 
   try {
     const clientId = await getClientId()
@@ -1012,8 +1057,10 @@ async function recordBlockedVisit(rawUrl) {
     if (!response.ok) throw new Error(await getScannerError(response))
     const scan = await response.json()
     remember(rawUrl, scan)
-    if (!hasBypass(host)) {
+    if (!hasBypass(host) && isBlockedScan(scan)) {
       await rememberBlockedSite(rawUrl, scan)
+    } else if (!isBlockedScan(scan)) {
+      await unblockSite({ rawUrl, host })
     }
     await saveStatus({
       ok: true,
@@ -1022,6 +1069,7 @@ async function recordBlockedVisit(rawUrl) {
       lastScore: scan.score,
       coverage: scan.coverage,
       categories: scan.categories,
+      ...getCompactThreatDetails(scan),
     })
     await notifyScanResult(rawUrl, scan)
     return scan
@@ -1130,6 +1178,11 @@ async function cancelDangerousDownload(downloadItem, scan) {
     lastScore: scan?.score ?? 0,
     coverage: scan?.coverage,
     categories: scan?.categories,
+    threatName: scan?.threatName,
+    threatType: scan?.threatType,
+    whyDetected: scan?.whyDetected,
+    confidence: scan?.confidence,
+    evidenceSources: scan?.evidenceSources,
     ...(cancelled ? {} : { downloadWarning: 'Risk detected, but the browser could not cancel this download. It may already be complete.' }),
   })
   await notifyScanResult(downloadItem.url || getDownloadFileName(downloadItem), {
@@ -1166,6 +1219,11 @@ async function scanDownload(downloadItem) {
       lastScore: fileScan.score,
       coverage: fileScan.coverage,
       categories: fileScan.categories,
+      threatName: fileScan.threatName,
+      threatType: fileScan.threatType,
+      whyDetected: fileScan.whyDetected,
+      confidence: fileScan.confidence,
+      evidenceSources: fileScan.evidenceSources,
     })
     return fileScan
   } catch (error) {
@@ -1232,7 +1290,7 @@ async function inspectActivePage() {
   const scan = await response.json()
   remember(tab.url, scan)
   await saveStatus({ ok: true, lastUrl: tab.url, lastStatus: scan.status, lastScore: scan.score,
-    coverage: scan.coverage, categories: scan.categories })
+    coverage: scan.coverage, categories: scan.categories, ...getCompactThreatDetails(scan) })
   await notifyScanResult(tab.url, scan)
   if (isBlockedScan(scan) && !hasBypass(getHost(tab.url))) {
     await rememberBlockedSite(tab.url, scan)
@@ -1281,7 +1339,11 @@ chrome.webNavigation.onErrorOccurred?.addListener(async (details) => {
   const context = stored[key]
   openBlockedPage(details.tabId, details.url, {
     status: context?.status ?? 'Dangerous', score: context?.score ?? 0,
-    id: context?.scanId, warningSigns: context?.primaryWarning ? [context.primaryWarning] : [],
+    // This navigation never reaches onCommitted. The warning page must save
+    // a fresh automatic scan, not point at the previous blocked visit.
+    threatName: context?.threatName, threatType: context?.threatType,
+    whyDetected: context?.primaryWarning ? [context.primaryWarning] : [],
+    warningSigns: context?.primaryWarning ? [context.primaryWarning] : [],
   })
 })
 
@@ -1322,6 +1384,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'unblock-site' && (message.url || message.host)) {
     unblockSite({ rawUrl: message.url, host: message.host })
       .then((result) => sendResponse(result))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'prepare-blocked-details' && message.url) {
+    prepareBlockedDetails(message.url, message.scanId)
+      .then((details) => sendResponse({ ok: true, ...details }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }

@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-01T15:55:00.030Z",
+  "url": "https://tracking-threats-production.up.railway.app",
+  "commitPresentOnOrigin": "32d89aa",
+  "health": {
+    "status": 200,
+    "repository": "postgresql"
+  },
+  "frontend": {
+    "entry": "index-BfDaDOd8.js",
+    "admin": "Admin-DiKB8-Op.js",
+    "evaluationUI": true
+  },
+  "extension": {
+    "version": "1.0.33",
+    "manifestBackgroundPopupMatchLocal": true
+  },
+  "ocr": {
+    "cspIncludesWasmUnsafeEval": true,
+    "workerSrcSelf": true
+  },
+  "model": {
+    "liveSignal": "URL pattern resembles labeled phishing URLs",
+    "preview": true,
+    "reservedDomain": true,
+    "score": 75
+  },
+  "evaluation": {
+    "id": "f0591975-f642-4daf-8726-efe4ebedbf84",
+    "status": "completed",
+    "evaluated": 2,
+    "historySaved": true,
+    "datasets": [
+      {
+        "id": "synthetic",
+        "available": true
+      },
+      {
+        "id": "phiusiil",
+        "available": false
+      }
+    ]
+  },
+  "note": "Changes were already present on origin/main and live when checked; no duplicate deployment triggered. Two-case synthetic local smoke run is workflow verification, not an accuracy benchmark. PhiUSIIL sample is not installed on the live server."
+}

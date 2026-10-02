@@ -58,7 +58,11 @@ const scanText = (scan) =>
     scan.target,
     scan.content,
     scan.summary,
+    scan.threatName,
+    scan.threatType,
     ...(scan.warningSigns ?? []),
+    ...(scan.whyDetected ?? []),
+    ...(scan.evidenceSources ?? []),
     ...(scan.recommendations ?? []),
   ]
     .filter(Boolean)
@@ -75,7 +79,7 @@ const statusOptions = [
 ]
 
 export function ScanHistory() {
-  const { clearHistory, scanHistory, threatAuditLogs } = useThreats()
+  const { clearHistory, scanHistory, threatAuditLogs, activitySyncError } = useThreats()
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -131,6 +135,7 @@ export function ScanHistory() {
 
   return (
     <div className="space-y-5">
+      {activitySyncError && <p role="alert" className="rounded-lg border border-amber-500 p-3 text-sm">History could not be synced: {activitySyncError}. Displayed records may be out of date. Reconnecting automatically.</p>}
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Scan History</p>
@@ -208,7 +213,7 @@ export function ScanHistory() {
               <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-300">
                 {focusedScan
                   ? 'The matching scan is highlighted below with warning signs and recommendations.'
-                  : 'No matching saved scan is available. Search result previews are not saved until you visit the site. To see a preview, open it again from the updated extension.'}
+                  : 'Waiting for a matching saved scan from this browser. If it does not appear, return to the extension warning page and retry its history connection. A previous record may have expired or been deleted.'}
               </p>
             </div>
             {focusedScan && <RiskBadge risk={focusedScan.status ?? focusedScan.risk} coverage={focusedScan.coverage} categories={focusedScan.categories} />}
@@ -219,7 +224,7 @@ export function ScanHistory() {
       <Panel>
         {scanHistory.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            No scan yet. New email and manual scans will be saved.
+            No saved scans loaded. Automatic browser scans, email scans, and manual scans appear here when synced with this browser.
           </p>
         ) : (
           <div className="space-y-4">

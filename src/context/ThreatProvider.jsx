@@ -110,6 +110,11 @@ const toPublicScanRecord = (scan) => ({
   coverage: scan.coverage,
   categories: scan.categories,
   categoryWarnings: scan.categoryWarnings,
+  threatName: scan.threatName,
+  threatType: scan.threatType,
+  whyDetected: scan.whyDetected,
+  confidence: scan.confidence,
+  evidenceSources: scan.evidenceSources,
   emailBreakdown: scan.emailBreakdown,
   fileDetails: scan.fileDetails
     ? {
@@ -147,18 +152,23 @@ const toPublicLiveEvent = (scan) => ({
   categoryWarnings: scan.categoryWarnings,
   timestamp: scan.date,
   warningSigns: scan.warningSigns ?? [],
+  threatName: scan.threatName,
+  threatType: scan.threatType,
+  whyDetected: scan.whyDetected,
+  confidence: scan.confidence,
+  evidenceSources: scan.evidenceSources,
 })
 
 const toPublicAlert = (scan) => ({
   id: scan.id,
-  title: `${scan.type} risk found`,
+  title: scan.threatName ?? `${scan.type} risk found`,
   source: scan.target,
   time: scan.date,
   severity: scan.status,
   riskLevel: scan.status,
-  threatType: scan.type,
+  threatType: scan.threatType ?? scan.type,
   status: 'new',
-  message: scan.summary,
+  message: scan.whyDetected?.[0] ?? scan.summary,
   recommendedAction:
     scan.recommendations?.[0] ?? scan.recommendation ?? 'Review before trusting this item.',
 })
@@ -208,6 +218,7 @@ export function ThreatProvider({ children }) {
   )
   const [systemLogs, setSystemLogs] = useState([])
   const [systemActive, setSystemActive] = useState(false)
+  const [activitySyncError, setActivitySyncError] = useState('')
   const [stats, setStats] = useState(
     isPublicDeployment ? getPublicStats(initialPublicScans) : emptyStats,
   )
@@ -251,7 +262,7 @@ export function ThreatProvider({ children }) {
       const [health, activity] = await Promise.all([
         apiService.getHealth(),
         publicClientId
-          ? apiService.getPublicActivity(publicClientId).catch(() => null)
+          ? apiService.getPublicActivity(publicClientId)
           : Promise.resolve(null),
       ])
       const nextScans = activity?.scans
@@ -262,6 +273,7 @@ export function ThreatProvider({ children }) {
         : filterVisiblePublicScans(readPublicScans(publicClientId), publicClientId)
       writePublicScans(nextScans, publicClientId)
       applyPublicScans(nextScans, health)
+      setActivitySyncError('')
       return
     }
 
@@ -276,6 +288,7 @@ export function ThreatProvider({ children }) {
     ])
 
     setScanHistory(scans)
+    setActivitySyncError('')
     setAlerts(nextAlerts)
     setFlaggedThreats(blockedThreats)
     setThreatAuditLogs(auditLogs)
@@ -308,7 +321,7 @@ export function ThreatProvider({ children }) {
     if (!isPublicDeployment) return
     ensureClientCredential()
       .then(({ clientId }) => setPublicClientId(clientId))
-      .catch(console.error)
+      .catch((error) => setActivitySyncError(error.message))
   }, [])
 
   useEffect(() => {
@@ -328,10 +341,10 @@ export function ThreatProvider({ children }) {
 
   useEffect(() => {
     const refreshTimeoutId = window.setTimeout(() => {
-      refreshData().catch(console.error)
+      refreshData().catch((error) => setActivitySyncError(error.message))
     }, 0)
     const intervalId = window.setInterval(() => {
-      refreshData().catch(console.error)
+      refreshData().catch((error) => setActivitySyncError(error.message))
     }, 2000)
 
     return () => {
@@ -418,7 +431,7 @@ export function ThreatProvider({ children }) {
         setActiveNotification({
           id: scan.id,
           source: scan.target,
-          threatType: scan.type,
+          threatType: scan.threatType ?? scan.type,
           riskLevel: scan.status,
           recommendedAction: scan.recommendations?.[0] ?? scan.recommendation,
         })
@@ -541,6 +554,7 @@ export function ThreatProvider({ children }) {
   const value = useMemo(
     () => ({
       activeNotification,
+      activitySyncError,
       alerts,
       acknowledgeAlert,
       autoBlock,
@@ -570,6 +584,7 @@ export function ThreatProvider({ children }) {
     }),
     [
       activeNotification,
+      activitySyncError,
       acknowledgeAlert,
       clearAlerts,
       clearFlaggedThreats,

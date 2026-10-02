@@ -87,6 +87,8 @@ export function ScanExplanation({ scan, manual = false }) {
   const categories = normalizeCategories(scan.categories)
   const contentCategories = categories.filter((category) => category.endsWith('-content'))
   const riskCategories = categories.filter((category) => !category.endsWith('-content'))
+  const whyDetected = Array.isArray(scan.whyDetected) ? scan.whyDetected : []
+  const evidenceSources = Array.isArray(scan.evidenceSources) ? scan.evidenceSources : []
 
   return (
     <div className="mt-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-950/60">
@@ -103,6 +105,41 @@ export function ScanExplanation({ scan, manual = false }) {
           </p>
         </div>
       </div>
+
+      {scan.threatName && scan.threatType && (
+        <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Threat name</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{scan.threatName}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Threat type</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{scan.threatType}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Confidence</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{scan.confidence || 'Not rated'}</p>
+            </div>
+          </div>
+          {whyDetected.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {scan.status === 'Safe' ? 'Why this result' : 'Why detected'}
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600 dark:text-slate-300">
+                {whyDetected.map((reason, index) => <li key={`${reason}-${index}`}>{reason}</li>)}
+              </ul>
+            </div>
+          )}
+          {evidenceSources.length > 0 && (
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+              <span className="font-semibold text-slate-700 dark:text-slate-200">Evidence sources:</span>{' '}
+              {evidenceSources.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
 
       <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
         Rule-based score: {scan.score}/100. This is not a calibrated probability.

@@ -8,24 +8,29 @@ import { enrichUrlAnalysis } from './threatIntel.js'
 import { enrichPageInspection, enrichPageSnapshot } from './pageInspector.js'
 import { enrichContentLinks } from './linkReputation.js'
 import { enrichEmailAuthentication } from './emailAuthentication.js'
+import { attachThreatClassification } from './threatClassification.js'
 
 export async function detectUrl(target, { pageSnapshot = null, preview = false } = {}) {
   const reputation = await enrichUrlAnalysis(target, scanUrl(target))
-  if (preview) return reputation
-  return enrichPageSnapshot(pageSnapshot, await enrichPageInspection(target, reputation))
+  const analysis = preview
+    ? reputation
+    : await enrichPageSnapshot(pageSnapshot, await enrichPageInspection(target, reputation))
+  return attachThreatClassification('URL', analysis)
 }
 
-export const detectMessage = (content) => enrichContentLinks(content, scanMessage(content))
+export const detectMessage = async (content) =>
+  attachThreatClassification('Message', await enrichContentLinks(content, scanMessage(content)))
 
 export async function detectEmail(input) {
   const { sender, subject = '', body = '', rawEmail = '', smtpClientIp = '', smtpHelo = '', envelopeFrom = '' } = input
   const analysis = await enrichContentLinks(`${subject}\n${body}`.trim(), analyzeEmail({ sender, subject, body }))
-  return enrichEmailAuthentication({ rawEmail, smtpClientIp, smtpHelo, envelopeFrom }, analysis)
+  return attachThreatClassification('Email', await enrichEmailAuthentication({ rawEmail, smtpClientIp, smtpHelo, envelopeFrom }, analysis))
 }
 
 export async function detectFile(input) {
   const analysis = await scanFile(input)
-  return extractLinks(input.content ?? '').length ? enrichContentLinks(input.content, analysis) : analysis
+  const enriched = extractLinks(input.content ?? '').length ? await enrichContentLinks(input.content, analysis) : analysis
+  return attachThreatClassification('File', enriched)
 }
 
 export const productionDetectors = Object.freeze({ url: detectUrl, message: detectMessage, email: detectEmail, file: detectFile })

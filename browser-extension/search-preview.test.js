@@ -12,6 +12,11 @@ const scan = {
   summary: 'Found 1 URL warning sign.',
   warningSigns: ['URL does not use HTTPS'],
   recommendations: ['Proceed with normal caution.'],
+  threatName: 'Suspicious website',
+  threatType: 'Website risk',
+  confidence: 'Medium',
+  whyDetected: ['URL does not use HTTPS'],
+  evidenceSources: ['Local detection rules'],
 }
 
 function extension() {

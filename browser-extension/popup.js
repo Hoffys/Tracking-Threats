@@ -19,7 +19,7 @@ inspectPage.addEventListener('click', () => {
     const label = scan.status === 'Safe' && scan.categories?.includes('piracy-content') ? 'Download risk unknown'
       : scan.status === 'Safe' && hasContentWarning ? 'Content warning'
       : scan.status === 'Safe' ? 'Appears safe' : scan.status === 'Dangerous' ? 'Risk detected' : 'Caution'
-    inspectionNote.textContent = `${label} - score ${scan.score}/100. Scan finished.`
+    inspectionNote.textContent = `${label} - score ${scan.score}/100. ${scan.threatName ? `Threat name: ${scan.threatName}. Threat type: ${scan.threatType}. ${scan.whyDetected?.[0] ?? ''}` : ''} Scan finished.`
     pill.textContent = `${label} - ${scan.score}/100`
     if (['Dangerous', 'Blocked'].includes(scan.status)) pill.classList.add('error')
     if (scan.status === 'Suspicious') pill.classList.add('warning')
@@ -69,6 +69,10 @@ function renderStatus(threattrackStatus) {
   if (threattrackStatus.downloadWarning) message.textContent += ` ${threattrackStatus.downloadWarning}`
   if (threattrackStatus.categories?.length) message.textContent += ` Categories: ${threattrackStatus.categories.join(', ')}. Content categories do not establish phishing.`
   if (threattrackStatus.categories?.includes('piracy-content')) message.textContent += ' No strong phishing indicators were found, but the download risk is unknown. Piracy-related sources may involve malware, fake mirrors, tampered files, or copyright risk.'
+  if (threattrackStatus.threatName) message.textContent += ` Threat name: ${threattrackStatus.threatName}.`
+  if (threattrackStatus.threatType) message.textContent += ` Threat type: ${threattrackStatus.threatType}.`
+  if (threattrackStatus.whyDetected?.length) message.textContent += ` Why: ${threattrackStatus.whyDetected[0]}`
+  if (threattrackStatus.confidence) message.textContent += ` Confidence: ${threattrackStatus.confidence}.`
 }
 
 chrome.storage.local.get('threattrackStatus', ({ threattrackStatus }) => renderStatus(threattrackStatus))

@@ -1,0 +1,110 @@
+{
+  "startedAt": "2026-10-01T16:05:00.061Z",
+  "cases": [
+    {
+      "name": "Manifest V3 service worker loads",
+      "status": "passed"
+    },
+    {
+      "name": "automatic URL navigation, storage and badge",
+      "status": "passed",
+      "evidence": {
+        "score": 100,
+        "badge": "?",
+        "coverage": "unavailable"
+      }
+    },
+    {
+      "name": "activeTab denies rendered-page injection without user invocation",
+      "status": "passed",
+      "evidence": "Cannot access contents of url \"https://audit-fixture.test/ordinary\". Extension manifest must request permission to access this host."
+    },
+    {
+      "name": "History API navigation triggers automatic scanning",
+      "status": "passed",
+      "evidence": {
+        "status": "Safe",
+        "score": 100
+      }
+    },
+    {
+      "name": "dangerous navigation redirects to warning and installs a block rule",
+      "status": "passed",
+      "evidence": {
+        "warningPage": true,
+        "rules": 1
+      }
+    },
+    {
+      "name": "blocked details opens matching saved scan through real credential bridge",
+      "status": "passed",
+      "evidence": {
+        "scanId": "cafdb396-fb45-4bac-8a48-7b05ebc47453",
+        "pageErrors": [
+          "Cannot read properties of null (reading 'style')",
+          "Cannot read properties of null (reading 'style')",
+          "google is not defined"
+        ]
+      }
+    },
+    {
+      "name": "blocked visit recovers after saved history was removed",
+      "status": "failed",
+      "error": "Condition timed out"
+    },
+    {
+      "name": "Google matched content script scans fixture result automatically",
+      "status": "passed",
+      "evidence": {
+        "badge": "RISK DETECTED 40/100"
+      }
+    },
+    {
+      "name": "Gmail matched content script presents email consent gate",
+      "status": "passed",
+      "evidence": {
+        "consentGate": true
+      }
+    },
+    {
+      "name": "Gmail fixture scans through backend after explicit consent",
+      "status": "passed",
+      "evidence": {
+        "score": 100,
+        "status": "Safe"
+      }
+    },
+    {
+      "name": "popup displays saved status",
+      "status": "passed",
+      "evidence": {
+        "text": "Appears safe - 100/100"
+      }
+    }
+  ],
+  "limitations": [
+    "Synthetic Google/Gmail page fixtures, not signed-in live services.",
+    "activeTab user gesture is not simulated; denial without a gesture is tested."
+  ],
+  "permissions": [
+    "alarms",
+    "activeTab",
+    "storage",
+    "tabs",
+    "downloads",
+    "webNavigation",
+    "declarativeNetRequest",
+    "notifications",
+    "scripting"
+  ],
+  "originalHostPermissions": [
+    "http://localhost:4000/*",
+    "https://tracking-threats-production.up.railway.app/*"
+  ],
+  "browser": "154.0.4258.37",
+  "extensionId": "dligoodimndnbnhnlobdmpgijnpbllna",
+  "finishedAt": "2026-10-01T16:05:21.049Z",
+  "passed": 10,
+  "failed": 1,
+  "artifacts": "C:\\Users\\Bry\\AppData\\Local\\Temp\\tracking-extension-audit-zKXZMw"
+}

@@ -14,6 +14,7 @@ export function readSearchPreview(href) {
     const strings = (value) => Array.isArray(value)
       ? value.filter((item) => typeof item === 'string').slice(0, 50)
       : []
+    const text = (value, limit = 160) => typeof value === 'string' ? value.slice(0, limit) : ''
     return {
       target: preview.target,
       status: preview.status,
@@ -21,6 +22,11 @@ export function readSearchPreview(href) {
       summary: typeof preview.summary === 'string' ? preview.summary : '',
       warningSigns: strings(preview.warningSigns),
       recommendations: strings(preview.recommendations),
+      ...(preview.threatName !== undefined ? { threatName: text(preview.threatName) } : {}),
+      ...(preview.threatType !== undefined ? { threatType: text(preview.threatType) } : {}),
+      ...(preview.confidence !== undefined ? { confidence: text(preview.confidence, 40) } : {}),
+      ...(preview.whyDetected !== undefined ? { whyDetected: strings(preview.whyDetected) } : {}),
+      ...(preview.evidenceSources !== undefined ? { evidenceSources: strings(preview.evidenceSources) } : {}),
       ...(preview.coverage !== undefined ? { coverage: normalizeCoverage(preview.coverage) } : {}),
       ...(preview.categories !== undefined ? { categories: normalizeCategories(preview.categories) } : {}),
       ...(preview.categoryWarnings !== undefined ? { categoryWarnings: strings(preview.categoryWarnings) } : {}),

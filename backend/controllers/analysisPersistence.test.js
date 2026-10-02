@@ -19,6 +19,10 @@ test('public scans retain coverage and link scores without raw finding phrases',
     const scan = await createEmailScan({ sender: 'person@example.org', subject: 'Hello',
       body: 'Share marker-private-123 password now. https://paypal.test/login' })
     assert.equal(scan.status, 'Dangerous')
+    assert.equal(scan.threatName, 'Suspected phishing email')
+    assert.equal(scan.threatType, 'Phishing / credential theft')
+    assert.ok(scan.whyDetected.length > 0)
+    assert.equal(scan.confidence, 'Medium')
     assert.equal(scan.coverage.status, 'unavailable')
     assert.ok(scan.emailBreakdown.links.score <= 50)
     assert.equal(scan.emailBreakdown.links.extracted, undefined)
@@ -30,6 +34,8 @@ test('public scans retain coverage and link scores without raw finding phrases',
     const categorized = await createMessageScan({ target: 'Discussion', content: 'A discussion of casino gambling and torrents.' })
     assert.equal(categorized.score, 100)
     assert.equal(categorized.categoryWarnings.length, 2)
+    assert.equal(categorized.threatName, 'Piracy-related content warning')
+    assert.equal(categorized.threatType, 'Content and download risk')
     assert.ok(categorized.categoryWarnings.every((item) => typeof item === 'string'))
     assert.equal(categorized.coverage.status, 'local-only')
   } finally {

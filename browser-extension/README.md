@@ -73,6 +73,8 @@ content alone is not proof of phishing.
 
 Version 1.0.33 adds live popup/badge updates, SPA navigation monitoring, alarm-based safe-host refresh, and pauses downloads while checks run. URL rules now use DNR block actions, which work without broad host grants; the tab API opens warning pages separately. Cancellation failures are reported as risk, not successful blocking. No permissions were added. See `docs/audit-2026-10-01.md` in the project for verification and limitations.
 
+Version 1.0.34 reconnects blocked results to this browser's saved History before enabling the details link. Missing/expired/deleted records are rescanned using the real detector, and persistent block-rule visits now save fresh automatic activity. Connection failures show a retry control instead of an empty history link. No permissions were added. Replace the unpacked extension files and reload the extension to activate this update; refreshing the website alone does not update extension code.
+
 Version 1.0.32 expands the piracy warning to named torrent, repack, cracked-
 software, and mirror indicators instead of treating FitGirl as a special case.
 All separate content-risk categories now use an amber content warning rather
