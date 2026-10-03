@@ -117,8 +117,14 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use((error, _req, res, _next) => {
   void _next
-  const statusCode = error.statusCode ?? 500
+  const statusCode = error.statusCode ?? error.status ?? 500
   if (statusCode >= 500) console.error(error)
+  if (statusCode === 413 || error.type === 'entity.too.large') {
+    return res.status(413).json({
+      error: 'Scan request is too large. Binary files should be submitted using file metadata and SHA-256 only.',
+      code: 'PAYLOAD_TOO_LARGE',
+    })
+  }
   res.status(statusCode).json({
     error: statusCode >= 500 ? 'Internal server error' : error.message,
   })

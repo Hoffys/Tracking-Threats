@@ -18,6 +18,7 @@ import { responseLabel } from '../utils/scanPresentation'
 import { ScanExplanation } from '../components/ScanExplanation'
 import { ThreatIntelSummary } from '../components/ThreatIntelSummary'
 import { useThreats } from '../hooks/useThreats'
+import { readFileTextPreview } from '../utils/fileInspection'
 import { inspectImageFile } from '../utils/imageInspection'
 
 export function ManualScan({ onNavigate }) {
@@ -44,20 +45,12 @@ export function ManualScan({ onNavigate }) {
     File: 'File',
   }
 
-  const readFilePreview = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(String(reader.result ?? ''))
-      reader.onerror = () => reject(reader.error)
-      reader.readAsText(file.slice(0, 200 * 1024))
-    })
-
   const inspectFileContent = async (file) => {
     if (file.type.startsWith('image/')) {
       const image = await inspectImageFile(file)
       return image.scanText
     }
-    return readFilePreview(file)
+    return readFileTextPreview(file)
   }
 
   const hashFile = async (file) => {
