@@ -1,16 +1,34 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Award, Download, Printer } from 'lucide-react'
 import './LearningCertificate.css'
 
-export function LearningCertificate({ score, total, moduleCount }) {
+export function LearningCertificate({ level, score, total, moduleCount }) {
   const [name, setName] = useState('')
   const [completedAt] = useState(() => new Date())
   const [downloadError, setDownloadError] = useState('')
+  const [printRequested, setPrintRequested] = useState(false)
   const learnerName = name.trim()
+  const levelSlug = level.toLowerCase()
+  const includesQuiz = Number.isInteger(score) && Number.isInteger(total)
+  const courseName = `${level} Security Awareness`
+  const completionSummary = includesQuiz
+    ? `All ${moduleCount} ${level} modules and the Scenario Trainer test completed.`
+    : `All ${moduleCount} ${level} learning modules completed.`
   const completionDate = completedAt.toLocaleDateString(undefined, {
     year: 'numeric', month: 'long', day: 'numeric',
   })
+
+  useEffect(() => {
+    if (!printRequested) return undefined
+    const resetPrint = () => setPrintRequested(false)
+    const timer = window.setTimeout(() => window.print(), 0)
+    window.addEventListener('afterprint', resetPrint, { once: true })
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('afterprint', resetPrint)
+    }
+  }, [printRequested])
 
   const downloadCertificate = () => {
     if (!learnerName) return
@@ -50,9 +68,9 @@ export function LearningCertificate({ score, total, moduleCount }) {
       context.lineTo(1420, 525)
       context.stroke()
       line('for completing the', 590)
-      line('Beginner Security Awareness', 660, 44, true)
-      line(`All ${moduleCount} Beginner modules and the Scenario Trainer test completed.`, 725, 26)
-      line(`Quiz score: ${score} / ${total}`, 825, 30, true)
+      line(courseName, 660, 44, true)
+      line(completionSummary, 725, 26)
+      line(includesQuiz ? `Quiz score: ${score} / ${total}` : `Modules completed: ${moduleCount} / ${moduleCount}`, 825, 30, true)
       line(`Completed on ${completionDate}`, 885, 28)
       line('Tracking Threats - Learning Modules', 1005, 24)
       canvas.toBlob((blob) => {
@@ -60,7 +78,7 @@ export function LearningCertificate({ score, total, moduleCount }) {
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = 'tracking-threats-beginner-certificate.png'
+        link.download = `tracking-threats-${levelSlug}-certificate.png`
         document.body.appendChild(link)
         link.click()
         link.remove()
@@ -72,17 +90,20 @@ export function LearningCertificate({ score, total, moduleCount }) {
   }
 
   const certificate = (
-    <article className="learning-certificate" aria-label="Certificate preview">
+    <article className="learning-certificate" aria-label={`${level} certificate preview`}>
       <div className="learning-certificate-brand"><Award size={32} aria-hidden="true" /> Tracking Threats</div>
       <p className="learning-certificate-eyebrow">Security learning center</p>
       <h3>Certificate of Completion</h3>
       <p>This certificate is presented to</p>
       <p className="learning-certificate-name">{learnerName || 'Your name'}</p>
       <p>for completing the</p>
-      <h4>Beginner Security Awareness</h4>
-      <p>All {moduleCount} Beginner modules and the Scenario Trainer test completed.</p>
+      <h4>{courseName}</h4>
+      <p>{completionSummary}</p>
       <div className="learning-certificate-details">
-        <div><strong>{score} / {total}</strong><span>Quiz score</span></div>
+        <div>
+          <strong>{includesQuiz ? `${score} / ${total}` : `${moduleCount} / ${moduleCount}`}</strong>
+          <span>{includesQuiz ? 'Quiz score' : 'Modules completed'}</span>
+        </div>
         <div><strong>{completionDate}</strong><span>Completion date</span></div>
       </div>
       <p className="learning-certificate-footer">Tracking Threats · Learning Modules</p>
@@ -90,17 +111,17 @@ export function LearningCertificate({ score, total, moduleCount }) {
   )
 
   return (
-    <section className="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-700 dark:bg-emerald-950/40" aria-labelledby="certificate-title">
-      <h3 id="certificate-title" className="flex items-center gap-2 text-lg font-semibold text-emerald-900 dark:text-emerald-200">
-        <Award size={22} aria-hidden="true" /> Your Beginner certificate is ready!
+    <section className="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-700 dark:bg-emerald-950/40" aria-labelledby={`certificate-title-${levelSlug}`}>
+      <h3 id={`certificate-title-${levelSlug}`} className="flex items-center gap-2 text-lg font-semibold text-emerald-900 dark:text-emerald-200">
+        <Award size={22} aria-hidden="true" /> Your {level} certificate is ready!
       </h3>
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300" role="status">
-        You completed all {moduleCount} Beginner modules and answered all {total} test questions. Add your name to download or print your certificate.
+        You completed all {moduleCount} {level} modules{includesQuiz ? ` and answered all ${total} test questions` : ''}. Add your name to download or print your certificate.
       </p>
-      <form className="mt-4" onSubmit={(event) => { event.preventDefault(); if (learnerName) window.print() }}>
-        <label htmlFor="certificate-name" className="block text-sm font-semibold">Name on certificate</label>
+      <form className="mt-4" onSubmit={(event) => { event.preventDefault(); if (learnerName) setPrintRequested(true) }}>
+        <label htmlFor={`certificate-name-${levelSlug}`} className="block text-sm font-semibold">Name on certificate</label>
         <input
-          id="certificate-name"
+          id={`certificate-name-${levelSlug}`}
           autoComplete="name"
           required
           maxLength={80}
@@ -119,7 +140,7 @@ export function LearningCertificate({ score, total, moduleCount }) {
           <Printer size={18} aria-hidden="true" /> Print / Save as PDF
         </button>
       </form>
-      {learnerName && createPortal(
+      {learnerName && printRequested && createPortal(
         <div className="learning-certificate-print" aria-hidden="true">{certificate}</div>,
         document.body,
       )}

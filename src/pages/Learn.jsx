@@ -277,9 +277,6 @@ export function Learn({ onNavigate }) {
   const progress = Math.round((completedModules.length / modules.length) * 100)
   const isComplete = progress === 100
   const quizAnswered = Object.keys(scenarioAnswers).length
-  const beginnerModules = modules.filter((module) => module.level === 'Beginner')
-  const beginnerCompleted = beginnerModules.filter((module) => completedModules.includes(module.title)).length
-  const beginnerCertificateReady = beginnerCompleted === beginnerModules.length && quizAnswered === scenarios.length
   const quizScore = scenarios.filter(
     (scenario) => scenarioAnswers[scenario.prompt] === scenario.answer,
   ).length
@@ -290,6 +287,18 @@ export function Learn({ onNavigate }) {
     return matchesLevel && searchText.includes(query.trim().toLowerCase())
   })
   const levels = ['All', 'Beginner', 'Intermediate', 'Advanced']
+  const certificateProgress = levels.slice(1).map((level) => {
+    const levelModules = modules.filter((module) => module.level === level)
+    const completed = levelModules.filter((module) => completedModules.includes(module.title)).length
+    const requiresQuiz = level === 'Beginner'
+    return {
+      level,
+      moduleCount: levelModules.length,
+      completed,
+      requiresQuiz,
+      ready: completed === levelModules.length && (!requiresQuiz || quizAnswered === scenarios.length),
+    }
+  })
 
   const toggleComplete = (title) => {
     setCompletedModules((current) =>
@@ -672,15 +681,56 @@ export function Learn({ onNavigate }) {
                 : 'Review the explanations, then try the quiz again.'}
             </p>
           )}
-          <p className="mt-4 text-sm text-slate-600 dark:text-slate-300" role="status">
-            Beginner certificate: {beginnerCompleted}/{beginnerModules.length} modules complete and {quizAnswered}/{scenarios.length} test questions answered.
-            {!beginnerCertificateReady && ' Complete all Beginner modules and answer every test question to unlock your certificate.'}
-          </p>
-          {beginnerCertificateReady && (
-            <LearningCertificate score={quizScore} total={scenarios.length} moduleCount={beginnerModules.length} />
-          )}
         </Panel>
       </section>
+
+      <Panel>
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+            <GraduationCap size={21} />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Level achievements</p>
+            <h2 className="text-lg font-semibold">Learning certificates</h2>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {certificateProgress.map((certificate) => (
+            <article key={certificate.level} className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold">{certificate.level}</h3>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  certificate.ready
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                }`}>
+                  {certificate.ready ? 'Certificate ready' : 'In progress'}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {certificate.completed}/{certificate.moduleCount} modules complete
+                {certificate.requiresQuiz ? ` · ${quizAnswered}/${scenarios.length} test questions answered` : ''}
+              </p>
+              {!certificate.ready && (
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Complete all {certificate.level} modules{certificate.requiresQuiz ? ' and answer every Scenario Trainer question' : ''} to unlock.
+                </p>
+              )}
+            </article>
+          ))}
+        </div>
+        <div className="mt-4 space-y-4">
+          {certificateProgress.filter((certificate) => certificate.ready).map((certificate) => (
+            <LearningCertificate
+              key={certificate.level}
+              level={certificate.level}
+              moduleCount={certificate.moduleCount}
+              score={certificate.requiresQuiz ? quizScore : undefined}
+              total={certificate.requiresQuiz ? scenarios.length : undefined}
+            />
+          ))}
+        </div>
+      </Panel>
 
       {selectedModule && SelectedIcon && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 p-4 backdrop-blur-sm">

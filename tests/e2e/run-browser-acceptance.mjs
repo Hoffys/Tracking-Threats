@@ -335,7 +335,7 @@ async function run() {
     await expect(page.locator('article[id^="scan-"]')).toHaveCount(0)
   })
 
-  test('phone, tablet and short laptop navigation stay usable', async ({ newPage, evidence }) => {
+  test('phone, tablet and short laptop navigation plus Learn certificates stay usable', async ({ newPage, evidence }) => {
     const page = await newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
     await open(page, 'dashboard')
     await expect(page.getByRole('navigation', { name: 'Mobile navigation' })).toBeHidden()
@@ -374,6 +374,61 @@ async function run() {
     assert.ok(sidebarMetrics.scrollHeight > sidebarMetrics.clientHeight, 'Short laptop sidebar should need vertical scrolling.')
     assert.equal(sidebarMetrics.reachedBottom, true)
     evidence.shortLaptop = { width: 1366, height: 650, ...sidebarMetrics }
+    const levelModules = {
+      Intermediate: [
+        'Password Defense',
+        'Multi-Factor Authentication',
+        'File & Attachment Safety',
+        'Social Engineering Tactics',
+        'Report Quality',
+        'Browser Extension Safety',
+      ],
+      Advanced: [
+        'Incident Response',
+        'Threat Triage',
+        'Domain Investigation',
+        'Attachment Analysis',
+        'Security Coaching',
+        'Policy & Allowlist Review',
+      ],
+    }
+    const completeLevel = async (level) => {
+      await laptop.getByRole('button', { name: level, exact: true }).click()
+      for (const title of levelModules[level]) {
+        const moduleCard = laptop.getByRole('button').filter({
+          has: laptop.getByRole('heading', { name: title, exact: true }),
+        })
+        await moduleCard.click()
+        await laptop.getByRole('button', { name: 'Mark module complete', exact: true }).click()
+        await laptop.getByRole('button', { name: 'Close selected module', exact: true }).click()
+      }
+    }
+
+    await open(laptop, 'learn')
+    await expect(laptop.getByRole('heading', { name: 'Learn Modules', exact: true })).toBeVisible()
+    await completeLevel('Intermediate')
+
+    const intermediateCertificate = laptop.getByRole('region', { name: 'Your Intermediate certificate is ready!' })
+    await expect(intermediateCertificate).toBeVisible()
+    await expect(intermediateCertificate.getByRole('heading', { name: 'Intermediate Security Awareness', exact: true })).toBeVisible()
+    await intermediateCertificate.getByLabel('Name on certificate').fill('Intermediate Learner')
+    await expect(intermediateCertificate.getByRole('button', { name: 'Download certificate (PNG)', exact: true })).toBeEnabled()
+    await expect(laptop.getByRole('region', { name: 'Your Beginner certificate is ready!' })).toHaveCount(0)
+
+    await completeLevel('Advanced')
+    const advancedCertificate = laptop.getByRole('region', { name: 'Your Advanced certificate is ready!' })
+    await expect(advancedCertificate).toBeVisible()
+    await expect(advancedCertificate.getByRole('heading', { name: 'Advanced Security Awareness', exact: true })).toBeVisible()
+    await advancedCertificate.getByLabel('Name on certificate').fill('Advanced Learner')
+    await expect(advancedCertificate.getByRole('button', { name: 'Download certificate (PNG)', exact: true })).toBeEnabled()
+    await expect(laptop.getByText('6/6 modules complete', { exact: true })).toHaveCount(2)
+    await laptop.screenshot({ path: path.join(artifacts, 'learn-intermediate-advanced-certificates.png'), fullPage: true })
+
+    evidence.certificates = {
+      intermediateModules: levelModules.Intermediate.length,
+      advancedModules: levelModules.Advanced.length,
+      beginnerRemainedLockedWithoutQuiz: true,
+    }
   })
 
   test('admin clients filter linked and legacy records without duplicating heartbeats', async ({ page, evidence }) => {
