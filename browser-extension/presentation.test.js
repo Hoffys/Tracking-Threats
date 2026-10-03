@@ -5,7 +5,7 @@ import vm from 'node:vm'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
-import { providerState, responseLabel } from '../src/utils/scanPresentation.js'
+import { providerState, responseLabel, summarizeThreatIntelProviders } from '../src/utils/scanPresentation.js'
 
 const complete = { status: 'complete', checkedProviders: 6, totalProviders: 6, limitations: [] }
 
@@ -18,6 +18,20 @@ test('unchecked, skipped and failed providers never render as No match', () => {
   assert.equal(providerState({ checked: true, found: false }), 'No match')
   assert.equal(providerState({ checked: true, found: true }), 'Matched')
   assert.equal(responseLabel({ status: 'Dangerous', blocked: true }, true), 'Risk detected; review recommended')
+})
+
+test('repeated link-provider checks render once without hiding different results', () => {
+  const summaries = summarizeThreatIntelProviders([
+    { provider: 'VirusTotal', error: 'VirusTotal returned 429' },
+    { provider: 'VirusTotal', error: 'VirusTotal returned 429' },
+    { provider: 'DNS Reputation', checked: true, found: false },
+    { provider: 'DNS Reputation', checked: true, found: true, warning: 'Domain has no public A or AAAA DNS records' },
+  ])
+
+  assert.deepEqual(summaries, [
+    { provider: 'VirusTotal', summary: 'Lookup unavailable - VirusTotal returned 429 (2 checks)' },
+    { provider: 'DNS Reputation', summary: 'No match (1 of 2 checks); Matched - Domain has no public A or AAAA DNS records (1 of 2 checks)' },
+  ])
 })
 
 test('public history persists detection context through JSON storage', () => {
@@ -103,10 +117,12 @@ test('rendered results distinguish incomplete checks, content categories and man
     assert.doesNotMatch(html, /Why this was blocked|confirmed phishing|Threat Blocked Automatically/)
     const intel = renderToStaticMarkup(createElement(ThreatIntelSummary, { providers: [
       { provider: 'Skipped', checked: false }, { provider: 'Failed', error: 'timeout' },
+      { provider: 'Failed', error: 'timeout' },
     ] }))
     assert.doesNotMatch(intel, /No match/)
     assert.match(intel, /Not checked/)
-    assert.match(intel, /Lookup unavailable/)
+    assert.match(intel, /Lookup unavailable - timeout \(2 checks\)/)
+    assert.equal((intel.match(/Failed:/g) ?? []).length, 1)
   } finally {
     await server.close()
   }

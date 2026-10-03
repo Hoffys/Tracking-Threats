@@ -1,10 +1,10 @@
 import { ShieldCheck } from 'lucide-react'
-import { providerState } from '../utils/scanPresentation'
+import { summarizeThreatIntelProviders } from '../utils/scanPresentation'
 
 export function ThreatIntelSummary({ providers = [] }) {
-  const checkedProviders = providers.filter(Boolean)
+  const providerSummaries = summarizeThreatIntelProviders(providers)
 
-  if (checkedProviders.length === 0) return null
+  if (providerSummaries.length === 0) return null
 
   return (
     <div className="mt-4">
@@ -13,16 +13,11 @@ export function ThreatIntelSummary({ providers = [] }) {
         Threat intelligence
       </div>
       <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-        {checkedProviders.map((provider) => {
-          const state = providerState(provider)
-
-          return (
-            <li key={`${provider.provider}-${provider.ipAddress ?? provider.host ?? state}`}>
-              <span className="font-medium">{provider.provider}:</span> {state}
-              {provider.warning ? ` - ${provider.warning}` : ''}
-            </li>
-          )
-        })}
+        {providerSummaries.map((provider) => (
+          <li key={provider.provider}>
+            <span className="font-medium">{provider.provider}:</span> {provider.summary}
+          </li>
+        ))}
       </ul>
     </div>
   )

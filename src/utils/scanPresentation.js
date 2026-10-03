@@ -65,6 +65,33 @@ export function providerState(provider) {
   return provider.checked === true ? 'No match' : 'Check status unknown'
 }
 
+export function summarizeThreatIntelProviders(providers = []) {
+  const groups = new Map()
+
+  for (const provider of providers.filter(Boolean)) {
+    const name = provider.provider || 'Unknown provider'
+    const state = providerState(provider)
+    const detail = provider.warning ? `${state} - ${provider.warning}` : state
+    const group = groups.get(name) ?? { provider: name, total: 0, variants: new Map() }
+    const variant = group.variants.get(detail) ?? { detail, count: 0 }
+    variant.count += 1
+    group.total += 1
+    group.variants.set(detail, variant)
+    groups.set(name, group)
+  }
+
+  return [...groups.values()].map((group) => ({
+    provider: group.provider,
+    summary: [...group.variants.values()].map((variant) => {
+      if (group.total === 1) return variant.detail
+      const count = variant.count === group.total
+        ? `${group.total} checks`
+        : `${variant.count} of ${group.total} checks`
+      return `${variant.detail} (${count})`
+    }).join('; '),
+  }))
+}
+
 export function coverageLabel(coverage) {
   const value = normalizeCoverage(coverage)
   if (!value) return 'Scan finished. Check details were not recorded for this result; no further checks are pending.'
