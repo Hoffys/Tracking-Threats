@@ -6,6 +6,7 @@ import {
   Globe2,
   LockKeyhole,
   LogOut,
+  Megaphone,
   Minus,
   Monitor,
   RefreshCw,
@@ -33,10 +34,21 @@ const formatDate = (value) => value
 
 const tabs = [
   { id: 'clients', label: 'Clients' },
+  { id: 'announcements', label: 'Announcements' },
   { id: 'reports', label: 'Reports' },
   { id: 'logs', label: 'Logs' },
   { id: 'evaluation', label: 'Evaluation' },
 ]
+
+const emptyAnnouncementForm = {
+  type: 'update',
+  title: '',
+  message: '',
+  priority: 'important',
+  targetVersion: '',
+  expiresAt: '',
+  isActive: true,
+}
 
 const usageMetrics = [
   ['extensionDownloads', 'Extension download requests'],
@@ -57,6 +69,8 @@ export function Admin() {
   const [overview, setOverview] = useState(null)
   const [clients, setClients] = useState([])
   const [logs, setLogs] = useState({ system: [], actions: [] })
+  const [announcements, setAnnouncements] = useState([])
+  const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm)
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
   const [clientFilter, setClientFilter] = useState('linked')
@@ -87,14 +101,16 @@ export function Admin() {
   }, [adminToken])
 
   const load = async (token) => {
-    const [nextOverview, nextClients, nextLogs] = await Promise.all([
+    const [nextOverview, nextClients, nextLogs, nextAnnouncements] = await Promise.all([
       apiService.getAdminOverview(token),
       apiService.getAdminClients(token),
       apiService.getAdminLogs(token),
+      apiService.getAdminAnnouncements(token),
     ])
     setOverview(nextOverview)
     setClients(nextClients)
     setLogs(nextLogs)
+    setAnnouncements(nextAnnouncements)
     setRelativeTimeReference(Date.now())
   }
 
@@ -139,6 +155,48 @@ export function Admin() {
     }
   }
 
+  const createAnnouncement = async (event) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const created = await apiService.createAdminAnnouncement(adminToken, {
+        ...announcementForm,
+        targetVersion: announcementForm.type === 'update' ? announcementForm.targetVersion.trim() : '',
+        expiresAt: announcementForm.expiresAt
+          ? new Date(announcementForm.expiresAt).toISOString()
+          : null,
+      })
+      setAnnouncements((current) => [created, ...current])
+      setAnnouncementForm(emptyAnnouncementForm)
+      setNotice(created.isActive ? 'Announcement published.' : 'Announcement saved as a draft.')
+    } catch (announcementError) {
+      setError(announcementError.message || 'Could not save announcement')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const toggleAnnouncement = async (announcement) => {
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const updated = await apiService.updateAdminAnnouncement(
+        adminToken,
+        announcement.id,
+        { isActive: !announcement.isActive },
+      )
+      setAnnouncements((current) => current.map((item) => item.id === updated.id ? updated : item))
+      setNotice(updated.isActive ? 'Announcement published.' : 'Announcement unpublished.')
+    } catch (announcementError) {
+      setError(announcementError.message || 'Could not update announcement')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const deleteData = async (event) => {
     event.preventDefault()
     if (!selected || confirmId !== selected.clientId || !verifiedRequest) return
@@ -165,6 +223,7 @@ export function Admin() {
     setSelected(null)
     setOverview(null)
     setClients([])
+    setAnnouncements([])
     setLogs({ system: [], actions: [] })
     setError('')
     setNotice('')
@@ -439,6 +498,149 @@ export function Admin() {
             </div>
           </section>
         )
+      )}
+
+      {tab === 'announcements' && (
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,420px)_1fr]">
+          <form onSubmit={createAnnouncement} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+            <div>
+              <p className="text-sm text-emerald-700 dark:text-emerald-300">Staff publishing</p>
+              <h2 className="mt-1 flex items-center gap-2 text-lg font-semibold">
+                <Megaphone size={19} /> New announcement
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Published items appear in the extension announcement panel. Update links always use the official extension download endpoint.
+              </p>
+            </div>
+
+            <label className="block text-sm font-semibold">
+              Type
+              <select
+                value={announcementForm.type}
+                onChange={(event) => setAnnouncementForm((current) => ({ ...current, type: event.target.value }))}
+                className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 font-normal dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value="update">Extension update</option>
+                <option value="security">Security advisory</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="general">General announcement</option>
+              </select>
+            </label>
+
+            <label className="block text-sm font-semibold">
+              Title
+              <input
+                value={announcementForm.title}
+                onChange={(event) => setAnnouncementForm((current) => ({ ...current, title: event.target.value }))}
+                maxLength={120}
+                required
+                className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 font-normal dark:border-slate-700 dark:bg-slate-950"
+              />
+            </label>
+
+            <label className="block text-sm font-semibold">
+              Message
+              <textarea
+                value={announcementForm.message}
+                onChange={(event) => setAnnouncementForm((current) => ({ ...current, message: event.target.value }))}
+                maxLength={1000}
+                rows={5}
+                required
+                className="mt-1.5 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2.5 font-normal dark:border-slate-700 dark:bg-slate-950"
+              />
+            </label>
+
+            {announcementForm.type === 'update' && (
+              <label className="block text-sm font-semibold">
+                New extension version
+                <input
+                  value={announcementForm.targetVersion}
+                  onChange={(event) => setAnnouncementForm((current) => ({ ...current, targetVersion: event.target.value }))}
+                  placeholder="Example: 1.0.36"
+                  pattern="\d{1,5}\.\d{1,5}\.\d{1,5}(\.\d{1,5})?"
+                  required
+                  className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 font-normal dark:border-slate-700 dark:bg-slate-950"
+                />
+              </label>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-semibold">
+                Priority
+                <select
+                  value={announcementForm.priority}
+                  onChange={(event) => setAnnouncementForm((current) => ({ ...current, priority: event.target.value }))}
+                  className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 font-normal dark:border-slate-700 dark:bg-slate-950"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="important">Important</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </label>
+              <label className="block text-sm font-semibold">
+                Expires (optional)
+                <input
+                  type="datetime-local"
+                  value={announcementForm.expiresAt}
+                  onChange={(event) => setAnnouncementForm((current) => ({ ...current, expiresAt: event.target.value }))}
+                  className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 font-normal dark:border-slate-700 dark:bg-slate-950"
+                />
+              </label>
+            </div>
+
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={announcementForm.isActive}
+                onChange={(event) => setAnnouncementForm((current) => ({ ...current, isActive: event.target.checked }))}
+                className="mt-1 accent-emerald-600"
+              />
+              Publish immediately. Clear this to save a draft.
+            </label>
+
+            <button type="submit" disabled={busy} className="w-full rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">
+              {busy ? 'Saving...' : announcementForm.isActive ? 'Publish announcement' : 'Save draft'}
+            </button>
+          </form>
+
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold">Published and draft announcements</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Newest items appear first.</p>
+            </div>
+            {announcements.map((announcement) => (
+              <article key={announcement.id} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{announcement.type}</span>
+                      <span className={announcement.priority === 'critical' ? 'text-rose-600 dark:text-rose-300' : announcement.priority === 'important' ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500'}>{announcement.priority}</span>
+                      <span className={announcement.isActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'}>{announcement.isActive ? 'Published' : 'Draft'}</span>
+                    </div>
+                    <h3 className="mt-2 font-semibold">{announcement.title}</h3>
+                    {announcement.targetVersion && <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">Extension v{announcement.targetVersion}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => toggleAnnouncement(announcement)}
+                    className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700"
+                  >
+                    {announcement.isActive ? 'Unpublish' : 'Publish'}
+                  </button>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300">{announcement.message}</p>
+                <p className="mt-3 text-xs text-slate-500">
+                  {announcement.publishedAt ? `Published ${formatDate(announcement.publishedAt)}` : 'Not published'}
+                  {announcement.expiresAt ? ` · Expires ${formatDate(announcement.expiresAt)}` : ''}
+                </p>
+              </article>
+            ))}
+            {announcements.length === 0 && (
+              <p className="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700">No announcements yet.</p>
+            )}
+          </div>
+        </section>
       )}
 
       {tab === 'reports' && (

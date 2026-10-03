@@ -1,8 +1,10 @@
+import crypto from 'node:crypto'
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { dbPromise } from '../db/database.js'
 import { requireAdminStrict } from '../middleware/adminAuth.js'
 import { deleteClientScanData } from '../services/scanRepository.js'
+import { mapAnnouncementRow, validateAnnouncementInput } from '../services/announcementService.js'
 import { evaluationRoutes } from './evaluationRoutes.js'
 
 export const adminRoutes = Router()
@@ -18,6 +20,97 @@ adminRoutes.use(
 )
 
 adminRoutes.use('/evaluations', evaluationRoutes)
+
+adminRoutes.get('/announcements', async (_req, res, next) => {
+  try {
+    const db = await dbPromise
+    const rows = await db.all('SELECT * FROM announcements ORDER BY created_at DESC')
+    res.json(rows.map(mapAnnouncementRow))
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRoutes.post('/announcements', async (req, res, next) => {
+  try {
+    const input = validateAnnouncementInput(req.body)
+    const db = await dbPromise
+    const now = new Date().toISOString()
+    const id = `an_${crypto.randomBytes(16).toString('hex')}`
+    const publishedAt = input.isActive ? now : null
+    await db.run(
+      `INSERT INTO announcements
+        (id, type, title, message, priority, target_version, is_active,
+         published_at, expires_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id,
+      input.type,
+      input.title,
+      input.message,
+      input.priority,
+      input.targetVersion,
+      input.isActive ? 1 : 0,
+      publishedAt,
+      input.expiresAt,
+      now,
+      now,
+    )
+    const row = await db.get('SELECT * FROM announcements WHERE id = ?', id)
+    res.status(201).json(mapAnnouncementRow(row))
+  } catch (error) {
+    next(error)
+  }
+})
+
+adminRoutes.patch('/announcements/:announcementId', async (req, res, next) => {
+  try {
+    const announcementId = String(req.params.announcementId ?? '')
+    if (!/^an_[a-f0-9]{32}$/.test(announcementId)) {
+      return res.status(400).json({ error: 'Invalid announcement ID' })
+    }
+    const db = await dbPromise
+    const existing = await db.get('SELECT * FROM announcements WHERE id = ?', announcementId)
+    if (!existing) return res.status(404).json({ error: 'Announcement not found' })
+    const input = validateAnnouncementInput(req.body, { partial: true })
+    if (Object.keys(input).length === 0) {
+      return res.status(400).json({ error: 'No announcement changes supplied' })
+    }
+    const merged = {
+      type: input.type ?? existing.type,
+      title: input.title ?? existing.title,
+      message: input.message ?? existing.message,
+      priority: input.priority ?? existing.priority,
+      targetVersion: Object.hasOwn(input, 'targetVersion') ? input.targetVersion : existing.target_version,
+      expiresAt: Object.hasOwn(input, 'expiresAt') ? input.expiresAt : existing.expires_at,
+      isActive: Object.hasOwn(input, 'isActive') ? input.isActive : Boolean(existing.is_active),
+    }
+    if (merged.type === 'update' && !merged.targetVersion) {
+      return res.status(400).json({ error: 'Extension updates require a target version' })
+    }
+    const now = new Date().toISOString()
+    const publishedAt = merged.isActive ? (existing.published_at ?? now) : existing.published_at
+    await db.run(
+      `UPDATE announcements SET
+        type = ?, title = ?, message = ?, priority = ?, target_version = ?,
+        is_active = ?, published_at = ?, expires_at = ?, updated_at = ?
+       WHERE id = ?`,
+      merged.type,
+      merged.title,
+      merged.message,
+      merged.priority,
+      merged.targetVersion,
+      merged.isActive ? 1 : 0,
+      publishedAt,
+      merged.expiresAt,
+      now,
+      announcementId,
+    )
+    const row = await db.get('SELECT * FROM announcements WHERE id = ?', announcementId)
+    res.json(mapAnnouncementRow(row))
+  } catch (error) {
+    next(error)
+  }
+})
 
 adminRoutes.get('/overview', async (_req, res, next) => {
   try {

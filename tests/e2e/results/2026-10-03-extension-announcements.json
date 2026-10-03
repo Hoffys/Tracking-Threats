@@ -1,0 +1,133 @@
+{
+  "startedAt": "2026-10-03T15:19:51.130Z",
+  "cases": [
+    {
+      "name": "Manifest V3 service worker loads",
+      "status": "passed"
+    },
+    {
+      "name": "automatic URL navigation, storage and badge",
+      "status": "passed",
+      "evidence": {
+        "score": 100,
+        "badge": "?",
+        "coverage": "unavailable"
+      }
+    },
+    {
+      "name": "activeTab denies rendered-page injection without user invocation",
+      "status": "passed",
+      "evidence": "Cannot access contents of url \"https://audit-fixture.test/ordinary\". Extension manifest must request permission to access this host."
+    },
+    {
+      "name": "History API navigation triggers automatic scanning",
+      "status": "passed",
+      "evidence": {
+        "status": "Safe",
+        "score": 100
+      }
+    },
+    {
+      "name": "dangerous navigation redirects to warning and installs a block rule",
+      "status": "passed",
+      "evidence": {
+        "warningPage": true,
+        "rules": 1
+      }
+    },
+    {
+      "name": "blocked details opens matching saved scan through real credential bridge",
+      "status": "passed",
+      "evidence": {
+        "scanId": "087d55c4-8a1a-4db3-8b8a-a21317da09b1",
+        "pageErrors": []
+      }
+    },
+    {
+      "name": "blocked visit recovers after saved history was removed",
+      "status": "passed",
+      "evidence": {
+        "recoveredScanId": "a8ba4998-6dce-4783-8afe-3899d1a29b93",
+        "liveMonitor": true
+      }
+    },
+    {
+      "name": "persistent block-rule navigation saves a fresh automatic visit",
+      "status": "passed",
+      "evidence": {
+        "newScanId": "88cff750-9691-4e3e-a0f6-f15d1b099d98"
+      }
+    },
+    {
+      "name": "history reports sync failure and recovers automatically",
+      "status": "passed",
+      "evidence": {
+        "visibleError": true,
+        "recovered": true
+      }
+    },
+    {
+      "name": "Google matched content script scans fixture result automatically",
+      "status": "passed",
+      "evidence": {
+        "badge": "RISK DETECTED 40/100"
+      }
+    },
+    {
+      "name": "Gmail matched content script presents email consent gate",
+      "status": "passed",
+      "evidence": {
+        "consentGate": true
+      }
+    },
+    {
+      "name": "Gmail fixture scans through backend after explicit consent",
+      "status": "passed",
+      "evidence": {
+        "score": 100,
+        "status": "Safe"
+      }
+    },
+    {
+      "name": "popup displays saved status",
+      "status": "passed",
+      "evidence": {
+        "text": "Appears safe - 100/100"
+      }
+    },
+    {
+      "name": "popup shows an unread version-aware staff announcement",
+      "status": "passed",
+      "evidence": {
+        "announcementId": "an_8d9dff19f540167165666a9d9f16b2ec",
+        "installedVersion": "1.0.35",
+        "targetVersion": "1.0.36"
+      }
+    }
+  ],
+  "limitations": [
+    "Synthetic Google/Gmail page fixtures, not signed-in live services.",
+    "activeTab user gesture is not simulated; denial without a gesture is tested."
+  ],
+  "permissions": [
+    "alarms",
+    "activeTab",
+    "storage",
+    "tabs",
+    "downloads",
+    "webNavigation",
+    "declarativeNetRequest",
+    "notifications",
+    "scripting"
+  ],
+  "originalHostPermissions": [
+    "http://localhost:4000/*",
+    "https://tracking-threats-production.up.railway.app/*"
+  ],
+  "browser": "154.0.4258.53",
+  "extensionId": "galdggfojpbcojjbdnkgnkjfomlhmnjk",
+  "finishedAt": "2026-10-03T15:20:02.335Z",
+  "passed": 14,
+  "failed": 0,
+  "artifacts": "C:\\Users\\Bry\\AppData\\Local\\Temp\\tracking-extension-audit-QoEguK"
+}

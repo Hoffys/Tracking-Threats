@@ -4,8 +4,19 @@ import rateLimit from 'express-rate-limit'
 import { createClientCredential, requireClient } from '../middleware/clientAuth.js'
 import { dbPromise } from '../db/database.js'
 import { getExtensionPackage } from '../services/extensionPackage.js'
+import { selectPublicAnnouncements } from '../services/announcementService.js'
 
 export const clientRoutes = Router()
+
+clientRoutes.get('/public/announcements', async (req, res, next) => {
+  try {
+    const db = await dbPromise
+    const rows = await db.all('SELECT * FROM announcements ORDER BY created_at DESC')
+    res.json(selectPublicAnnouncements(rows, String(req.query.version ?? '').trim()))
+  } catch (error) {
+    next(error)
+  }
+})
 
 const PAIR_CODE_TTL_MS = 10 * 60 * 1000
 

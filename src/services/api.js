@@ -148,6 +148,17 @@ export const apiService = {
   getEvaluation: (token, id) => adminRequest(`/admin/evaluations/${encodeURIComponent(id)}`, token),
   runEvaluation: (token, settings) => adminRequest('/admin/evaluations', token, { method: 'POST', body: JSON.stringify(settings) }),
   getAdminClients: (token) => adminRequest('/admin/clients', token),
+  getAdminAnnouncements: (token) => adminRequest('/admin/announcements', token),
+  createAdminAnnouncement: (token, announcement) =>
+    adminRequest('/admin/announcements', token, {
+      method: 'POST',
+      body: JSON.stringify(announcement),
+    }),
+  updateAdminAnnouncement: (token, announcementId, changes) =>
+    adminRequest(`/admin/announcements/${encodeURIComponent(announcementId)}`, token, {
+      method: 'PATCH',
+      body: JSON.stringify(changes),
+    }),
   getAdminClient: (token, clientId) =>
     adminRequest(`/admin/clients/${encodeURIComponent(clientId)}`, token),
   getAdminLogs: (token) => adminRequest('/admin/logs', token),

@@ -3,6 +3,95 @@ const pill = document.querySelector('#pill')
 const openApp = document.querySelector('#openApp')
 const inspectPage = document.querySelector('#inspectPage')
 const inspectionNote = document.querySelector('#inspectionNote')
+const announcementButton = document.querySelector('#announcementButton')
+const announcementBadge = document.querySelector('#announcementBadge')
+const announcementPanel = document.querySelector('#announcementPanel')
+const announcementStatus = document.querySelector('#announcementStatus')
+const announcementList = document.querySelector('#announcementList')
+const installedVersion = chrome.runtime.getManifest().version
+const announcementReadKey = 'trackingThreatsReadAnnouncements'
+let currentAnnouncements = []
+
+document.querySelector('#installedVersion').textContent = `Extension v${installedVersion}`
+
+function createAnnouncementCard(announcement) {
+  const card = document.createElement('article')
+  card.className = 'announcement-card'
+
+  const meta = document.createElement('span')
+  meta.className = 'announcement-meta'
+  meta.textContent = [announcement.type, announcement.priority, announcement.targetVersion ? `v${announcement.targetVersion}` : '']
+    .filter(Boolean).join(' · ')
+
+  const title = document.createElement('strong')
+  title.textContent = announcement.title
+
+  const body = document.createElement('p')
+  body.textContent = announcement.message
+
+  card.append(meta, title, body)
+  if (announcement.type === 'update' && announcement.targetVersion) {
+    const update = document.createElement('a')
+    update.className = 'announcement-update'
+    update.href = `${TRACKING_THREATS_CONFIG.API_BASE_URL.replace(/\/$/, '')}/api/public/extension/download`
+    update.target = '_blank'
+    update.rel = 'noopener noreferrer'
+    update.textContent = `Download v${announcement.targetVersion}`
+    card.appendChild(update)
+  }
+  return card
+}
+
+async function markCurrentAnnouncementsRead() {
+  if (currentAnnouncements.length === 0) return
+  const stored = await chrome.storage.local.get(announcementReadKey)
+  const readIds = new Set(Array.isArray(stored[announcementReadKey]) ? stored[announcementReadKey] : [])
+  currentAnnouncements.forEach((announcement) => readIds.add(announcement.id))
+  await chrome.storage.local.set({
+    [announcementReadKey]: Array.from(readIds).slice(-100),
+  })
+  announcementBadge.hidden = true
+}
+
+async function renderAnnouncements(payload) {
+  currentAnnouncements = Array.isArray(payload?.announcements) ? payload.announcements : []
+  const stored = await chrome.storage.local.get(announcementReadKey)
+  const readIds = new Set(Array.isArray(stored[announcementReadKey]) ? stored[announcementReadKey] : [])
+  const unread = currentAnnouncements.filter((announcement) => !readIds.has(announcement.id))
+
+  announcementBadge.hidden = unread.length === 0
+  announcementBadge.textContent = unread.length > 9 ? '9+' : String(unread.length)
+  announcementList.replaceChildren(...currentAnnouncements.map(createAnnouncementCard))
+  announcementStatus.textContent = currentAnnouncements.length === 0
+    ? 'No new announcements. Your extension is up to date.'
+    : payload.updateAvailable
+      ? `Update available. Installed v${installedVersion}; latest v${payload.latestVersion}.`
+      : `${currentAnnouncements.length} announcement${currentAnnouncements.length === 1 ? '' : 's'}.`
+  if (!announcementPanel.hidden) await markCurrentAnnouncementsRead()
+}
+
+async function loadAnnouncements() {
+  try {
+    const apiBase = TRACKING_THREATS_CONFIG.API_BASE_URL.replace(/\/$/, '')
+    const response = await fetch(`${apiBase}/api/public/announcements?version=${encodeURIComponent(installedVersion)}`, {
+      cache: 'no-store',
+    })
+    if (!response.ok) throw new Error(`Update service returned ${response.status}`)
+    await renderAnnouncements(await response.json())
+  } catch {
+    announcementStatus.textContent = 'Announcements are temporarily unavailable.'
+    announcementBadge.hidden = true
+  }
+}
+
+announcementButton.addEventListener('click', async () => {
+  const opening = announcementPanel.hidden
+  announcementPanel.hidden = !opening
+  announcementButton.setAttribute('aria-expanded', String(opening))
+  if (opening) await markCurrentAnnouncementsRead()
+})
+
+loadAnnouncements()
 
 inspectPage.addEventListener('click', () => {
   inspectPage.disabled = true

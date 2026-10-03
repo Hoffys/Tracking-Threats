@@ -301,6 +301,20 @@ export async function initDatabase() {
       deleted_scans INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS announcements (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'normal',
+      target_version TEXT,
+      is_active INTEGER NOT NULL DEFAULT 0,
+      published_at TEXT,
+      expires_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `)
 
   await ensureColumn(db, 'client_credentials', 'last_seen_at', 'TEXT')
@@ -336,6 +350,7 @@ export async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_admin_actions_created_at ON admin_actions(created_at);
     CREATE INDEX IF NOT EXISTS idx_client_credentials_device_id ON client_credentials(device_id);
     CREATE INDEX IF NOT EXISTS idx_device_pair_codes_device_id ON device_pair_codes(device_id);
+    CREATE INDEX IF NOT EXISTS idx_announcements_public ON announcements(is_active, published_at);
   `)
   await db.run(
     `INSERT INTO notification_settings

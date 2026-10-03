@@ -22,8 +22,96 @@
       }
 
       h1 {
-        margin: 0 0 10px;
+        margin: 0;
         font-size: 15px;
+      }
+
+      .popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .icon-button {
+        position: relative;
+        display: grid;
+        width: 34px;
+        height: 34px;
+        margin: 0;
+        padding: 0;
+        place-items: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        background: white;
+        color: #0f766e;
+        font-size: 17px;
+      }
+
+      .announcement-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        min-width: 17px;
+        height: 17px;
+        box-sizing: border-box;
+        border: 2px solid #f8fafc;
+        border-radius: 999px;
+        background: #e11d48;
+        color: white;
+        font-size: 9px;
+        line-height: 13px;
+        text-align: center;
+      }
+
+      .version-line {
+        margin: -4px 0 10px;
+        font-size: 10px;
+        color: #64748b;
+      }
+
+      .announcements {
+        margin: 0 0 12px;
+        border: 1px solid #99f6e4;
+        border-radius: 9px;
+        background: #f0fdfa;
+        padding: 10px;
+      }
+
+      .announcements h2 {
+        margin: 0;
+        font-size: 13px;
+      }
+
+      .announcement-card {
+        margin-top: 9px;
+        border-top: 1px solid #ccfbf1;
+        padding-top: 9px;
+      }
+
+      .announcement-card strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .announcement-meta {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #0f766e;
+      }
+
+      .announcement-update {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        margin-top: 8px;
+        border-radius: 7px;
+        background: #0f766e;
+        padding: 8px 10px;
+        color: white;
+        text-align: center;
       }
 
       p {
@@ -88,7 +176,19 @@
   </head>
   <body>
     <main>
-      <h1>Tracking Threats Monitor</h1>
+      <div class="popup-header">
+        <h1>Tracking Threats Monitor</h1>
+        <button id="announcementButton" class="icon-button" type="button" aria-label="Open announcements" aria-expanded="false">
+          <span aria-hidden="true">&#128227;</span>
+          <span id="announcementBadge" class="announcement-badge" hidden></span>
+        </button>
+      </div>
+      <p id="installedVersion" class="version-line"></p>
+      <section id="announcementPanel" class="announcements" aria-labelledby="announcementTitle" hidden>
+        <h2 id="announcementTitle">Announcements</h2>
+        <p id="announcementStatus">Checking for updates...</p>
+        <div id="announcementList"></div>
+      </section>
       <div class="status">
         <p id="message">Waiting for browsing activity...</p>
         <span id="pill" class="pill">Ready</span>

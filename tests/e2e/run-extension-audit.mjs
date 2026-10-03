@@ -34,7 +34,7 @@ try {
   const origin = `http://127.0.0.1:${port}`
   const osVars = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(path|systemroot|windir|comspec|pathext|temp|tmp|userprofile|appdata|localappdata)$/i.test(key)))
   backend = spawn(process.execPath, [path.join(root, 'backend/server.js')], { cwd: artifacts, windowsHide: true,
-    env: { ...osVars, NODE_ENV: 'production', PORT: String(port), DATABASE_URL: '', DATABASE_PATH: path.join(artifacts, 'test.sqlite'), PUBLIC_DEPLOYMENT: 'true', REPUTATION_ENABLED: 'false', SMTP_ENABLED: 'false', AUTO_MONITOR: 'false', CORS_ALLOW_CHROME_EXTENSIONS: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] })
+    env: { ...osVars, NODE_ENV: 'production', PORT: String(port), DATABASE_URL: '', DATABASE_PATH: path.join(artifacts, 'test.sqlite'), PUBLIC_DEPLOYMENT: 'true', REPUTATION_ENABLED: 'false', SMTP_ENABLED: 'false', AUTO_MONITOR: 'false', CORS_ALLOW_CHROME_EXTENSIONS: 'true', ADMIN_API_TOKEN: 'isolated-extension-audit-admin' }, stdio: ['ignore', 'pipe', 'pipe'] })
   let log = ''
   backend.stdout.on('data', (chunk) => { log += chunk })
   backend.stderr.on('data', (chunk) => { log += chunk })
@@ -185,6 +185,42 @@ try {
     await popup.close()
     return { text }
   })
+  await check('popup shows an unread version-aware staff announcement', async () => {
+    const response = await fetch(`${origin}/api/admin/announcements`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer isolated-extension-audit-admin',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: 'update',
+        title: 'Extension v1.0.36 available',
+        message: 'Install the latest isolated audit update.',
+        priority: 'important',
+        targetVersion: '1.0.36',
+        expiresAt: null,
+        isActive: true,
+      }),
+    })
+    assert.equal(response.status, 201)
+    const announcement = await response.json()
+    const popup = await browser.newPage()
+    await popup.goto(`chrome-extension://${report.extensionId}/popup.html`)
+    await popup.locator('#announcementBadge').waitFor({ state: 'visible' })
+    assert.equal(await popup.locator('#announcementBadge').innerText(), '1')
+    await popup.locator('#announcementButton').click()
+    await popup.getByText('Extension v1.0.36 available', { exact: true }).waitFor()
+    const update = popup.getByRole('link', { name: 'Download v1.0.36', exact: true })
+    assert.equal(await update.getAttribute('href'), `${origin}/api/public/extension/download`)
+    await until(() => popup.evaluate(async (id) => {
+      const stored = await chrome.storage.local.get('trackingThreatsReadAnnouncements')
+      return stored.trackingThreatsReadAnnouncements?.includes(id)
+    }, announcement.id))
+    assert.equal(await popup.locator('#announcementBadge').isHidden(), true)
+    await popup.screenshot({ path: path.join(artifacts, 'popup-announcement.png') })
+    await popup.close()
+    return { announcementId: announcement.id, installedVersion: manifest.version, targetVersion: announcement.targetVersion }
+  })
   await writeFile(path.join(artifacts, 'backend.log'), log)
 } catch (error) { report.infrastructureError = error.message; console.error(error.message) }
 finally {
@@ -195,7 +231,7 @@ finally {
   report.failed = report.cases.filter((item) => item.status === 'failed').length
   report.artifacts = artifacts
   await writeFile(path.join(artifacts, 'results.json'), JSON.stringify(report, null, 2))
-  await writeFile(path.join(root, 'tests/e2e/results/2026-10-02-extension-history.json'), JSON.stringify(report, null, 2))
+  await writeFile(path.join(root, 'tests/e2e/results/2026-10-03-extension-announcements.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify({ passed: report.passed, failed: report.failed, infrastructureError: report.infrastructureError, artifacts }))
   if (report.failed || report.infrastructureError) process.exitCode = 1
 }

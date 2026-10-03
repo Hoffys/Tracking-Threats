@@ -108,7 +108,7 @@ never use that configuration for a public deployment.
 
 Public scan history, notification settings, and deletion now require a private
 client credential in addition to the client ID. New browser sessions register
-automatically. Install or reload unpacked extension version 1.0.34 before the
+automatically. Install or reload unpacked extension version 1.0.35 before the
 demo; older extension versions do not include the current protected-history,
 blocked-result recovery, and presentation fixes. The extension
 passes only a client ID in app links and transfers its credential on the app

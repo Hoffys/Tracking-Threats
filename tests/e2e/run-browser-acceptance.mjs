@@ -496,6 +496,51 @@ async function run() {
     await page.screenshot({ path: path.join(artifacts, 'admin-clients-phone.png'), fullPage: true })
   })
 
+  test('admin publishes version-aware extension announcements', async ({ page, evidence }) => {
+    await open(page, 'admin')
+    await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.getByRole('tab', { name: 'Announcements', exact: true }).click()
+
+    await page.getByLabel('Title').fill('Extension v1.0.35 available')
+    await page.getByLabel('Message').fill('Improved Gmail monitoring and update notifications are now available.')
+    await page.getByLabel('New extension version').fill('1.0.35')
+    await page.getByRole('button', { name: 'Publish announcement', exact: true }).click()
+    await expect(page.getByRole('status')).toContainText('Announcement published.')
+
+    const card = page.getByRole('article').filter({ hasText: 'Extension v1.0.35 available' })
+    await expect(card).toContainText('Published')
+    await expect(card).toContainText('Extension v1.0.35')
+
+    const outdatedResponse = await fetch(`${origin}/api/public/announcements?version=1.0.34`)
+    assert.equal(outdatedResponse.status, 200)
+    const outdated = await outdatedResponse.json()
+    assert.equal(outdated.updateAvailable, true)
+    assert.equal(outdated.latestVersion, '1.0.35')
+    assert.equal(outdated.announcements.length, 1)
+    assert.equal(outdated.announcements[0].title, 'Extension v1.0.35 available')
+
+    const currentResponse = await fetch(`${origin}/api/public/announcements?version=1.0.35`)
+    assert.equal(currentResponse.status, 200)
+    const current = await currentResponse.json()
+    assert.equal(current.updateAvailable, false)
+    assert.deepEqual(current.announcements, [])
+    await screenshot(page, 'admin-extension-announcement')
+
+    await card.getByRole('button', { name: 'Unpublish', exact: true }).click()
+    await expect(page.getByRole('status')).toContainText('Announcement unpublished.')
+    const hiddenResponse = await fetch(`${origin}/api/public/announcements?version=1.0.34`)
+    assert.equal(hiddenResponse.status, 200)
+    assert.deepEqual((await hiddenResponse.json()).announcements, [])
+
+    evidence.extensionAnnouncement = {
+      title: outdated.announcements[0].title,
+      targetVersion: outdated.announcements[0].targetVersion,
+      outdatedClientNotified: outdated.updateAvailable,
+      currentClientAnnouncementCount: current.announcements.length,
+    }
+  })
+
   test('admin evaluation runs real samples, displays counts and restores saved history', async ({ page, evidence }) => {
     await open(page, 'admin')
     await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
