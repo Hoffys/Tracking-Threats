@@ -1,6 +1,5 @@
 import { Download, Megaphone, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { apiService, extensionDownloadUrl } from '../services/api'
 
 const readAnnouncementKey = 'threattrack:read-announcements'
@@ -36,7 +35,7 @@ const priorityStyles = {
   normal: 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60',
 }
 
-export function AnnouncementCenter({ panelHost }) {
+export function AnnouncementCenter() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -129,7 +128,7 @@ export function AnnouncementCenter({ panelHost }) {
     <section
       id="public-announcements"
       aria-label="System and extension announcements"
-      className="fixed right-4 top-20 z-50 max-h-[calc(100vh-6rem)] w-[calc(100vw-2rem)] max-w-sm overflow-y-auto rounded-xl border border-emerald-200 bg-white p-4 text-left shadow-2xl dark:border-slate-700 dark:bg-slate-900 lg:static lg:ml-auto lg:mt-4 lg:w-96 lg:max-w-none"
+      className="fixed right-4 top-20 z-50 max-h-[calc(100vh-6rem)] w-[calc(100vw-2rem)] max-w-sm overflow-y-auto rounded-xl border border-emerald-200 bg-white p-4 text-left shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:right-0 sm:top-12 sm:w-96 sm:max-w-none"
     >
       <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-3 dark:border-slate-700">
         <div>
@@ -210,7 +209,7 @@ export function AnnouncementCenter({ panelHost }) {
   ) : null
 
   return (
-    <>
+    <div className="relative">
       <button
         type="button"
         aria-label={buttonLabel}
@@ -227,7 +226,7 @@ export function AnnouncementCenter({ panelHost }) {
           </span>
         )}
       </button>
-      {panelHost ? createPortal(panel, panelHost) : panel}
-    </>
+      {panel}
+    </div>
   )
 }

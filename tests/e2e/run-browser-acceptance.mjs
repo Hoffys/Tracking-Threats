@@ -532,6 +532,19 @@ async function run() {
     await expect(page.getByRole('heading', { name: 'System Active & Monitoring', exact: true })).toBeVisible()
     const announcementButton = page.getByRole('button', { name: 'Announcements, 1 unread', exact: true })
     await expect(announcementButton).toBeVisible()
+    const desktopBeforeOpen = await page.evaluate(() => ({
+      mainTop: document.querySelector('main').getBoundingClientRect().top,
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }))
+    const iconBeforeOpen = await announcementButton.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { left: rect.left, right: rect.right }
+    })
+    const alertsBeforeOpen = await page.getByText('0 active alerts', { exact: true }).evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { left: rect.left, right: rect.right }
+    })
+    assert.ok(iconBeforeOpen.left >= alertsBeforeOpen.right, 'Announcement icon must be the rightmost visible navbar control.')
     await announcementButton.click()
     let publicAnnouncements = page.getByLabel('System and extension announcements')
     await expect(publicAnnouncements).toBeVisible()
@@ -545,20 +558,23 @@ async function run() {
       const panel = document.querySelector('#public-announcements').getBoundingClientRect()
       const main = document.querySelector('main').getBoundingClientRect()
       const sidebar = document.querySelector('aside').getBoundingClientRect()
+      const icon = document.querySelector('[aria-controls="public-announcements"]').getBoundingClientRect()
       return {
         viewportWidth: innerWidth,
         sidebarRight: sidebar.right,
+        iconRight: icon.right,
         panelLeft: panel.left,
         panelRight: panel.right,
-        panelBottom: panel.bottom,
         mainTop: main.top,
         pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
       }
     })
     assert.ok(desktopFlow.panelLeft >= desktopFlow.sidebarRight, 'Announcement panel must stay to the right of the desktop sidebar.')
     assert.ok(desktopFlow.panelRight <= desktopFlow.viewportWidth - 15, 'Announcement panel must stay inside the right viewport edge.')
-    assert.ok(desktopFlow.mainTop >= desktopFlow.panelBottom, 'Main content must flow below the announcement panel instead of sitting underneath it.')
+    assert.ok(Math.abs(desktopFlow.panelRight - desktopFlow.iconRight) <= 1, 'Floating announcement panel must stay anchored to the rightmost icon.')
+    assert.ok(Math.abs(desktopFlow.mainTop - desktopBeforeOpen.mainTop) <= 1, 'Floating announcement panel must not move the main content.')
     assert.ok(desktopFlow.pageOverflow <= 1, `Desktop announcement layout overflows by ${desktopFlow.pageOverflow}px`)
+    assert.ok(desktopBeforeOpen.pageOverflow <= 1, `Desktop navbar overflows by ${desktopBeforeOpen.pageOverflow}px before opening announcements`)
     await page.screenshot({ path: path.join(artifacts, 'public-navbar-announcement-desktop.png'), fullPage: true })
     await publicAnnouncements.getByRole('button', { name: 'Close announcements', exact: true }).click()
 
