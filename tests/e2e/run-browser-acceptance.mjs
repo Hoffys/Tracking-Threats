@@ -496,7 +496,7 @@ async function run() {
     await page.screenshot({ path: path.join(artifacts, 'admin-clients-phone.png'), fullPage: true })
   })
 
-  test('admin publishes version-aware extension announcements', async ({ page, evidence }) => {
+  test('admin publishes version-aware extension announcements shown in the public navbar', async ({ page, evidence }) => {
     await open(page, 'admin')
     await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -527,7 +527,32 @@ async function run() {
     assert.deepEqual(current.announcements, [])
     await screenshot(page, 'admin-extension-announcement')
 
-    await card.getByRole('button', { name: 'Unpublish', exact: true }).click()
+    await page.setViewportSize({ width: 390, height: 844 })
+    await open(page, 'dashboard')
+    const announcementButton = page.getByRole('button', { name: 'Announcements, 1 unread', exact: true })
+    await expect(announcementButton).toBeVisible()
+    await announcementButton.click()
+    const publicAnnouncements = page.getByLabel('System and extension announcements')
+    await expect(publicAnnouncements).toBeVisible()
+    await expect(publicAnnouncements).toContainText('Latest extension version: v1.0.35')
+    await expect(publicAnnouncements).toContainText('Extension v1.0.35 available')
+    await expect(publicAnnouncements).toContainText('Improved Gmail monitoring and update notifications are now available.')
+    const download = publicAnnouncements.getByRole('link', { name: 'Download Extension v1.0.35', exact: true })
+    await expect(download).toHaveAttribute('href', '/api/public/extension/download')
+    await expect(page.getByRole('button', { name: 'Announcements', exact: true })).toBeVisible()
+    const publicOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    assert.ok(publicOverflow <= 1, `Public announcement panel overflows by ${publicOverflow}px`)
+    await page.screenshot({ path: path.join(artifacts, 'public-navbar-announcement-phone.png'), fullPage: true })
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Announcements', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: /unread/ })).toHaveCount(0)
+
+    await open(page, 'admin')
+    await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await page.getByRole('tab', { name: 'Announcements', exact: true }).click()
+    const restoredCard = page.getByRole('article').filter({ hasText: 'Extension v1.0.35 available' })
+    await restoredCard.getByRole('button', { name: 'Unpublish', exact: true }).click()
     await expect(page.getByRole('status')).toContainText('Announcement unpublished.')
     const hiddenResponse = await fetch(`${origin}/api/public/announcements?version=1.0.34`)
     assert.equal(hiddenResponse.status, 200)
@@ -538,6 +563,9 @@ async function run() {
       targetVersion: outdated.announcements[0].targetVersion,
       outdatedClientNotified: outdated.updateAvailable,
       currentClientAnnouncementCount: current.announcements.length,
+      publicNavbarUnreadCount: 1,
+      publicNavbarReadStatePersisted: true,
+      publicNavbarOverflow: publicOverflow,
     }
   })
 

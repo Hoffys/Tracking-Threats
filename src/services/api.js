@@ -137,6 +137,7 @@ const clientQuery = (clientId) => (clientId ? `?clientId=${encodeURIComponent(cl
 
 export const apiService = {
   getHealth: () => request('/health'),
+  getPublicAnnouncements: () => request('/public/announcements', { cache: 'no-store' }),
   getPublicActivity: (clientId) =>
     clientRequest(`/public/activity/${encodeURIComponent(clientId)}`, clientId),
   deletePublicHistory: (clientId) =>
