@@ -376,6 +376,126 @@ async function run() {
     evidence.shortLaptop = { width: 1366, height: 650, ...sidebarMetrics }
   })
 
+  test('admin clients filter linked and legacy records without duplicating heartbeats', async ({ page, evidence }) => {
+    const jsonRequest = async (pathname, { method = 'GET', token = '', body } = {}) => {
+      const response = await fetch(`${origin}${pathname}`, {
+        method,
+        headers: {
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...(token ? { 'X-Client-Token': token } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      })
+      const payload = await response.json()
+      assert.ok(response.ok, `${method} ${pathname}: ${response.status} ${JSON.stringify(payload)}`)
+      return payload
+    }
+
+    const linked = await jsonRequest('/api/public/clients', { method: 'POST' })
+    await jsonRequest('/api/public/devices', {
+      method: 'POST', token: linked.token,
+      body: { clientId: linked.clientId, deviceName: 'Bryan PC', browserName: 'Brave' },
+    })
+    for (let index = 0; index < 2; index += 1) {
+      await jsonRequest('/api/public/extension/heartbeat', {
+        method: 'POST', token: linked.token,
+        body: { clientId: linked.clientId, version: '1.0.31', browserName: 'Brave' },
+      })
+    }
+    await jsonRequest('/api/scan/message', {
+      method: 'POST', token: linked.token,
+      body: {
+        clientId: linked.clientId,
+        target: 'Admin clients acceptance fixture',
+        message: 'Meeting starts at noon.',
+        source: 'api',
+        privacyAccepted: true,
+      },
+    })
+    const adminHeaders = { Authorization: 'Bearer isolated-browser-audit-admin' }
+    const listResponse = await fetch(`${origin}/api/admin/clients`, { headers: adminHeaders })
+    assert.equal(listResponse.status, 200)
+    const beforeUi = await listResponse.json()
+    assert.equal(beforeUi.filter((client) => client.clientId === linked.clientId).length, 1)
+    const linkedRecord = beforeUi.find((client) => client.clientId === linked.clientId)
+    assert.equal(linkedRecord.deviceName, 'Bryan PC')
+    assert.equal(linkedRecord.browserName, 'Brave')
+    assert.equal(linkedRecord.extensionVersion, '1.0.31')
+    assert.ok(linkedRecord.extensionLastSeenAt)
+
+    await open(page, 'admin')
+    await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    const afterPageResponse = await fetch(`${origin}/api/admin/clients`, { headers: adminHeaders })
+    assert.equal(afterPageResponse.status, 200)
+    const afterPage = await afterPageResponse.json()
+    const unlinked = afterPage.find((client) => client.clientId !== linked.clientId && !client.deviceId)
+    assert.ok(unlinked, 'Acceptance needs an existing unlinked browser client.')
+
+    const linkedFilter = page.getByRole('button', { name: /Linked \/ Active \(\d+\)/ })
+    const allFilter = page.getByRole('button', { name: /All Clients \(\d+\)/ })
+    const legacyFilter = page.getByRole('button', { name: /Legacy \/ Unlinked \(\d+\)/ })
+    await expect(linkedFilter).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: linked.clientId, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: unlinked.clientId, exact: true })).toHaveCount(0)
+
+    const linkedRow = page.getByRole('row').filter({ has: page.getByRole('button', { name: linked.clientId, exact: true }) })
+    await expect(linkedRow).toContainText('Bryan PC')
+    await expect(linkedRow).toContainText('Brave')
+    await expect(linkedRow).toContainText('v1.0.31')
+    await expect(linkedRow).toContainText('Linked')
+    await expect(linkedRow).toContainText('Online')
+    await expect(linkedRow).toContainText(/Last heartbeat: (Just now|\d+ seconds ago|1 minute ago)/)
+    await screenshot(page, 'admin-clients-linked-default')
+
+    await allFilter.click()
+    await expect(page.getByRole('button', { name: linked.clientId, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: unlinked.clientId, exact: true })).toBeVisible()
+
+    await legacyFilter.click()
+    await expect(page.getByRole('button', { name: linked.clientId, exact: true })).toHaveCount(0)
+    const legacyRow = page.getByRole('row').filter({ has: page.getByRole('button', { name: unlinked.clientId, exact: true }) })
+    await expect(legacyRow).toContainText('Legacy / Unlinked')
+    await expect(legacyRow).toContainText('Offline')
+    await expect(legacyRow).toContainText('Last heartbeat: No heartbeat')
+
+    await linkedFilter.click()
+    const refreshed = apiResponse(page, 'GET', '/api/admin/clients')
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+    const refreshedClients = await responseJson(refreshed)
+    assert.equal(refreshedClients.filter((client) => client.clientId === linked.clientId).length, 1)
+
+    await page.reload()
+    await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    await expect(page.getByRole('button', { name: linked.clientId, exact: true })).toBeVisible()
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    const phoneTable = page.getByRole('table').filter({ has: page.getByRole('columnheader', { name: 'Client ID', exact: true }) })
+    const scrollContainer = phoneTable.locator('..')
+    const scrollMetrics = await scrollContainer.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      overflowX: getComputedStyle(element).overflowX,
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }))
+    assert.ok(scrollMetrics.scrollWidth > scrollMetrics.clientWidth)
+    assert.equal(scrollMetrics.overflowX, 'auto')
+    assert.ok(scrollMetrics.pageOverflow <= 1, `Admin clients page overflows by ${scrollMetrics.pageOverflow}px`)
+
+    evidence.linkedClient = {
+      clientId: linked.clientId,
+      deviceName: linkedRecord.deviceName,
+      browserName: linkedRecord.browserName,
+      extensionVersion: linkedRecord.extensionVersion,
+      heartbeat: linkedRecord.extensionLastSeenAt,
+    }
+    evidence.unlinkedClientId = unlinked.clientId
+    evidence.duplicateLinkedRecordsAfterRefresh = refreshedClients.filter((client) => client.clientId === linked.clientId).length
+    evidence.phoneTable = scrollMetrics
+    await page.screenshot({ path: path.join(artifacts, 'admin-clients-phone.png'), fullPage: true })
+  })
+
   test('admin evaluation runs real samples, displays counts and restores saved history', async ({ page, evidence }) => {
     await open(page, 'admin')
     await page.getByLabel('Admin Only Access Key').fill('isolated-browser-audit-admin')

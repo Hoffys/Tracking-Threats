@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
   Download,
   FileText,
+  Globe2,
   LockKeyhole,
   LogOut,
+  Minus,
+  Monitor,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -12,6 +15,14 @@ import {
 } from 'lucide-react'
 import { apiService } from '../services/api'
 import { EvaluationPanel } from '../components/EvaluationPanel'
+import {
+  adminClientFilters,
+  filterAdminClients,
+  formatRelativeTime,
+  getClientPresence,
+  getLatestClientActivity,
+  isLinkedActiveClient,
+} from '../utils/adminClients'
 
 const formatDate = (value) => value
   ? new Intl.DateTimeFormat(undefined, {
@@ -48,6 +59,8 @@ export function Admin() {
   const [logs, setLogs] = useState({ system: [], actions: [] })
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
+  const [clientFilter, setClientFilter] = useState('linked')
+  const [relativeTimeReference, setRelativeTimeReference] = useState(() => Date.now())
   const [deleting, setDeleting] = useState(false)
   const [confirmId, setConfirmId] = useState('')
   const [verifiedRequest, setVerifiedRequest] = useState(false)
@@ -55,9 +68,23 @@ export function Admin() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  const visibleClients = useMemo(() =>
-    clients.filter((client) => client.clientId.toLowerCase().includes(search.trim().toLowerCase())),
-  [clients, search])
+  const clientCounts = useMemo(() => ({
+    all: clients.length,
+    linked: clients.filter(isLinkedActiveClient).length,
+    legacy: clients.filter((client) => !isLinkedActiveClient(client)).length,
+  }), [clients])
+
+  const visibleClients = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return filterAdminClients(clients, clientFilter)
+      .filter((client) => client.clientId.toLowerCase().includes(query))
+  }, [clientFilter, clients, search])
+
+  useEffect(() => {
+    if (!adminToken) return undefined
+    const timer = window.setInterval(() => setRelativeTimeReference(Date.now()), 30 * 1000)
+    return () => window.clearInterval(timer)
+  }, [adminToken])
 
   const load = async (token) => {
     const [nextOverview, nextClients, nextLogs] = await Promise.all([
@@ -68,6 +95,7 @@ export function Admin() {
     setOverview(nextOverview)
     setClients(nextClients)
     setLogs(nextLogs)
+    setRelativeTimeReference(Date.now())
   }
 
   const signIn = async (event) => {
@@ -291,69 +319,123 @@ export function Admin() {
           </section>
         ) : (
           <section className="space-y-4">
-            <div className="relative max-w-sm">
-              <Search size={17} className="absolute left-3 top-3 text-slate-400" />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search client ID" aria-label="Search client ID"
-                className="w-full rounded-md border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full max-w-sm">
+                <Search size={17} className="absolute left-3 top-3 text-slate-400" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search client ID" aria-label="Search client ID"
+                  className="w-full rounded-md border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm dark:border-slate-700 dark:bg-slate-900" />
+              </div>
+              <div role="group" aria-label="Filter clients" className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+                {adminClientFilters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    aria-pressed={clientFilter === filter.id}
+                    onClick={() => setClientFilter(filter.id)}
+                    className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold ${
+                      clientFilter === filter.id
+                        ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {filter.label} ({clientCounts[filter.id]})
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[650px] text-left text-sm">
+              <table className="w-full min-w-[1100px] table-fixed text-left text-sm">
                 <thead className="border-b border-slate-300 text-slate-500 dark:border-slate-700">
                    <tr>
-                      <th className="py-2">Client ID</th>
-                      <th>Device</th>
-                      <th>Browser</th>
-                      <th>Scans</th>
-                      <th>Last scan</th>
-                      <th>Last active</th>
-                      <th>Extension</th>
-                      <th>Status</th>
+                      <th className="w-[220px] py-2 pr-4">Client ID</th>
+                      <th className="w-[130px] pr-4">Device</th>
+                      <th className="w-[95px] pr-4">Browser</th>
+                      <th className="w-[60px] pr-4">Scans</th>
+                      <th className="w-[160px] pr-4">Last scan</th>
+                      <th className="w-[180px] pr-4">Last active</th>
+                      <th className="w-[90px] pr-4">Extension</th>
+                      <th className="w-[180px]">Status</th>
                   </tr>
                 </thead>
-                <tbody>{visibleClients.map((client) => (
-              <tr key={client.clientId} className="border-b border-slate-200 dark:border-slate-800">
-                <td className="py-2">
-                  <button
-                    type="button"
-                    onClick={() => selectClient(client.clientId)}
-                    className="font-mono text-emerald-700 hover:underline dark:text-emerald-300"
-                  >
-                    {client.clientId}
-                  </button>
-                </td>
+                <tbody>
+                  {visibleClients.map((client) => {
+                    const linked = isLinkedActiveClient(client)
+                    const presence = getClientPresence(client, relativeTimeReference)
+                    const lastActiveAt = getLatestClientActivity(client)
+                    return (
+                      <tr key={client.clientId} className="border-b border-slate-200 dark:border-slate-800">
+                        <td className="py-2 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => selectClient(client.clientId)}
+                            title={client.clientId}
+                            className="block max-w-[200px] truncate font-mono text-emerald-700 hover:underline dark:text-emerald-300"
+                          >
+                            {client.clientId}
+                          </button>
+                        </td>
 
-                <td>{client.deviceName || 'N/A'}</td>
+                        <td className="pr-4">
+                          <span className="inline-flex max-w-full items-center gap-2">
+                            {client.deviceName ? <Monitor size={16} className="text-slate-400" /> : <Minus size={16} className="text-slate-400" />}
+                            <span className="truncate" title={client.deviceName || 'N/A'}>{client.deviceName || 'N/A'}</span>
+                          </span>
+                        </td>
 
-                <td>{client.browserName || 'N/A'}</td>
+                        <td className="pr-4">
+                          <span className="inline-flex items-center gap-2">
+                            {client.browserName ? <Globe2 size={16} className="text-slate-400" /> : <Minus size={16} className="text-slate-400" />}
+                            {client.browserName || 'N/A'}
+                          </span>
+                        </td>
 
-                <td>{client.scanCount}</td>
+                        <td className="pr-4">{client.scanCount}</td>
 
-                <td>{formatDate(client.lastScanAt)}</td>
+                        <td className="pr-4">{formatDate(client.lastScanAt)}</td>
 
-                <td>{formatDate(client.lastSeenAt)}</td>
+                        <td className="pr-4">
+                          <span>{formatDate(lastActiveAt)}</span>
+                          {lastActiveAt && (
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                              {formatRelativeTime(lastActiveAt, relativeTimeReference)}
+                            </p>
+                          )}
+                        </td>
 
-                <td>
-                  {client.extensionVersion ? (
-                    <>
-                      <span>v{client.extensionVersion}</span>
-                      <p className="text-xs text-slate-500">
-                        {formatDate(client.extensionLastSeenAt)}
-                      </p>
-                    </>
-                  ) : (
-                    'N/A'
-                  )}
-                </td>
+                        <td className="pr-4">
+                          {client.extensionVersion ? (
+                            <span>v{client.extensionVersion}</span>
+                          ) : (
+                            'N/A'
+                          )}
+                        </td>
 
-                <td>
-                  {client.deviceId
-                    ? 'Linked'
-                    : 'Legacy / Unlinked'}
-                </td>
-              </tr>
-            ))}</tbody>
+                        <td>
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            linked
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                          }`}>
+                            {linked ? 'Linked' : 'Legacy / Unlinked'}
+                          </span>
+                          <p className="mt-1.5 flex items-center gap-1.5 font-medium">
+                            <span aria-hidden="true" className={`h-2 w-2 rounded-full ${presence.isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                            {presence.isOnline ? 'Online' : 'Offline'}
+                          </p>
+                          <p className="mt-0.5 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
+                            Last heartbeat: {presence.relative}
+                          </p>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
               </table>
-              {visibleClients.length === 0 && <p className="py-4 text-sm text-slate-500">No clients found.</p>}
+              {visibleClients.length === 0 && (
+                <p className="py-4 text-sm text-slate-500">
+                  No clients found in the {adminClientFilters.find((filter) => filter.id === clientFilter)?.label ?? 'selected'} view.
+                </p>
+              )}
             </div>
           </section>
         )
