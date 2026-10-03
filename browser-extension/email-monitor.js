@@ -708,28 +708,94 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
   overlay.setAttribute('role', 'dialog')
   overlay.setAttribute('aria-modal', 'true')
   overlay.setAttribute('aria-labelledby', 'threattrack-inbox-review-title')
-  overlay.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:rgba(2,6,23,.72);font-family:Arial,sans-serif;padding:16px'
+  overlay.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;box-sizing:border-box;background:rgba(2,6,23,.76);font-family:Arial,sans-serif;padding:16px'
 
   const panel = document.createElement('section')
-  panel.style.cssText = 'box-sizing:border-box;width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#f8fafc;box-shadow:0 28px 80px rgba(0,0,0,.5);padding:20px'
+  panel.style.cssText = 'box-sizing:border-box;display:flex;flex-direction:column;width:min(680px,100%);max-height:calc(100vh - 32px);overflow:hidden;border:1px solid #334155;border-radius:14px;background:#0f172a;color:#f8fafc;box-shadow:0 28px 80px rgba(0,0,0,.55)'
 
-  const title = document.createElement('h2')
-  title.id = 'threattrack-inbox-review-title'
-  title.textContent = 'Scanned Gmail messages'
-  title.style.cssText = 'margin:0;color:#fff;font:700 20px/1.3 Arial,sans-serif'
-
-  const summary = document.createElement('p')
   const entries = inboxResults.filter((result) => result.batch === selectedBatch)
   const failed = entries.filter((result) => result.failed).length
   const pending = entries.filter((result) => result.pending).length
-  summary.textContent = `Batch ${selectedBatch}: ${entries.length - failed - pending} checked, ${failed} failed, ${pending} pending. Sender and subject are shown only in this browser tab.`
-  summary.style.cssText = 'margin:8px 0 14px;color:#cbd5e1;font:13px/1.5 Arial,sans-serif'
-  panel.append(title, summary)
+  const checked = entries.length - failed - pending
+  const safe = entries.filter((result) => result.level === 'safe' || result.level === 'incomplete').length
+  const limited = entries.filter((result) => result.level === 'incomplete').length
+  const needsReview = entries.filter((result) => ['content', 'caution', 'dangerous'].includes(result.level)).length
+
+  const header = document.createElement('header')
+  header.style.cssText = 'flex:none;border-bottom:1px solid #263449;padding:20px 22px 18px'
+
+  const headingRow = document.createElement('div')
+  headingRow.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:16px'
+
+  const heading = document.createElement('div')
+  heading.style.cssText = 'min-width:0'
+
+  const eyebrow = document.createElement('p')
+  eyebrow.textContent = `GMAIL INBOX  •  BATCH ${selectedBatch}`
+  eyebrow.style.cssText = 'margin:0 0 5px;color:#5eead4;font:700 11px/1.4 Arial,sans-serif;letter-spacing:.08em'
+
+  const title = document.createElement('h2')
+  title.id = 'threattrack-inbox-review-title'
+  title.textContent = 'Email scan results'
+  title.style.cssText = 'margin:0;color:#fff;font:700 21px/1.3 Arial,sans-serif'
+
+  const summary = document.createElement('p')
+  summary.textContent = `${entries.length} message${entries.length === 1 ? '' : 's'} in this batch. Sender and subject stay in this browser tab.`
+  summary.style.cssText = 'margin:6px 0 0;color:#aebdd0;font:13px/1.5 Arial,sans-serif'
+  heading.append(eyebrow, title, summary)
+
+  const closeIcon = document.createElement('button')
+  closeIcon.type = 'button'
+  closeIcon.textContent = '×'
+  closeIcon.setAttribute('aria-label', 'Close email scan results')
+  closeIcon.style.cssText = 'flex:none;display:grid;place-items:center;width:32px;height:32px;border:1px solid #3b4a61;border-radius:8px;background:#172033;color:#cbd5e1;cursor:pointer;font:400 22px/1 Arial,sans-serif;padding:0'
+  closeIcon.addEventListener('click', () => overlay.remove())
+  headingRow.append(heading, closeIcon)
+  header.appendChild(headingRow)
+
+  const metrics = document.createElement('div')
+  metrics.style.cssText = 'display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px'
+  const metricData = [
+    ['Checked', checked, '#e2e8f0'],
+    ['No warnings', safe, '#6ee7b7'],
+    ['Warnings', needsReview, needsReview > 0 ? '#fde68a' : '#94a3b8'],
+    ['Failed', failed, failed > 0 ? '#fca5a5' : '#94a3b8'],
+  ]
+  metricData.forEach(([label, value, color]) => {
+    const metric = document.createElement('div')
+    metric.style.cssText = 'min-width:0;border:1px solid #2f3d52;border-radius:9px;background:#111c2e;padding:9px 10px'
+    const valueText = document.createElement('strong')
+    valueText.textContent = String(value)
+    valueText.style.cssText = `display:block;color:${color};font:700 16px/1.2 Arial,sans-serif`
+    const labelText = document.createElement('span')
+    labelText.textContent = label
+    labelText.style.cssText = 'display:block;margin-top:3px;color:#94a3b8;font:11px/1.3 Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
+    metric.append(valueText, labelText)
+    metrics.appendChild(metric)
+  })
+  header.appendChild(metrics)
+  if (limited > 0) {
+    const limitedNote = document.createElement('p')
+    limitedNote.textContent = `${limited} result${limited === 1 ? '' : 's'} had limited verification. Expand a message to review what was unavailable.`
+    limitedNote.style.cssText = 'margin:10px 0 0;border-left:3px solid #f59e0b;border-radius:3px;background:rgba(245,158,11,.08);color:#fde68a;font:11px/1.45 Arial,sans-serif;padding:7px 9px'
+    header.appendChild(limitedNote)
+  }
+  panel.appendChild(header)
+
+  const content = document.createElement('div')
+  content.style.cssText = 'min-height:0;display:flex;flex:1;flex-direction:column;padding:14px 22px 0'
+
+  const listHeader = document.createElement('div')
+  listHeader.style.cssText = 'flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px'
+  const listTitle = document.createElement('strong')
+  listTitle.textContent = 'Scanned messages'
+  listTitle.style.cssText = 'color:#e2e8f0;font:700 12px/1.4 Arial,sans-serif'
+  listHeader.appendChild(listTitle)
 
   if (inboxBatchNumber > 1) {
     const batchSelect = document.createElement('select')
     batchSelect.setAttribute('aria-label', 'Choose scan batch')
-    batchSelect.style.cssText = 'box-sizing:border-box;width:100%;margin-bottom:12px;border:1px solid #475569;border-radius:6px;background:#111827;color:#f8fafc;font:13px Arial,sans-serif;padding:8px'
+    batchSelect.style.cssText = 'box-sizing:border-box;max-width:150px;border:1px solid #475569;border-radius:7px;background:#111827;color:#f8fafc;font:12px Arial,sans-serif;padding:7px 30px 7px 9px'
     for (let batch = 1; batch <= inboxBatchNumber; batch += 1) {
       const option = document.createElement('option')
       option.value = String(batch)
@@ -738,14 +804,17 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
     }
     batchSelect.value = String(selectedBatch)
     batchSelect.addEventListener('change', () => showInboxReview(Number(batchSelect.value)))
-    panel.appendChild(batchSelect)
+    listHeader.appendChild(batchSelect)
   }
+  content.appendChild(listHeader)
 
   const list = document.createElement('ul')
-  list.style.cssText = 'list-style:none;margin:0;padding:0;max-height:42vh;overflow:auto;border-top:1px solid #334155'
+  list.style.cssText = 'list-style:none;min-height:0;margin:0;padding:0 4px 14px 0;overflow:auto'
   entries.forEach((result) => {
     const item = document.createElement('li')
-    item.style.cssText = 'display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #334155;padding:10px 0'
+    item.style.cssText = 'box-sizing:border-box;margin:0 0 8px;border:1px solid #2c3b50;border-radius:10px;background:#111c2e;padding:12px 13px'
+    const itemTop = document.createElement('div')
+    itemTop.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:14px'
     const identity = document.createElement('div')
     identity.style.cssText = 'min-width:0;overflow-wrap:anywhere'
     const subject = document.createElement('strong')
@@ -753,44 +822,85 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
     subject.style.cssText = 'display:block;color:#f8fafc;font:700 13px/1.4 Arial,sans-serif'
     const sender = document.createElement('span')
     sender.textContent = result.sender || 'Unknown sender'
-    sender.style.cssText = 'display:block;margin-top:2px;color:#94a3b8;font:12px/1.4 Arial,sans-serif'
+    sender.style.cssText = 'display:block;margin-top:3px;color:#94a3b8;font:12px/1.4 Arial,sans-serif'
     identity.append(subject, sender)
     const status = document.createElement('span')
-    status.textContent = result.pending ? 'Scanning' : result.failed ? 'Failed' : `${getStatusLabel(result.status, result.coverage, result.categories)} ${result.score}/100`
-    status.style.cssText = `flex:none;align-self:center;color:${result.failed ? '#fca5a5' : result.pending ? '#cbd5e1' : result.level === 'dangerous' ? '#fecdd3' : result.level === 'caution' || result.level === 'content' ? '#fde68a' : '#6ee7b7'};font:700 11px/1.4 Arial,sans-serif`
-    const context = document.createElement('span')
-    context.textContent = result.pending || result.failed ? '' : [getCoverageText(result), getCategoryText(result)].filter(Boolean).join(' ')
-    context.style.cssText = 'display:block;margin-top:4px;color:#cbd5e1;font:12px/1.4 Arial,sans-serif'
-    identity.appendChild(context)
-    item.append(identity, status)
+    const isWarning = ['incomplete', 'caution', 'content'].includes(result.level)
+    const statusColor = result.failed
+      ? '#fca5a5'
+      : result.pending
+        ? '#cbd5e1'
+        : result.level === 'dangerous'
+          ? '#fecdd3'
+          : isWarning
+            ? '#fde68a'
+            : '#6ee7b7'
+    const statusBackground = result.failed || result.level === 'dangerous'
+      ? 'rgba(190,24,93,.15)'
+      : isWarning
+        ? 'rgba(245,158,11,.12)'
+        : result.pending
+          ? 'rgba(148,163,184,.10)'
+          : 'rgba(16,185,129,.12)'
+    status.textContent = result.pending
+      ? 'Scanning'
+      : result.failed
+        ? 'Failed'
+        : `${getStatusLabel(result.status, result.coverage, result.categories)}  •  ${result.score}/100`
+    status.style.cssText = `flex:none;border:1px solid ${statusColor}55;border-radius:999px;background:${statusBackground};color:${statusColor};font:700 11px/1.3 Arial,sans-serif;padding:6px 9px;white-space:nowrap`
+    itemTop.append(identity, status)
+    item.appendChild(itemTop)
+
+    if (result.pending || result.failed) {
+      const stateText = document.createElement('p')
+      stateText.textContent = result.pending
+        ? 'This message is still being checked.'
+        : 'This message could not be assessed. Try scanning it again later.'
+      stateText.style.cssText = `margin:9px 0 0;color:${result.failed ? '#fca5a5' : '#cbd5e1'};font:12px/1.45 Arial,sans-serif`
+      item.appendChild(stateText)
+    } else {
+      const details = document.createElement('details')
+      details.style.cssText = 'margin-top:9px;border-top:1px solid #263449;padding-top:8px'
+      const detailsToggle = document.createElement('summary')
+      detailsToggle.textContent = 'View scan details'
+      detailsToggle.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 11px/1.4 Arial,sans-serif'
+      const context = document.createElement('p')
+      context.textContent = [getCoverageText(result), getCategoryText(result)].filter(Boolean).join(' ')
+      context.style.cssText = 'margin:8px 0 1px;color:#cbd5e1;font:12px/1.5 Arial,sans-serif'
+      details.append(detailsToggle, context)
+      item.appendChild(details)
+    }
     list.appendChild(item)
   })
-  panel.appendChild(list)
+  content.appendChild(list)
+  panel.appendChild(content)
 
-  if (inboxPaused) {
-    const scope = document.createElement('p')
-    scope.textContent = 'Not now pauses inbox previews. Opened emails remain covered by your consent; Turn off stops all email scanning.'
-    scope.style.cssText = 'margin:12px 0 0;color:#cbd5e1;font:12px/1.5 Arial,sans-serif'
-    panel.appendChild(scope)
-  }
+  const footer = document.createElement('footer')
+  footer.style.cssText = 'flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #263449;background:#0c1424;padding:14px 22px;flex-wrap:wrap'
+  const scope = document.createElement('p')
+  scope.textContent = inboxPaused
+    ? 'Inbox preview scanning is paused. Opened emails are still covered by your consent.'
+    : 'Scanning continues while this Gmail tab remains open.'
+  scope.style.cssText = 'flex:1;min-width:220px;margin:0;color:#94a3b8;font:11px/1.45 Arial,sans-serif'
 
   const actions = document.createElement('div')
-  actions.style.cssText = 'display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap'
+  actions.style.cssText = 'display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap'
   const close = document.createElement('button')
   close.type = 'button'
-  close.textContent = inboxPaused ? 'Not now' : 'Close'
-  close.style.cssText = 'border:1px solid #475569;border-radius:6px;background:transparent;color:#f8fafc;cursor:pointer;font:700 13px Arial,sans-serif;padding:9px 13px'
+  close.textContent = inboxPaused ? 'Done for now' : 'Close'
+  close.style.cssText = 'border:1px solid #475569;border-radius:8px;background:transparent;color:#f8fafc;cursor:pointer;font:700 12px Arial,sans-serif;padding:9px 13px'
   close.addEventListener('click', () => overlay.remove())
   actions.appendChild(close)
   if (inboxPaused) {
     const next = document.createElement('button')
     next.type = 'button'
     next.textContent = 'Scan next 50'
-    next.style.cssText = 'border:0;border-radius:6px;background:#0d9488;color:#fff;cursor:pointer;font:700 13px Arial,sans-serif;padding:9px 13px'
+    next.style.cssText = 'border:0;border-radius:8px;background:#0d9488;color:#fff;cursor:pointer;font:700 12px Arial,sans-serif;padding:9px 13px'
     next.addEventListener('click', continueInboxBatch)
     actions.appendChild(next)
   }
-  panel.appendChild(actions)
+  footer.append(scope, actions)
+  panel.appendChild(footer)
   overlay.appendChild(panel)
   overlay.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') overlay.remove()
@@ -949,10 +1059,11 @@ function getScanLevel(scan) {
   return 'safe'
 }
 
-function getStatusLabel(status, _coverage, categories = []) {
+function getStatusLabel(status, coverage, categories = []) {
   if (status === 'Safe' && categories.includes('piracy-content')) return 'Download risk unknown'
   if (status === 'Safe' && categories.some((category) => typeof category === 'string' && category.endsWith('-content'))) return 'Content warning'
-  if (status === 'Safe') return 'Appears safe'
+  if (status === 'Safe' && hasIncompleteChecks({ coverage })) return 'No warning found - limited check'
+  if (status === 'Safe') return 'No warning found'
   if (status === 'Dangerous') return 'Risk detected'
   return status === 'Suspicious' ? 'Caution' : status
 }

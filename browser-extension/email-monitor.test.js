@@ -37,6 +37,8 @@ function createMonitor() {
       scan: scanGmailInbox,
       continueBatch: continueInboxBatch,
       stop: stopEmailMonitoring,
+      getScanLevel,
+      getStatusLabel,
       state: () => ({
         consentGranted: emailConsentGranted,
         attempts: inboxAttempts,
@@ -149,4 +151,15 @@ test('withdrawn consent ignores responses already in flight', () => {
   assert.equal(monitor.state().results.length, 0)
   monitor.scan()
   assert.equal(callbacks.length, 3)
+})
+
+test('safe email labels distinguish complete scans from limited checks', () => {
+  const { monitor } = createMonitor()
+  const complete = { status: 'complete', checkedProviders: 1, totalProviders: 1, linksChecked: 0, totalLinks: 0 }
+  const limited = { status: 'local-only', checkedProviders: 0, totalProviders: 0 }
+
+  assert.equal(monitor.getStatusLabel('Safe', complete), 'No warning found')
+  assert.equal(monitor.getScanLevel({ status: 'Safe', coverage: complete }), 'safe')
+  assert.equal(monitor.getStatusLabel('Safe', limited), 'No warning found - limited check')
+  assert.equal(monitor.getScanLevel({ status: 'Safe', coverage: limited }), 'incomplete')
 })
