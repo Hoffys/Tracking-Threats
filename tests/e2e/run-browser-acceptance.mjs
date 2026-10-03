@@ -527,12 +527,13 @@ async function run() {
     assert.deepEqual(current.announcements, [])
     await screenshot(page, 'admin-extension-announcement')
 
-    await page.setViewportSize({ width: 390, height: 844 })
+    await page.setViewportSize({ width: 1212, height: 650 })
     await open(page, 'dashboard')
+    await expect(page.getByRole('heading', { name: 'System Active & Monitoring', exact: true })).toBeVisible()
     const announcementButton = page.getByRole('button', { name: 'Announcements, 1 unread', exact: true })
     await expect(announcementButton).toBeVisible()
     await announcementButton.click()
-    const publicAnnouncements = page.getByLabel('System and extension announcements')
+    let publicAnnouncements = page.getByLabel('System and extension announcements')
     await expect(publicAnnouncements).toBeVisible()
     await expect(publicAnnouncements).toContainText('Latest extension version: v1.0.35')
     await expect(publicAnnouncements).toContainText('Extension v1.0.35 available')
@@ -540,10 +541,35 @@ async function run() {
     const download = publicAnnouncements.getByRole('link', { name: 'Download Extension v1.0.35', exact: true })
     await expect(download).toHaveAttribute('href', '/api/public/extension/download')
     await expect(page.getByRole('button', { name: 'Announcements', exact: true })).toBeVisible()
+    const desktopFlow = await page.evaluate(() => {
+      const panel = document.querySelector('#public-announcements').getBoundingClientRect()
+      const main = document.querySelector('main').getBoundingClientRect()
+      const sidebar = document.querySelector('aside').getBoundingClientRect()
+      return {
+        viewportWidth: innerWidth,
+        sidebarRight: sidebar.right,
+        panelLeft: panel.left,
+        panelRight: panel.right,
+        panelBottom: panel.bottom,
+        mainTop: main.top,
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      }
+    })
+    assert.ok(desktopFlow.panelLeft >= desktopFlow.sidebarRight, 'Announcement panel must stay to the right of the desktop sidebar.')
+    assert.ok(desktopFlow.panelRight <= desktopFlow.viewportWidth - 15, 'Announcement panel must stay inside the right viewport edge.')
+    assert.ok(desktopFlow.mainTop >= desktopFlow.panelBottom, 'Main content must flow below the announcement panel instead of sitting underneath it.')
+    assert.ok(desktopFlow.pageOverflow <= 1, `Desktop announcement layout overflows by ${desktopFlow.pageOverflow}px`)
+    await page.screenshot({ path: path.join(artifacts, 'public-navbar-announcement-desktop.png'), fullPage: true })
+    await publicAnnouncements.getByRole('button', { name: 'Close announcements', exact: true }).click()
+
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.getByRole('button', { name: 'Announcements', exact: true }).click()
+    publicAnnouncements = page.getByLabel('System and extension announcements')
+    await expect(publicAnnouncements).toBeVisible()
     const publicOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     assert.ok(publicOverflow <= 1, `Public announcement panel overflows by ${publicOverflow}px`)
     await page.screenshot({ path: path.join(artifacts, 'public-navbar-announcement-phone.png'), fullPage: true })
-    await page.reload()
+    await open(page, 'dashboard', true)
     await expect(page.getByRole('button', { name: 'Announcements', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /unread/ })).toHaveCount(0)
 
@@ -566,6 +592,7 @@ async function run() {
       publicNavbarUnreadCount: 1,
       publicNavbarReadStatePersisted: true,
       publicNavbarOverflow: publicOverflow,
+      publicNavbarDesktopFlow: desktopFlow,
     }
   })
 
