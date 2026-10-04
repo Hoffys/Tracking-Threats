@@ -43,6 +43,17 @@ function appendScanContext(parent, scan) {
   parent.appendChild(detail)
 }
 
+function appendScanDetailsDisclosure(parent, scan) {
+  const details = document.createElement('details')
+  details.style.cssText = 'margin-top:10px;border-top:1px solid #263449;padding-top:8px'
+  const summary = document.createElement('summary')
+  summary.textContent = 'View scan details'
+  summary.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 12px/1.4 Arial,sans-serif'
+  details.appendChild(summary)
+  appendScanContext(details, scan)
+  parent.appendChild(details)
+}
+
 const MIN_EMAIL_TEXT_LENGTH = 40
 const SCAN_DEBOUNCE_MS = 1400
 const INBOX_SCAN_DEBOUNCE_MS = 2200
@@ -1150,7 +1161,7 @@ function showEmailWarning(scan, email) {
   score.textContent = `Status: ${getStatusLabel(scan.status, scan.coverage, scan.categories)} - Rule-based score ${scan.score}/100`
   score.style.cssText = `margin:8px 0 0;color:${accentColor};font-weight:700`
   banner.appendChild(score)
-  appendScanContext(banner, scan)
+  appendScanDetailsDisclosure(banner, scan)
 
   if (isSafe) {
     const safeText = document.createElement('p')
@@ -1190,7 +1201,7 @@ function showEmailWarning(scan, email) {
   setDetailsHref(details, scanTarget)
   details.target = '_blank'
   details.rel = 'noreferrer'
-  details.textContent = 'View scan details'
+  details.textContent = 'Open scan details'
   details.style.cssText = [
     'display:inline-flex',
     'margin-top:12px',

@@ -130,14 +130,21 @@ test('search result dialogs stay inside the viewport and scroll their own conten
   }
 })
 
-test('Google result popup offers a View scan details action', () => {
+test('Google result popup offers expandable scan details and keeps its app link', () => {
+  const disclosureSource = source.slice(
+    source.indexOf('function appendScanDetailsDisclosure('),
+    source.indexOf('const MAX_RESULTS_TO_SCAN'),
+  )
   const popupSource = source.slice(
     source.indexOf('function showResultPopup('),
     source.indexOf('function createPreviewButton('),
   )
 
-  assert.match(popupSource, /details\.textContent = 'View scan details'/)
-  assert.doesNotMatch(popupSource, /Open in Tracking Threats/)
+  assert.match(disclosureSource, /document\.createElement\('details'\)/)
+  assert.match(disclosureSource, /document\.createElement\('summary'\)/)
+  assert.match(disclosureSource, /summary\.textContent = 'View scan details'/)
+  assert.match(popupSource, /appendScanDetailsDisclosure\(popup, topScan\)/)
+  assert.match(popupSource, /details\.textContent = 'Open in Tracking Threats'/)
 })
 
 test('missing and failed preview replies produce an amber unavailable message', () => {

@@ -164,12 +164,19 @@ test('safe email labels distinguish complete scans from limited checks', () => {
   assert.equal(monitor.getScanLevel({ status: 'Safe', coverage: limited }), 'incomplete')
 })
 
-test('opened email warning offers a View scan details action', () => {
+test('opened email warning offers expandable scan details and keeps its History link', () => {
+  const disclosureSource = source.slice(
+    source.indexOf('function appendScanDetailsDisclosure('),
+    source.indexOf('const MIN_EMAIL_TEXT_LENGTH'),
+  )
   const warningSource = source.slice(
     source.indexOf('function showEmailWarning('),
     source.indexOf('function showInboxRiskWarning('),
   )
 
-  assert.match(warningSource, /details\.textContent = 'View scan details'/)
-  assert.doesNotMatch(warningSource, /Open scan details/)
+  assert.match(disclosureSource, /document\.createElement\('details'\)/)
+  assert.match(disclosureSource, /document\.createElement\('summary'\)/)
+  assert.match(disclosureSource, /summary\.textContent = 'View scan details'/)
+  assert.match(warningSource, /appendScanDetailsDisclosure\(banner, scan\)/)
+  assert.match(warningSource, /details\.textContent = 'Open scan details'/)
 })
