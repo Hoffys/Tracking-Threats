@@ -520,7 +520,7 @@ function showResultPopup(url, scan) {
   setDetailsHref(details, topUrl, topScan)
   details.target = '_blank'
   details.rel = 'noreferrer'
-  details.textContent = 'Open in Tracking Threats'
+  details.textContent = 'View scan details'
   details.style.cssText = [
     'display:inline-flex',
     'margin-top:12px',

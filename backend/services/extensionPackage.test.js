@@ -22,7 +22,7 @@ test('download ZIP contains runnable extension assets and excludes private files
     ...manifest.web_accessible_resources.flatMap((resource) => resource.resources),
     ...manifest.declarative_net_request.rule_resources.map((rule) => rule.path), 'popup.js', 'INSTALL.txt']
   needed.forEach((file) => assert.ok(entries.has(file), `Missing ${file}`))
-  assert.equal(manifest.version, '1.0.35')
+  assert.equal(manifest.version, '1.0.36')
   assert.ok(manifest.permissions.includes('alarms'))
   assert.ok(manifest.permissions.includes('activeTab'))
   assert.ok(manifest.permissions.includes('scripting'))

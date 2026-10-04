@@ -1190,7 +1190,7 @@ function showEmailWarning(scan, email) {
   setDetailsHref(details, scanTarget)
   details.target = '_blank'
   details.rel = 'noreferrer'
-  details.textContent = 'Open scan details'
+  details.textContent = 'View scan details'
   details.style.cssText = [
     'display:inline-flex',
     'margin-top:12px',

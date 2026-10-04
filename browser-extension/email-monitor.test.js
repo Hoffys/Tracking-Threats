@@ -163,3 +163,13 @@ test('safe email labels distinguish complete scans from limited checks', () => {
   assert.equal(monitor.getStatusLabel('Safe', limited), 'No warning found - limited check')
   assert.equal(monitor.getScanLevel({ status: 'Safe', coverage: limited }), 'incomplete')
 })
+
+test('opened email warning offers a View scan details action', () => {
+  const warningSource = source.slice(
+    source.indexOf('function showEmailWarning('),
+    source.indexOf('function showInboxRiskWarning('),
+  )
+
+  assert.match(warningSource, /details\.textContent = 'View scan details'/)
+  assert.doesNotMatch(warningSource, /Open scan details/)
+})
