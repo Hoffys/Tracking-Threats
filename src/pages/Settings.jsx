@@ -209,7 +209,7 @@ export function Settings() {
     } catch (digestError) {
       setError(
         digestError.message ||
-          'Hindi na-send ang history digest. Check SMTP settings and saved emails.',
+          'The history digest was not sent. Check SMTP settings and saved emails.',
       )
     } finally {
       setIsSendingDigest(false)
@@ -352,7 +352,7 @@ export function Settings() {
             <div className="mt-4 space-y-2">
               {draft.reportEmails.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                  Walang email na naka-save.
+                  No email saved.
                 </p>
               ) : (
                 draft.reportEmails.map((email) => (
@@ -498,7 +498,7 @@ export function Settings() {
               <h2 className="text-lg font-semibold">Contact the staff of Tracking Threats</h2>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-              {['Alemari Acuesta', 'Bryan Duran', 'Niccolo Valero', 'James Torralba'].map(
+              {['Alemari Acuesta | Alemariacuesta@gmail.com', 'Bryan Duran | Bryan.duran@gmail.com', 'Niccolo Valero | Niccolo.valero@gmail.com', 'James Torralba | James.torralba@gmail.com'].map(
                 (name) => (
                   <div
                     key={name}
