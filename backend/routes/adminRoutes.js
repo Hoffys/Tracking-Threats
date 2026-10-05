@@ -112,6 +112,22 @@ adminRoutes.patch('/announcements/:announcementId', async (req, res, next) => {
   }
 })
 
+adminRoutes.delete('/announcements/:announcementId', async (req, res, next) => {
+  try {
+    const announcementId = String(req.params.announcementId ?? '')
+    if (!/^an_[a-f0-9]{32}$/.test(announcementId)) {
+      return res.status(400).json({ error: 'Invalid announcement ID' })
+    }
+    const db = await dbPromise
+    const existing = await db.get('SELECT id FROM announcements WHERE id = ?', announcementId)
+    if (!existing) return res.status(404).json({ error: 'Announcement not found' })
+    await db.run('DELETE FROM announcements WHERE id = ?', announcementId)
+    res.json({ ok: true, id: announcementId })
+  } catch (error) {
+    next(error)
+  }
+})
+
 adminRoutes.get('/overview', async (_req, res, next) => {
   try {
     const db = await dbPromise

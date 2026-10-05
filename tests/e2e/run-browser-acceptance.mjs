@@ -655,6 +655,20 @@ async function run() {
     assert.equal(hiddenResponse.status, 200)
     assert.deepEqual((await hiddenResponse.json()).announcements, [])
 
+    page.once('dialog', async (dialog) => {
+      assert.equal(dialog.type(), 'confirm')
+      assert.match(dialog.message(), /Permanently delete the announcement/)
+      await dialog.accept()
+    })
+    await restoredCard.getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(page.getByRole('status')).toContainText('Announcement deleted.')
+    await expect(restoredCard).toHaveCount(0)
+    const deletedAdminResponse = await fetch(`${origin}/api/admin/announcements`, {
+      headers: { Authorization: 'Bearer isolated-browser-audit-admin' },
+    })
+    assert.equal(deletedAdminResponse.status, 200)
+    assert.deepEqual(await deletedAdminResponse.json(), [])
+
     evidence.extensionAnnouncement = {
       title: outdated.announcements[0].title,
       targetVersion: outdated.announcements[0].targetVersion,
@@ -664,6 +678,7 @@ async function run() {
       publicNavbarReadStatePersisted: true,
       publicNavbarOverflow: publicOverflow,
       publicNavbarDesktopFlow: desktopFlow,
+      deletedFromAdmin: true,
     }
   })
 

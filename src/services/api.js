@@ -160,6 +160,10 @@ export const apiService = {
       method: 'PATCH',
       body: JSON.stringify(changes),
     }),
+  deleteAdminAnnouncement: (token, announcementId) =>
+    adminRequest(`/admin/announcements/${encodeURIComponent(announcementId)}`, token, {
+      method: 'DELETE',
+    }),
   getAdminClient: (token, clientId) =>
     adminRequest(`/admin/clients/${encodeURIComponent(clientId)}`, token),
   getAdminLogs: (token) => adminRequest('/admin/logs', token),

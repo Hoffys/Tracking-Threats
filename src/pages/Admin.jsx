@@ -197,6 +197,22 @@ export function Admin() {
     }
   }
 
+  const deleteAnnouncement = async (announcement) => {
+    if (!window.confirm(`Permanently delete the announcement "${announcement.title}"?`)) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await apiService.deleteAdminAnnouncement(adminToken, announcement.id)
+      setAnnouncements((current) => current.filter((item) => item.id !== announcement.id))
+      setNotice('Announcement deleted.')
+    } catch (announcementError) {
+      setError(announcementError.message || 'Could not delete announcement')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const deleteData = async (event) => {
     event.preventDefault()
     if (!selected || confirmId !== selected.clientId || !verifiedRequest) return
@@ -482,7 +498,7 @@ export function Admin() {
                             {presence.isOnline ? 'Online' : 'Offline'}
                           </p>
                           <p className="mt-0.5 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
-                            Last heartbeat: {presence.relative}
+                            Last Active: {presence.relative}
                           </p>
                         </td>
                       </tr>
@@ -620,14 +636,24 @@ export function Admin() {
                     <h3 className="mt-2 font-semibold">{announcement.title}</h3>
                     {announcement.targetVersion && <p className="mt-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">Extension v{announcement.targetVersion}</p>}
                   </div>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => toggleAnnouncement(announcement)}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-slate-700"
-                  >
-                    {announcement.isActive ? 'Unpublish' : 'Publish'}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => toggleAnnouncement(announcement)}
+                      className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-60 dark:border-slate-700"
+                    >
+                      {announcement.isActive ? 'Unpublish' : 'Publish'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => deleteAnnouncement(announcement)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-rose-400 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-60 dark:text-rose-300"
+                    >
+                      <Trash2 size={15} /> Delete
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300">{announcement.message}</p>
                 <p className="mt-3 text-xs text-slate-500">

@@ -100,6 +100,19 @@ test('staff announcements are authenticated and public updates are version aware
     assert.equal(unpublished.body.isActive, false)
     assert.deepEqual((await call('/public/announcements?version=1.0.34')).body.announcements, [])
     assert.equal((await call('/admin/announcements', { headers: adminHeaders })).body.length, 1)
+
+    assert.equal((await call(`/admin/announcements/${update.body.id}`, { method: 'DELETE' })).status, 401)
+    const deleted = await call(`/admin/announcements/${update.body.id}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })
+    assert.equal(deleted.status, 200)
+    assert.deepEqual(deleted.body, { ok: true, id: update.body.id })
+    assert.deepEqual((await call('/admin/announcements', { headers: adminHeaders })).body, [])
+    assert.equal((await call(`/admin/announcements/${update.body.id}`, {
+      method: 'DELETE',
+      headers: adminHeaders,
+    })).status, 404)
   } finally {
     child.kill()
     if (child.exitCode === null) await once(child, 'exit')

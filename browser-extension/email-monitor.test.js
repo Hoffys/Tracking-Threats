@@ -176,7 +176,7 @@ test('opened email warning offers expandable scan details and keeps its History 
 
   assert.match(disclosureSource, /document\.createElement\('details'\)/)
   assert.match(disclosureSource, /document\.createElement\('summary'\)/)
-  assert.match(disclosureSource, /summary\.textContent = 'View scan details'/)
+  assert.match(disclosureSource, /summary\.textContent = 'View more details'/)
   assert.match(warningSource, /appendScanDetailsDisclosure\(banner, scan\)/)
   assert.match(warningSource, /details\.textContent = 'Open scan details'/)
 })

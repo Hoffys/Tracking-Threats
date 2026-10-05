@@ -47,7 +47,7 @@ function appendScanDetailsDisclosure(parent, scan) {
   const details = document.createElement('details')
   details.style.cssText = 'margin-top:10px;border-top:1px solid #263449;padding-top:8px'
   const summary = document.createElement('summary')
-  summary.textContent = 'View scan details'
+  summary.textContent = 'View more details'
   summary.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 12px/1.4 Arial,sans-serif'
   details.appendChild(summary)
   appendScanContext(details, scan)

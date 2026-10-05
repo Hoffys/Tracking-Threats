@@ -142,7 +142,7 @@ test('Google result popup offers expandable scan details and keeps its app link'
 
   assert.match(disclosureSource, /document\.createElement\('details'\)/)
   assert.match(disclosureSource, /document\.createElement\('summary'\)/)
-  assert.match(disclosureSource, /summary\.textContent = 'View scan details'/)
+  assert.match(disclosureSource, /summary\.textContent = 'View more details'/)
   assert.match(popupSource, /appendScanDetailsDisclosure\(popup, topScan\)/)
   assert.match(popupSource, /details\.textContent = 'Open in Tracking Threats'/)
 })
