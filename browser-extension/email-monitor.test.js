@@ -34,6 +34,7 @@ function createMonitor() {
     clearEmailMonitorUi = () => {}
     globalThis.monitor = {
       setRows: (rows) => { visibleRows = rows },
+      setBatchSize: (size) => setInboxBatchSize(size, false),
       scan: scanGmailInbox,
       continueBatch: continueInboxBatch,
       stop: stopEmailMonitoring,
@@ -49,6 +50,7 @@ function createMonitor() {
         failed: inboxStats.failed,
         results: inboxResults,
         reviewPrompts,
+        batchSize: inboxBatchSize,
       }),
     }
   `, sandbox, { filename: fileURLToPath(new URL('./email-monitor.js', import.meta.url)) })
@@ -67,6 +69,7 @@ const rows = (start, count) => Array.from({ length: count }, (_, offset) => ({
 
 test('Gmail inbox pauses after 50 attempts and requires a choice for the next 50', () => {
   const { monitor, callbacks } = createMonitor()
+  monitor.setBatchSize(50)
   monitor.setRows(rows(0, 50))
   monitor.scan()
   assert.equal(callbacks.length, 4)
@@ -99,6 +102,7 @@ test('Gmail inbox pauses after 50 attempts and requires a choice for the next 50
 
 test('failed scans are reported and continuing waits for a new Gmail page', () => {
   const { monitor, callbacks } = createMonitor()
+  monitor.setBatchSize(50)
   monitor.setRows(rows(0, 50))
   monitor.scan()
   callbacks.shift()({ ok: false, error: 'Temporary failure' })
@@ -119,6 +123,7 @@ test('failed scans are reported and continuing waits for a new Gmail page', () =
 
 test('Gmail offers the next batch after 45 eligible rows, then caps it at 50 more', () => {
   const { monitor, callbacks } = createMonitor()
+  monitor.setBatchSize(50)
   monitor.setRows(rows(0, 45))
   monitor.scan()
   for (let index = 0; index < 45; index += 1) {
@@ -136,6 +141,45 @@ test('Gmail offers the next batch after 45 eligible rows, then caps it at 50 mor
   assert.equal(monitor.state().attempts, 95)
   assert.equal(monitor.state().paused, true)
   assert.equal(callbacks.length, 0)
+})
+
+test('Gmail respects selectable batch sizes from 10 through 50', () => {
+  for (const size of [10, 20, 30, 40, 50]) {
+    const { monitor, callbacks } = createMonitor()
+    monitor.setBatchSize(size)
+    monitor.setRows(rows(0, 60))
+    monitor.scan()
+
+    for (let index = 0; index < size; index += 1) {
+      callbacks.shift()({ ok: true, scan: { status: 'Safe', score: 100 } })
+    }
+
+    assert.equal(monitor.state().batchSize, size)
+    assert.equal(monitor.state().attempts, size)
+    assert.equal(monitor.state().paused, true)
+    assert.equal(callbacks.length, 0)
+  }
+})
+
+test('Gmail renders the batch-size selector before consent and beside next-batch actions', () => {
+  const consentSource = source.slice(
+    source.indexOf('function showEmailConsentDialog('),
+    source.indexOf('function cleanText('),
+  )
+  const statusSource = source.slice(
+    source.indexOf('function showInboxStatus('),
+    source.indexOf('function continueInboxBatch('),
+  )
+  const reviewSource = source.slice(
+    source.indexOf('function showInboxReview('),
+    source.indexOf('function getOutlookEmail('),
+  )
+
+  assert.match(source, /const INBOX_BATCH_SIZES = \[10, 20, 30, 40, 50\]/)
+  assert.match(consentSource, /batchText\.textContent = 'Emails to scan per batch'/)
+  assert.match(consentSource, /createInboxBatchSizeSelect\(\)/)
+  assert.match(statusSource, /actions\.append\(batchSelect, next\)/)
+  assert.match(reviewSource, /actions\.append\(batchSelect, next\)/)
 })
 
 test('withdrawn consent ignores responses already in flight', () => {

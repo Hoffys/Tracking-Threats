@@ -57,10 +57,12 @@ function appendScanDetailsDisclosure(parent, scan) {
 const MIN_EMAIL_TEXT_LENGTH = 40
 const SCAN_DEBOUNCE_MS = 1400
 const INBOX_SCAN_DEBOUNCE_MS = 2200
-const MAX_INBOX_ROWS_PER_PASS = 50
+const INBOX_BATCH_SIZES = [10, 20, 30, 40, 50]
+const DEFAULT_INBOX_BATCH_SIZE = 10
 const MAX_INBOX_SCANS_IN_FLIGHT = 4
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
+const EMAIL_BATCH_SIZE_KEY = 'trackingThreatsEmailBatchSize'
 const EMAIL_CONSENT_VERSION = '2026.09'
 
 let scanTimer = null
@@ -70,7 +72,8 @@ let emailConsentGranted = false
 let emailObserver = null
 let inboxBatchNumber = 1
 let inboxBatchStart = 0
-let inboxBatchLimit = MAX_INBOX_ROWS_PER_PASS
+let inboxBatchSize = DEFAULT_INBOX_BATCH_SIZE
+let inboxBatchLimit = inboxBatchSize
 let inboxAttempts = 0
 let inboxPending = 0
 let inboxPaused = false
@@ -112,6 +115,45 @@ async function saveEmailConsent(accepted) {
   })
 }
 
+function normalizeInboxBatchSize(value) {
+  const size = Number(value)
+  return INBOX_BATCH_SIZES.includes(size) ? size : DEFAULT_INBOX_BATCH_SIZE
+}
+
+async function readInboxBatchSize() {
+  const stored = await chrome.storage.local.get(EMAIL_BATCH_SIZE_KEY)
+  return normalizeInboxBatchSize(stored[EMAIL_BATCH_SIZE_KEY])
+}
+
+function setInboxBatchSize(value, persist = true) {
+  inboxBatchSize = normalizeInboxBatchSize(value)
+  if (inboxPaused || inboxAttempts === inboxBatchStart) {
+    inboxBatchLimit = inboxBatchStart + inboxBatchSize
+  }
+  if (persist) {
+    chrome.storage.local.set({ [EMAIL_BATCH_SIZE_KEY]: inboxBatchSize }).catch(() => {})
+  }
+  return inboxBatchSize
+}
+
+function createInboxBatchSizeSelect(onChange = () => {}) {
+  const select = document.createElement('select')
+  select.setAttribute('aria-label', 'Emails to scan per batch')
+  select.style.cssText = 'border:1px solid #475569;border-radius:6px;background:#111827;color:#f8fafc;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
+  INBOX_BATCH_SIZES.forEach((size) => {
+    const option = document.createElement('option')
+    option.value = String(size)
+    option.textContent = `${size} emails`
+    select.appendChild(option)
+  })
+  select.value = String(inboxBatchSize)
+  select.addEventListener('change', () => {
+    setInboxBatchSize(select.value)
+    onChange(inboxBatchSize)
+  })
+  return select
+}
+
 function clearEmailMonitorUi() {
   document.getElementById('threattrack-email-consent')?.remove()
   document.getElementById('threattrack-email-consent-disabled')?.remove()
@@ -141,7 +183,7 @@ function stopEmailMonitoring() {
   inboxResults.length = 0
   inboxBatchNumber = 1
   inboxBatchStart = 0
-  inboxBatchLimit = MAX_INBOX_ROWS_PER_PASS
+  inboxBatchLimit = inboxBatchSize
   inboxAttempts = 0
   inboxPending = 0
   inboxPaused = false
@@ -281,7 +323,7 @@ function showEmailConsentDialog() {
   const list = document.createElement('ul')
   list.style.cssText = 'margin:14px 0 0;padding-left:20px;color:#e2e8f0;font:13px/1.6 Arial,sans-serif'
   ;[
-    'The extension checks the visible sender, subject, message text, links, and Gmail inbox previews in batches of up to 50. Each further batch requires your choice.',
+    'The extension checks the visible sender, subject, message text, links, and Gmail inbox previews. You choose 10, 20, 30, 40, or 50 messages per batch.',
     'This information is sent securely to the Tracking Threats backend for automated phishing analysis.',
     'Production does not retain raw email bodies. Redacted results and evidence are retained for up to 30 days.',
     'Consent applies to supported webmail opened in this browser. You can turn scanning off at any time.',
@@ -299,6 +341,13 @@ function showEmailConsentDialog() {
   privacyLink.textContent = 'Read the full Privacy Notice'
   privacyLink.style.cssText =
     'display:inline-block;margin-top:12px;color:#5eead4;font:700 13px/1.4 Arial,sans-serif;text-decoration:underline'
+
+  const batchField = document.createElement('label')
+  batchField.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;border:1px solid #334155;border-radius:8px;background:#111827;color:#e2e8f0;font:700 13px/1.4 Arial,sans-serif;padding:12px'
+  const batchText = document.createElement('span')
+  batchText.textContent = 'Emails to scan per batch'
+  const batchSelect = createInboxBatchSizeSelect()
+  batchField.append(batchText, batchSelect)
 
   const agreementLabel = document.createElement('label')
   agreementLabel.style.cssText = [
@@ -377,7 +426,7 @@ function showEmailConsentDialog() {
   })
 
   actions.append(decline, accept)
-  panel.append(eyebrow, title, intro, list, privacyLink, agreementLabel, actions)
+  panel.append(eyebrow, title, intro, list, privacyLink, batchField, agreementLabel, actions)
   overlay.appendChild(panel)
   document.body.appendChild(overlay)
   agreement.focus()
@@ -665,7 +714,7 @@ function showInboxStatus() {
   body.style.cssText = 'margin:6px 0 0;color:#cbd5e1'
 
   const counts = document.createElement('p')
-  counts.textContent = `Batch ${inboxBatchNumber}: ${batchProgress}/50 attempted - ${inboxPending} pending`
+  counts.textContent = `Batch ${inboxBatchNumber}: ${batchProgress}/${inboxBatchSize} attempted - ${inboxPending} pending`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   const totals = document.createElement('p')
@@ -687,12 +736,16 @@ function showInboxStatus() {
     review.addEventListener('click', () => showInboxReview())
     actions.appendChild(review)
     if (inboxPaused) {
+      const batchSelect = createInboxBatchSizeSelect((size) => {
+        next.textContent = `Scan next ${size}`
+        counts.textContent = `Batch ${inboxBatchNumber}: ${batchProgress}/${size} attempted - ${inboxPending} pending`
+      })
       const next = document.createElement('button')
       next.type = 'button'
-      next.textContent = 'Scan next 50'
+      next.textContent = `Scan next ${inboxBatchSize}`
       next.style.cssText = 'border:0;border-radius:6px;background:#0d9488;color:#fff;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
       next.addEventListener('click', continueInboxBatch)
-      actions.appendChild(next)
+      actions.append(batchSelect, next)
     }
     banner.appendChild(actions)
   }
@@ -703,7 +756,7 @@ function continueInboxBatch() {
   if (!emailConsentGranted || !inboxPaused) return
   inboxBatchNumber += 1
   inboxBatchStart = inboxAttempts
-  inboxBatchLimit = inboxBatchStart + MAX_INBOX_ROWS_PER_PASS
+  inboxBatchLimit = inboxBatchStart + inboxBatchSize
   inboxPaused = false
   inboxWaitingForRows = false
   document.getElementById('threattrack-inbox-review')?.remove()
@@ -903,12 +956,15 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
   close.addEventListener('click', () => overlay.remove())
   actions.appendChild(close)
   if (inboxPaused) {
+    const batchSelect = createInboxBatchSizeSelect((size) => {
+      next.textContent = `Scan next ${size}`
+    })
     const next = document.createElement('button')
     next.type = 'button'
-    next.textContent = 'Scan next 50'
+    next.textContent = `Scan next ${inboxBatchSize}`
     next.style.cssText = 'border:0;border-radius:8px;background:#0d9488;color:#fff;cursor:pointer;font:700 12px Arial,sans-serif;padding:9px 13px'
     next.addEventListener('click', continueInboxBatch)
-    actions.appendChild(next)
+    actions.append(batchSelect, next)
   }
   footer.append(scope, actions)
   panel.appendChild(footer)
@@ -1365,8 +1421,9 @@ function startEmailMonitoring() {
   emailObserver.observe(document.body, { childList: true, subtree: true })
 }
 
-readEmailConsent()
-  .then((decision) => {
+Promise.all([readEmailConsent(), readInboxBatchSize()])
+  .then(([decision, batchSize]) => {
+    setInboxBatchSize(batchSize, false)
     if (decision === 'accepted') startEmailMonitoring()
     else if (decision === 'declined') showEmailScanningDisabled()
     else showEmailConsentDialog()
