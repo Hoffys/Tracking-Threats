@@ -721,11 +721,19 @@ function showInboxStatus() {
   totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe + inboxStats.incomplete} appear safe (${inboxStats.incomplete} with limited verification) - ${inboxStats.content} content warning - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
   totals.style.cssText = 'margin:3px 0 0;color:#cbd5e1;font-size:11px'
 
+  const batchControls = document.createElement('div')
+  batchControls.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;border-top:1px solid #263449;padding-top:10px'
+  const batchLabel = document.createElement('span')
+  batchLabel.textContent = inboxPaused ? 'Next batch size' : 'Batch size'
+  batchLabel.style.cssText = 'color:#cbd5e1;font:700 11px Arial,sans-serif'
+  const batchSelect = createInboxBatchSizeSelect(() => showInboxStatus())
+  batchControls.append(batchLabel, batchSelect)
+
   const header = document.createElement('div')
   header.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:10px'
   header.append(title, createTurnOffButton())
 
-  banner.append(header, body, counts, totals)
+  banner.append(header, body, counts, totals, batchControls)
   if (inboxResults.length > 0) {
     const actions = document.createElement('div')
     actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'
@@ -736,16 +744,12 @@ function showInboxStatus() {
     review.addEventListener('click', () => showInboxReview())
     actions.appendChild(review)
     if (inboxPaused) {
-      const batchSelect = createInboxBatchSizeSelect((size) => {
-        next.textContent = `Scan next ${size}`
-        counts.textContent = `Batch ${inboxBatchNumber}: ${batchProgress}/${size} attempted - ${inboxPending} pending`
-      })
       const next = document.createElement('button')
       next.type = 'button'
       next.textContent = `Scan next ${inboxBatchSize}`
       next.style.cssText = 'border:0;border-radius:6px;background:#0d9488;color:#fff;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
       next.addEventListener('click', continueInboxBatch)
-      actions.append(batchSelect, next)
+      actions.appendChild(next)
     }
     banner.appendChild(actions)
   }
@@ -1416,6 +1420,7 @@ function startEmailMonitoring() {
   if (emailConsentGranted && emailObserver) return
   emailConsentGranted = true
   document.getElementById('threattrack-email-consent-disabled')?.remove()
+  showInboxStatus()
   scheduleEmailChecks()
   emailObserver = new MutationObserver(scheduleEmailChecks)
   emailObserver.observe(document.body, { childList: true, subtree: true })

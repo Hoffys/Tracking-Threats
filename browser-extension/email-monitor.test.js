@@ -161,7 +161,7 @@ test('Gmail respects selectable batch sizes from 10 through 50', () => {
   }
 })
 
-test('Gmail renders the batch-size selector before consent and beside next-batch actions', () => {
+test('Gmail renders the batch-size selector before consent, in the monitor, and beside review actions', () => {
   const consentSource = source.slice(
     source.indexOf('function showEmailConsentDialog('),
     source.indexOf('function cleanText('),
@@ -178,8 +178,10 @@ test('Gmail renders the batch-size selector before consent and beside next-batch
   assert.match(source, /const INBOX_BATCH_SIZES = \[10, 20, 30, 40, 50\]/)
   assert.match(consentSource, /batchText\.textContent = 'Emails to scan per batch'/)
   assert.match(consentSource, /createInboxBatchSizeSelect\(\)/)
-  assert.match(statusSource, /actions\.append\(batchSelect, next\)/)
+  assert.match(statusSource, /batchLabel\.textContent = inboxPaused \? 'Next batch size' : 'Batch size'/)
+  assert.match(statusSource, /banner\.append\(header, body, counts, totals, batchControls\)/)
   assert.match(reviewSource, /actions\.append\(batchSelect, next\)/)
+  assert.match(source, /showInboxStatus\(\)\s+scheduleEmailChecks\(\)/)
 })
 
 test('withdrawn consent ignores responses already in flight', () => {
