@@ -115,6 +115,16 @@ export const mapScan = (row) => {
     categoryWarnings: (details.categoryWarnings ?? []).map((item) => typeof item === 'string' ? item : item.label).filter(Boolean),
     ...classification,
     emailBreakdown: details.emailBreakdown,
+    emailDetails:
+      row.type === 'Email'
+        ? {
+            sender:
+              row.email_sender ||
+              details.emailBreakdown?.sender?.domain ||
+              'Sender not retained',
+            subject: row.email_subject || 'Subject not retained for privacy',
+          }
+        : null,
     fileDetails: details.file,
     responseStatus: row.action === 'Blocked' ? 'Blocked' : null,
     blocked: row.action === 'Blocked',

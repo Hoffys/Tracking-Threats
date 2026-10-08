@@ -97,9 +97,14 @@ export async function getHistory(_req, res, next) {
   try {
     const db = await dbPromise
     const rows = await db.all(`
-      SELECT * FROM scans
-      WHERE history_visible = 1
-      ORDER BY created_at DESC
+      SELECT
+        scans.*,
+        email_scans.sender AS email_sender,
+        email_scans.subject AS email_subject
+      FROM scans
+      LEFT JOIN email_scans ON email_scans.scan_id = scans.id
+      WHERE scans.history_visible = 1
+      ORDER BY scans.created_at DESC
       LIMIT 50
     `)
     res.json(rows.map(mapScan))
@@ -186,10 +191,15 @@ export async function getPublicActivity(req, res, next) {
     const db = await dbPromise
     const rows = await db.all(
       `
-        SELECT * FROM scans
-        WHERE history_visible = 1
-          AND client_id = ?
-        ORDER BY created_at DESC
+        SELECT
+          scans.*,
+          email_scans.sender AS email_sender,
+          email_scans.subject AS email_subject
+        FROM scans
+        LEFT JOIN email_scans ON email_scans.scan_id = scans.id
+        WHERE scans.history_visible = 1
+          AND scans.client_id = ?
+        ORDER BY scans.created_at DESC
         LIMIT 50
       `,
       clientId,

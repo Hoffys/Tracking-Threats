@@ -15,7 +15,7 @@ test('public scans retain coverage and link scores without raw finding phrases',
   const db = await dbPromise
   try {
     await initDatabase()
-    const { createEmailScan, createMessageScan } = await import('./scanController.js')
+    const { createEmailScan, createMessageScan, mapScan } = await import('./scanController.js')
     const scan = await createEmailScan({ sender: 'person@example.org', subject: 'Hello',
       body: 'Share marker-private-123 password now. https://paypal.test/login' })
     assert.equal(scan.status, 'Dangerous')
@@ -29,6 +29,17 @@ test('public scans retain coverage and link scores without raw finding phrases',
     const saved = await db.get('SELECT details, content FROM scans WHERE id = ?', scan.id)
     assert.equal(saved.content, '')
     assert.equal(saved.details.includes('marker-private-123'), false)
+    const historyRow = await db.get(
+      `SELECT scans.*, email_scans.sender AS email_sender, email_scans.subject AS email_subject
+       FROM scans
+       LEFT JOIN email_scans ON email_scans.scan_id = scans.id
+       WHERE scans.id = ?`,
+      scan.id,
+    )
+    const historyScan = mapScan(historyRow)
+    assert.equal(historyScan.emailDetails.sender, 'example.org')
+    assert.equal(historyScan.emailDetails.subject, 'Subject not retained for privacy')
+    assert.equal(JSON.stringify(historyScan).includes('marker-private-123'), false)
     const evidence = await db.all('SELECT details FROM scan_evidence WHERE scan_id = ?', scan.id)
     assert.equal(JSON.stringify(evidence).includes('marker-private-123'), false)
     const categorized = await createMessageScan({ target: 'Discussion', content: 'A discussion of casino gambling and torrents.' })

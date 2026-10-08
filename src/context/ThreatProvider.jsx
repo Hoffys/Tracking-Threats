@@ -116,6 +116,7 @@ const toPublicScanRecord = (scan) => ({
   confidence: scan.confidence,
   evidenceSources: scan.evidenceSources,
   emailBreakdown: scan.emailBreakdown,
+  emailDetails: scan.emailDetails,
   fileDetails: scan.fileDetails
     ? {
         name: scan.fileDetails.name,

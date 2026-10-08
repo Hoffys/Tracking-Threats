@@ -60,6 +60,7 @@ test('rendered results distinguish incomplete checks, content categories and man
     const { RiskBadge } = await server.ssrLoadModule('/src/components/RiskBadge.jsx')
     const { ScanExplanation } = await server.ssrLoadModule('/src/components/ScanExplanation.jsx')
     const { ThreatIntelSummary } = await server.ssrLoadModule('/src/components/ThreatIntelSummary.jsx')
+    const { EmailScanDetails } = await server.ssrLoadModule('/src/components/EmailScanDetails.jsx')
     for (const status of ['partial', 'unavailable', 'local-only', undefined]) {
       const coverage = status ? { ...complete, status, checkedProviders: 0 } : undefined
       const html = renderToStaticMarkup(createElement(RiskBadge, { risk: 'Safe', coverage }))
@@ -123,6 +124,20 @@ test('rendered results distinguish incomplete checks, content categories and man
     assert.match(intel, /Not checked/)
     assert.match(intel, /Lookup unavailable - timeout \(2 checks\)/)
     assert.equal((intel.match(/Failed:/g) ?? []).length, 1)
+    const emailDetails = renderToStaticMarkup(createElement(EmailScanDetails, { scan: {
+      type: 'Email',
+      emailDetails: { sender: 'example.org', subject: 'Subject not retained for privacy' },
+      emailBreakdown: {
+        sender: { status: 'Safe', score: 100, domain: 'example.org' },
+        content: { status: 'Suspicious', score: 65 },
+        links: { status: 'Safe', score: 100 },
+      },
+    } }))
+    assert.match(emailDetails, /Email details/)
+    assert.match(emailDetails, /example\.org/)
+    assert.match(emailDetails, /Subject not retained for privacy/)
+    assert.match(emailDetails, /Suspicious.*65\/100/)
+    assert.match(emailDetails, /Raw email bodies are not displayed or retained in production/)
   } finally {
     await server.close()
   }

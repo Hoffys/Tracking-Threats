@@ -1,3 +1,4 @@
+import { EmailScanDetails } from '../components/EmailScanDetails'
 import { FileClock, Filter, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Panel } from '../components/Panel'
@@ -58,6 +59,9 @@ const scanText = (scan) =>
     scan.target,
     scan.content,
     scan.summary,
+    scan.emailDetails?.sender,
+    scan.emailDetails?.subject,
+    scan.emailBreakdown?.sender?.domain,
     scan.threatName,
     scan.threatType,
     ...(scan.warningSigns ?? []),
@@ -321,6 +325,7 @@ export function ScanHistory() {
                 <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
                   {scan.summary}
                 </p>
+                <EmailScanDetails scan={scan} />
                 <ScanExplanation scan={scan} />
                 <ThreatIntelSummary providers={scan.threatIntel} />
                 {scan.warningSigns?.length > 0 && (
