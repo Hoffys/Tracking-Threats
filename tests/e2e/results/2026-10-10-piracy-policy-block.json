@@ -1,0 +1,143 @@
+{
+  "startedAt": "2026-10-09T23:36:12.026Z",
+  "cases": [
+    {
+      "name": "Manifest V3 service worker loads",
+      "status": "passed"
+    },
+    {
+      "name": "automatic URL navigation, storage and badge",
+      "status": "passed",
+      "evidence": {
+        "score": 100,
+        "badge": "?",
+        "coverage": "unavailable"
+      }
+    },
+    {
+      "name": "activeTab denies rendered-page injection without user invocation",
+      "status": "passed",
+      "evidence": "Cannot access contents of url \"https://audit-fixture.test/ordinary\". Extension manifest must request permission to access this host."
+    },
+    {
+      "name": "History API navigation triggers automatic scanning",
+      "status": "passed",
+      "evidence": {
+        "status": "Safe",
+        "score": 100
+      }
+    },
+    {
+      "name": "dangerous navigation redirects to warning and installs a block rule",
+      "status": "passed",
+      "evidence": {
+        "warningPage": true,
+        "rules": 1
+      }
+    },
+    {
+      "name": "blocked details opens matching saved scan through real credential bridge",
+      "status": "passed",
+      "evidence": {
+        "scanId": "4e65d297-ba14-4934-80da-9695adeff13a",
+        "pageErrors": []
+      }
+    },
+    {
+      "name": "blocked visit recovers after saved history was removed",
+      "status": "passed",
+      "evidence": {
+        "recoveredScanId": "1fb00964-67fe-4f2d-a6ab-dbf62faef52e",
+        "liveMonitor": true
+      }
+    },
+    {
+      "name": "persistent block-rule navigation saves a fresh automatic visit",
+      "status": "passed",
+      "evidence": {
+        "newScanId": "458a55a4-7280-4407-bb41-8aa3688144ac"
+      }
+    },
+    {
+      "name": "history reports sync failure and recovers automatically",
+      "status": "passed",
+      "evidence": {
+        "visibleError": true,
+        "recovered": true
+      }
+    },
+    {
+      "name": "piracy-content navigation is blocked as caution without a malware claim",
+      "status": "passed",
+      "evidence": {
+        "warningPage": true,
+        "summary": "This page was blocked because it matches the piracy-content policy. This does not claim that malware was confirmed.",
+        "score": "Status: Caution - Blocked by policy - URL phishing safety score 100/100",
+        "status": "Safe"
+      }
+    },
+    {
+      "name": "Google matched content script scans fixture result automatically",
+      "status": "passed",
+      "evidence": {
+        "badge": "RISK DETECTED 40/100"
+      }
+    },
+    {
+      "name": "Gmail matched content script presents email consent gate",
+      "status": "passed",
+      "evidence": {
+        "consentGate": true
+      }
+    },
+    {
+      "name": "Gmail fixture scans through backend after explicit consent",
+      "status": "passed",
+      "evidence": {
+        "score": 100,
+        "status": "Safe"
+      }
+    },
+    {
+      "name": "popup displays saved status",
+      "status": "passed",
+      "evidence": {
+        "text": "Appears safe - 100/100"
+      }
+    },
+    {
+      "name": "popup shows an unread version-aware staff announcement",
+      "status": "passed",
+      "evidence": {
+        "announcementId": "an_5362ab506db85f48ab39d39093e562ec",
+        "installedVersion": "1.0.41",
+        "targetVersion": "1.0.42"
+      }
+    }
+  ],
+  "limitations": [
+    "Synthetic Google/Gmail page fixtures, not signed-in live services.",
+    "activeTab user gesture is not simulated; denial without a gesture is tested."
+  ],
+  "permissions": [
+    "alarms",
+    "activeTab",
+    "storage",
+    "tabs",
+    "downloads",
+    "webNavigation",
+    "declarativeNetRequest",
+    "notifications",
+    "scripting"
+  ],
+  "originalHostPermissions": [
+    "http://localhost:4000/*",
+    "https://tracking-threats-production.up.railway.app/*"
+  ],
+  "browser": "154.0.4258.62",
+  "extensionId": "idnlcjokajgobaoellohjfobclonnkfh",
+  "finishedAt": "2026-10-09T23:36:23.971Z",
+  "passed": 15,
+  "failed": 0,
+  "artifacts": "C:\\Users\\Bry\\AppData\\Local\\Temp\\tracking-extension-audit-a0hZ5x"
+}

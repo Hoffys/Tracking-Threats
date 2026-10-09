@@ -99,8 +99,10 @@ test('coverage, categories and content warnings survive linked-app preview round
   }
   const piracy = { ...scan, status: 'Safe', score: 100, categories: ['piracy-content'] }
   assert.equal(app.getResultStyle(piracy).label, 'CAUTION - PIRACY RISK')
+  assert.equal(app.isRiskyScan(piracy), true)
   assert.match(app.getScoreText(piracy), /URL phishing safety score: 100\/100/)
   assert.match(app.getScoreText(piracy), /Downloaded files were not scanned/)
+  assert.match(source, /Blocked by the piracy-content policy/)
 })
 
 test('malformed coverage and forged category values cannot advertise complete checks', () => {

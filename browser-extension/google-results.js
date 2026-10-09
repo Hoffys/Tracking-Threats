@@ -143,7 +143,7 @@ function collectResultLinks() {
 }
 
 function isRiskyScan(scan) {
-  return scan?.status === 'Dangerous' || scan?.status === 'Suspicious' || scan?.blocked
+  return hasPiracyContent(scan) || scan?.status === 'Dangerous' || scan?.status === 'Suspicious' || scan?.blocked
 }
 
 function hasPiracyContent(scan) {
@@ -499,7 +499,7 @@ function showResultPopup(url, scan) {
 
   if (hasPiracyContent(topScan)) {
     const cautionText = document.createElement('p')
-    cautionText.textContent = 'No strong phishing indicators were found, but download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
+    cautionText.textContent = 'Blocked by the piracy-content policy. No strong phishing indicators were found, but download risk is unknown. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
     cautionText.style.cssText = 'margin:10px 0 0;color:#fde68a;font-weight:700'
     popup.appendChild(cautionText)
   } else if (hasContentWarnings(topScan)) {
@@ -585,6 +585,7 @@ function showClickPreview(url, scan, anchor) {
         : '#6ee7b7'
   const warnings = scan.warningSigns?.slice(0, 4) ?? []
   const recommendations = scan.recommendations?.slice(0, 2) ?? []
+  const piracyPolicyBlocked = hasPiracyContent(scan)
   const overlay = document.createElement('div')
   overlay.id = 'threattrack-click-preview'
   overlay.style.cssText = [
@@ -623,7 +624,7 @@ function showClickPreview(url, scan, anchor) {
   heading.style.cssText = 'display:flex;align-items:start;justify-content:space-between;gap:12px'
 
   const title = document.createElement('div')
-  title.innerHTML = `<strong style="display:block;font-size:16px;color:${accentColor}">Tracking Threats Link Preview</strong><span style="color:#cbd5e1">Review this result before opening it.</span>`
+  title.innerHTML = `<strong style="display:block;font-size:16px;color:${accentColor}">Tracking Threats Link Preview</strong><span style="color:#cbd5e1">${piracyPolicyBlocked ? 'This result is blocked by the piracy-content policy.' : 'Review this result before opening it.'}</span>`
 
   const close = createPreviewButton('x')
   close.style.width = '34px'
@@ -676,17 +677,19 @@ function showClickPreview(url, scan, anchor) {
   const cancel = createPreviewButton('Stay on results')
   cancel.addEventListener('click', () => overlay.remove())
 
-  const continueButton = createPreviewButton('Continue anyway', 'danger')
-  continueButton.addEventListener('click', () => {
-    overlay.remove()
-    if (anchor.target === '_blank') {
-      window.open(url, '_blank', 'noopener,noreferrer')
-      return
-    }
-    window.location.href = url
-  })
-
-  actions.append(details, cancel, continueButton)
+  actions.append(details, cancel)
+  if (!piracyPolicyBlocked) {
+    const continueButton = createPreviewButton('Continue anyway', 'danger')
+    continueButton.addEventListener('click', () => {
+      overlay.remove()
+      if (anchor.target === '_blank') {
+        window.open(url, '_blank', 'noopener,noreferrer')
+        return
+      }
+      window.location.href = url
+    })
+    actions.appendChild(continueButton)
+  }
   card.appendChild(actions)
   overlay.appendChild(card)
   document.body.appendChild(overlay)

@@ -158,6 +158,27 @@ try {
     await historyPage.close()
     return { visibleError: true, recovered: true }
   })
+  await check('piracy-content navigation is blocked as caution without a malware claim', async () => {
+    await page.goto('https://fitgirl.audit-fixture.test/repack').catch(() => {})
+    await until(() => page.url().includes('/blocked.html'))
+    await page.locator('#block-summary').waitFor()
+    const summary = await page.locator('#block-summary').innerText()
+    const warning = await page.locator('#block-warning').innerText()
+    const score = await page.locator('#score').innerText()
+    const status = await worker.evaluate(async () => {
+      const { threattrackStatus } = await chrome.storage.local.get('threattrackStatus')
+      return threattrackStatus
+    })
+    assert.match(summary, /blocked.*piracy-content policy/i)
+    assert.match(summary, /does not claim.*malware/i)
+    assert.match(warning, /does not rate downloaded files/i)
+    assert.match(score, /Caution - Blocked by policy/i)
+    assert.equal(new URL(page.url()).searchParams.get('policy'), 'piracy-content')
+    assert.equal(status.policyBlocked, true)
+    assert.ok(status.categories.includes('piracy-content'))
+    await page.screenshot({ path: path.join(artifacts, 'piracy-policy-block.png') })
+    return { warningPage: true, summary, score, status: status.lastStatus }
+  })
   await check('Google matched content script scans fixture result automatically', async () => {
     await page.goto('https://www.google.com/search?q=tracking-audit')
     await page.locator('.threattrack-result-badge').first().waitFor({ timeout: 20000 })
@@ -194,10 +215,10 @@ try {
       },
       body: JSON.stringify({
         type: 'update',
-        title: 'Extension v1.0.36 available',
+        title: 'Extension v1.0.42 available',
         message: 'Install the latest isolated audit update.',
         priority: 'important',
-        targetVersion: '1.0.36',
+        targetVersion: '1.0.42',
         expiresAt: null,
         isActive: true,
       }),
@@ -209,8 +230,8 @@ try {
     await popup.locator('#announcementBadge').waitFor({ state: 'visible' })
     assert.equal(await popup.locator('#announcementBadge').innerText(), '1')
     await popup.locator('#announcementButton').click()
-    await popup.getByText('Extension v1.0.36 available', { exact: true }).waitFor()
-    const update = popup.getByRole('link', { name: 'Download v1.0.36', exact: true })
+    await popup.getByText('Extension v1.0.42 available', { exact: true }).waitFor()
+    const update = popup.getByRole('link', { name: 'Download v1.0.42', exact: true })
     assert.equal(await update.getAttribute('href'), `${origin}/api/public/extension/download`)
     await until(() => popup.evaluate(async (id) => {
       const stored = await chrome.storage.local.get('trackingThreatsReadAnnouncements')
@@ -231,7 +252,7 @@ finally {
   report.failed = report.cases.filter((item) => item.status === 'failed').length
   report.artifacts = artifacts
   await writeFile(path.join(artifacts, 'results.json'), JSON.stringify(report, null, 2))
-  await writeFile(path.join(root, 'tests/e2e/results/2026-10-03-extension-announcements.json'), JSON.stringify(report, null, 2))
+  await writeFile(path.join(root, 'tests/e2e/results/2026-10-10-piracy-policy-block.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify({ passed: report.passed, failed: report.failed, infrastructureError: report.infrastructureError, artifacts }))
   if (report.failed || report.infrastructureError) process.exitCode = 1
 }

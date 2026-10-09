@@ -470,8 +470,13 @@ function getBlockContextKey(host) {
   return `blockedContext:${host}`
 }
 
+function isPiracyPolicyBlocked(scan) {
+  return scan?.categories?.includes('piracy-content') === true
+}
+
 function getDetectedThreat(scan = {}) {
   if (scan.threatType) return scan.threatType
+  if (isPiracyPolicyBlocked(scan)) return 'Piracy or illegal download risk'
   const warningText = (scan.warningSigns ?? []).join(' ').toLowerCase()
 
   if (/piracy|torrent|cracked|keygen|warez|streaming|repack/.test(warningText)) {
@@ -507,6 +512,9 @@ function getThreatName(scan = {}) {
 }
 
 function getPrimaryWarning(scan = {}) {
+  if (isPiracyPolicyBlocked(scan) && !scan.whyDetected?.[0] && !scan.warningSigns?.[0]) {
+    return 'This site matches piracy, torrent, repack, cracked-software, or similar content indicators.'
+  }
   return scan.whyDetected?.[0] ?? scan.warningSigns?.[0] ?? scan.summary ?? 'The scanner found dangerous URL indicators.'
 }
 
@@ -521,16 +529,18 @@ function getCompactThreatDetails(scan = {}) {
 }
 
 async function saveBlockedContext(host, rawUrl, scan) {
+  const piracyPolicyBlocked = isPiracyPolicyBlocked(scan)
   await chrome.storage.local.set({
     [getBlockContextKey(host)]: {
       host,
       url: rawUrl,
       scanId: scan?.id ?? '',
-      status: scan?.status ?? 'Blocked',
+      status: piracyPolicyBlocked ? 'Caution - Blocked by policy' : scan?.status ?? 'Blocked',
       score: scan?.score ?? 0,
       threatName: getThreatName(scan),
       threatType: getDetectedThreat(scan),
       primaryWarning: getPrimaryWarning(scan),
+      policyBlocked: piracyPolicyBlocked,
       expiresAt: Date.now() + BLOCK_CONTEXT_TTL_MS,
     },
   })
@@ -641,7 +651,7 @@ function getRecentScan(url) {
 }
 
 function isBlockedScan(scan) {
-  return scan?.status === 'Dangerous' || scan?.blocked || scan?.responseStatus === 'Blocked'
+  return isPiracyPolicyBlocked(scan) || scan?.status === 'Dangerous' || scan?.blocked || scan?.responseStatus === 'Blocked'
 }
 
 function getDownloadFileName(downloadItem = {}) {
@@ -765,7 +775,7 @@ async function saveStatus(status) {
 async function updateBadge(status) {
   if (!chrome.action) return
   const incomplete = status.coverage?.status !== 'complete'
-  const text = !status.ok ? 'OFF' : ['Dangerous', 'Blocked'].includes(status.lastStatus) ? '!'
+  const text = !status.ok ? 'OFF' : status.policyBlocked || ['Dangerous', 'Blocked'].includes(status.lastStatus) ? '!'
     : status.lastStatus === 'Suspicious' ? '?' : incomplete ? '?' : 'OK'
   const color = !status.ok ? '#64748b' : text === '!' ? '#be123c' : text === '?' ? '#b45309' : '#0f766e'
   await Promise.all([
@@ -793,8 +803,15 @@ function getScanNotification(scan, rawUrl) {
   const score = Number(scan?.score ?? 0)
   const status = scan?.status === 'Dangerous' || scan?.blocked ? 'Blocked' : scan?.status
   const host = getHost(rawUrl) || rawUrl
-  const piracyCaution = status === 'Safe' && scan?.categories?.includes('piracy-content')
+  const piracyPolicyBlocked = isPiracyPolicyBlocked(scan)
   const contentCaution = status === 'Safe' && scan?.categories?.some((category) => typeof category === 'string' && category.endsWith('-content'))
+
+  if (piracyPolicyBlocked) {
+    return {
+      title: 'Tracking Threats: piracy content blocked',
+      message: `${host}: blocked by the piracy-content policy. This is a content/download-risk block, not a claim that malware was confirmed. URL phishing safety score ${score}/100; downloaded files were not scanned.`,
+    }
+  }
 
   if (status === 'Blocked') {
     return {
@@ -807,13 +824,6 @@ function getScanNotification(scan, rawUrl) {
     return {
       title: `Tracking Threats: ${scan?.threatName || 'caution'}`,
       message: `${host}: ${scan?.threatType || getDetectedThreat(scan)}. ${getPrimaryWarning(scan)} Rule-based score ${score}/100; not a probability.`,
-    }
-  }
-
-  if (piracyCaution) {
-    return {
-      title: 'Tracking Threats: download risk unknown',
-      message: `${host}: no strong phishing indicators were found, but piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.`,
     }
   }
 
@@ -846,7 +856,7 @@ async function notifyScanResult(rawUrl, scan) {
       iconUrl: 'icons/icon-128.png',
       title: notification.title,
       message: notification.message,
-      priority: scan.status === 'Dangerous' || scan.blocked ? 2 : 0,
+      priority: isBlockedScan(scan) ? 2 : 0,
     })
   } catch {
     // Browser or OS notification settings should not stop scanning or blocking.
@@ -863,7 +873,7 @@ function openBlockedPage(tabId, rawUrl, scan) {
       getDetectedThreat(scan),
     )}&name=${encodeURIComponent(getThreatName(scan))}&warning=${encodeURIComponent(getPrimaryWarning(scan))}&scan=${encodeURIComponent(
       scan.id ?? '',
-    )}`,
+    )}&policy=${isPiracyPolicyBlocked(scan) ? 'piracy-content' : ''}`,
   )
 
   try {
@@ -945,6 +955,7 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
       lastScore: scan.score,
       coverage: scan.coverage,
       categories: scan.categories,
+      policyBlocked: isPiracyPolicyBlocked(scan),
       ...getCompactThreatDetails(scan),
     })
     if (!previewOnly) {
@@ -1069,6 +1080,7 @@ async function recordBlockedVisit(rawUrl) {
       lastScore: scan.score,
       coverage: scan.coverage,
       categories: scan.categories,
+      policyBlocked: isPiracyPolicyBlocked(scan),
       ...getCompactThreatDetails(scan),
     })
     await notifyScanResult(rawUrl, scan)
@@ -1162,8 +1174,9 @@ async function scanDownloadUrl(downloadItem, clientId) {
   return scan
 }
 
-async function cancelDangerousDownload(downloadItem, scan) {
+async function cancelBlockedDownload(downloadItem, scan) {
   let cancelled = false
+  const piracyPolicyBlocked = isPiracyPolicyBlocked(scan)
   try {
     await chrome.downloads.cancel(downloadItem.id)
     cancelled = true
@@ -1174,21 +1187,27 @@ async function cancelDangerousDownload(downloadItem, scan) {
   await saveStatus({
     ok: true,
     lastUrl: getDownloadFileName(downloadItem),
-    lastStatus: cancelled ? 'Blocked' : 'Dangerous',
+    lastStatus: cancelled ? 'Blocked' : piracyPolicyBlocked ? 'Caution' : 'Dangerous',
     lastScore: scan?.score ?? 0,
     coverage: scan?.coverage,
     categories: scan?.categories,
+    policyBlocked: piracyPolicyBlocked,
     threatName: scan?.threatName,
     threatType: scan?.threatType,
     whyDetected: scan?.whyDetected,
     confidence: scan?.confidence,
     evidenceSources: scan?.evidenceSources,
-    ...(cancelled ? {} : { downloadWarning: 'Risk detected, but the browser could not cancel this download. It may already be complete.' }),
+    ...(cancelled ? {} : {
+      downloadWarning: piracyPolicyBlocked
+        ? 'Piracy content was blocked by policy, but the browser could not cancel this download. It may already be complete.'
+        : 'Risk detected, but the browser could not cancel this download. It may already be complete.',
+    }),
   })
   await notifyScanResult(downloadItem.url || getDownloadFileName(downloadItem), {
     ...scan,
-    status: 'Dangerous',
+    status: piracyPolicyBlocked ? scan.status : 'Dangerous',
     blocked: cancelled,
+    policyBlocked: piracyPolicyBlocked,
   })
   return cancelled
 }
@@ -1202,13 +1221,15 @@ async function scanDownload(downloadItem) {
     const clientId = await getClientId()
     const urlScan = await scanDownloadUrl(downloadItem, clientId)
     if (isBlockedScan(urlScan)) {
-      blocked = await cancelDangerousDownload(downloadItem, urlScan)
+      blocked = true
+      await cancelBlockedDownload(downloadItem, urlScan)
       return urlScan
     }
 
     const fileScan = await scanDownloadFile(downloadItem, clientId)
     if (isBlockedScan(fileScan)) {
-      blocked = await cancelDangerousDownload(downloadItem, fileScan)
+      blocked = true
+      await cancelBlockedDownload(downloadItem, fileScan)
       return fileScan
     }
 
@@ -1290,7 +1311,7 @@ async function inspectActivePage() {
   const scan = await response.json()
   remember(tab.url, scan)
   await saveStatus({ ok: true, lastUrl: tab.url, lastStatus: scan.status, lastScore: scan.score,
-    coverage: scan.coverage, categories: scan.categories, ...getCompactThreatDetails(scan) })
+    coverage: scan.coverage, categories: scan.categories, policyBlocked: isPiracyPolicyBlocked(scan), ...getCompactThreatDetails(scan) })
   await notifyScanResult(tab.url, scan)
   if (isBlockedScan(scan) && !hasBypass(getHost(tab.url))) {
     await rememberBlockedSite(tab.url, scan)
@@ -1344,6 +1365,7 @@ chrome.webNavigation.onErrorOccurred?.addListener(async (details) => {
     threatName: context?.threatName, threatType: context?.threatType,
     whyDetected: context?.primaryWarning ? [context.primaryWarning] : [],
     warningSigns: context?.primaryWarning ? [context.primaryWarning] : [],
+    categories: context?.policyBlocked ? ['piracy-content'] : [],
   })
 })
 

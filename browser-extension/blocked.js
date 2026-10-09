@@ -1,6 +1,7 @@
 const params = new URLSearchParams(window.location.search)
 const blockedHost = params.get('host') || ''
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
+const requestedPolicy = params.get('policy') || ''
 
 let blockedUrl = params.get('url') || ''
 let blockedScanId = params.get('scan') || ''
@@ -22,6 +23,7 @@ function inferThreatFromUrl(url = '', host = '') {
       threatName: 'Piracy-related content warning',
       threatType: 'Piracy or illegal download risk',
       primaryWarning: 'This site matches piracy, cracked software, torrent, or repack indicators.',
+      policyBlocked: true,
     }
   }
 
@@ -45,7 +47,22 @@ function inferThreatFromUrl(url = '', host = '') {
     threatName: 'Dangerous website',
     threatType: 'Dangerous website risk',
     primaryWarning: 'The scanner found dangerous URL indicators.',
+    policyBlocked: false,
   }
+}
+
+function applyBlockCopy({ piracyPolicyBlocked = false, score = '0' } = {}) {
+  const summary = document.getElementById('block-summary')
+  const warning = document.getElementById('block-warning')
+  if (piracyPolicyBlocked) {
+    summary.textContent = 'This page was blocked because it matches the piracy-content policy. This does not claim that malware was confirmed.'
+    warning.textContent = 'The URL phishing score does not rate downloaded files. Piracy-related sources may expose you to malware, fake mirrors, tampered files, and copyright risk.'
+    document.getElementById('score').textContent = `Status: Caution - Blocked by policy - URL phishing safety score ${score}/100`
+    return
+  }
+  summary.textContent = 'This page was automatically blocked because Tracking Threats marked it as dangerous.'
+  warning.textContent = 'Continuing may expose your device, account, or data to this threat.'
+  document.getElementById('score').textContent = `Status: Blocked - Safety score ${score}/100`
 }
 
 function getDetailsUrl({ appUrl = APP_URL, url = '', host = '', scanId = '' } = {}) {
@@ -74,13 +91,17 @@ function updateDetailsLink({ url = '', host = '', scanId = blockedScanId } = {})
       return
     }
     blockedScanId = response.scan.id
+    const piracyPolicyBlocked = response.scan.categories?.includes('piracy-content') === true
     const reason = response.scan.whyDetected?.[0] || response.scan.warningSigns?.[0] || response.scan.summary
     document.getElementById('threat-name').textContent = `Threat name: ${response.scan.threatName || 'Dangerous website'}`
     document.getElementById('threat-type').textContent = `Threat type: ${response.scan.threatType || 'Website risk'}`
     document.getElementById('threat-reason').textContent = reason || 'The scanner found dangerous URL indicators.'
+    applyBlockCopy({ piracyPolicyBlocked, score: response.scan.score })
     detailsLink.href = getDetailsUrl({ appUrl: response.appUrl, url, host, scanId: blockedScanId })
     detailsLink.removeAttribute('aria-disabled')
-    historyStatus.textContent = `Saved in this browser's History and Live Monitor. Latest scan: ${response.scan.status}, safety score ${response.scan.score}/100.`
+    historyStatus.textContent = piracyPolicyBlocked
+      ? `Saved in this browser's History and Live Monitor. Piracy content was blocked by extension policy; URL phishing safety score ${response.scan.score}/100.`
+      : `Saved in this browser's History and Live Monitor. Latest scan: ${response.scan.status}, safety score ${response.scan.score}/100.`
   })
 }
 
@@ -93,6 +114,7 @@ function renderBlockedPage({
   threatType = '',
   primaryWarning = '',
   scanId = '',
+  policyBlocked = false,
 }) {
   blockedUrl = url
   blockedScanId = scanId || blockedScanId
@@ -100,6 +122,7 @@ function renderBlockedPage({
   const displayedThreatName = threatName || inferredThreat.threatName
   const displayedThreatType = threatType || inferredThreat.threatType
   const displayedPrimaryWarning = primaryWarning || inferredThreat.primaryWarning
+  const piracyPolicyBlocked = policyBlocked || requestedPolicy === 'piracy-content' || inferredThreat.policyBlocked
 
   document.getElementById('blocked-url').textContent =
     blockedUrl || (host ? `Blocked host: ${host}` : 'Unknown URL')
@@ -107,6 +130,7 @@ function renderBlockedPage({
   document.getElementById('threat-name').textContent = `Threat name: ${displayedThreatName}`
   document.getElementById('threat-type').textContent = `Threat type: ${displayedThreatType}`
   document.getElementById('threat-reason').textContent = displayedPrimaryWarning
+  applyBlockCopy({ piracyPolicyBlocked, score })
   updateDetailsLink({ url: blockedUrl, host, scanId: blockedScanId })
 }
 
