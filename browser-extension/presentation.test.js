@@ -78,11 +78,11 @@ test('rendered results distinguish incomplete checks, content categories and man
       categories: ['piracy-content'], categoryWarnings: ['Contains piracy-related references.'],
     }
     const piracyBadge = renderToStaticMarkup(createElement(RiskBadge, { risk: 'Safe', categories: piracyScan.categories }))
-    assert.match(piracyBadge, /Piracy warning - file not scanned/)
+    assert.match(piracyBadge, /CAUTION - PIRACY RISK/)
     assert.match(piracyBadge, /amber/)
     assert.doesNotMatch(piracyBadge, /Appears safe/)
     const piracyExplanation = renderToStaticMarkup(createElement(ScanExplanation, { scan: piracyScan }))
-    assert.match(piracyExplanation, /file not scanned/i)
+    assert.match(piracyExplanation, /file (?:was )?not scanned/i)
     assert.match(piracyExplanation, /URL phishing safety score: 100\/100/i)
     assert.match(piracyExplanation, /does not rate downloadable files/i)
     assert.match(piracyExplanation, /malware, fake mirrors, tampered files, and copyright risk/i)

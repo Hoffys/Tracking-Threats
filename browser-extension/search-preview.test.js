@@ -98,7 +98,7 @@ test('coverage, categories and content warnings survive linked-app preview round
     assert.match(app.getCoverageText(expected), /No further checks are pending/)
   }
   const piracy = { ...scan, status: 'Safe', score: 100, categories: ['piracy-content'] }
-  assert.equal(app.getResultStyle(piracy).label, 'PIRACY WARNING - FILE NOT SCANNED')
+  assert.equal(app.getResultStyle(piracy).label, 'CAUTION - PIRACY RISK')
   assert.match(app.getScoreText(piracy), /URL phishing safety score: 100\/100/)
   assert.match(app.getScoreText(piracy), /Downloaded files were not scanned/)
 })

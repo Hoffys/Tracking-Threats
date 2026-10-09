@@ -194,7 +194,7 @@ function getResultStyle(scan) {
   }
   if (level === 'content') {
     return {
-      label: hasPiracyContent(scan) ? 'PIRACY WARNING - FILE NOT SCANNED' : 'CONTENT WARNING',
+      label: hasPiracyContent(scan) ? 'CAUTION - PIRACY RISK' : 'CONTENT WARNING',
       border: 'rgba(245,158,11,.55)',
       background: '#fef3c7',
       color: '#92400e',

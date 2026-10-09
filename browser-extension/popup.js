@@ -112,7 +112,7 @@ inspectPage.addEventListener('click', () => {
     inspectionNote.textContent = piracyWarning
       ? `Piracy-related content warning. URL phishing safety score ${scan.score}/100; this does not rate downloads. The file was not scanned. Scan the actual file before opening it. Scan finished.`
       : `${label} - safety score ${scan.score}/100. ${scan.threatName ? `Threat name: ${scan.threatName}. Threat type: ${scan.threatType}. ${scan.whyDetected?.[0] ?? ''}` : ''} Scan finished.`
-    pill.textContent = piracyWarning ? 'Piracy warning - file not scanned' : `${label} - ${scan.score}/100`
+    pill.textContent = piracyWarning ? 'CAUTION - PIRACY RISK' : `${label} - ${scan.score}/100`
     if (['Dangerous', 'Blocked'].includes(scan.status)) pill.classList.add('error')
     if (scan.status === 'Suspicious') pill.classList.add('warning')
     if (scan.status === 'Safe' && hasContentWarning) pill.classList.add('warning')
@@ -154,7 +154,7 @@ function renderStatus(threattrackStatus) {
     : status === 'Safe' && hasContentWarning ? 'Content warning'
     : status === 'Safe' ? 'Appears safe'
     : status === 'Dangerous' ? 'Risk detected' : status === 'Suspicious' ? 'Caution' : status
-  pill.textContent = piracyWarning ? 'Piracy warning - file not scanned' : `${label} - ${threattrackStatus.lastScore}/100`
+  pill.textContent = piracyWarning ? 'CAUTION - PIRACY RISK' : `${label} - ${threattrackStatus.lastScore}/100`
   if (['Suspicious', 'Dangerous', 'Blocked'].includes(status)) pill.classList.add('error')
   if (status === 'Safe' && hasContentWarning) pill.classList.add('warning')
   message.textContent += piracyWarning

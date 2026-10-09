@@ -34,7 +34,7 @@ test('popup live storage updates replace stale risk styles', () => {
   assert.match(context.pill.textContent, /Appears safe/)
   context.status = { ...context.status, categories: ['piracy-content'] }
   vm.runInContext('renderStatus(status)', context)
-  assert.equal(context.pill.textContent, 'Piracy warning - file not scanned')
+  assert.equal(context.pill.textContent, 'CAUTION - PIRACY RISK')
   assert.doesNotMatch(context.pill.textContent, /100\/100/)
   assert.match(context.message.textContent, /URL phishing safety score 100\/100/)
   assert.match(context.message.textContent, /file was not scanned/i)

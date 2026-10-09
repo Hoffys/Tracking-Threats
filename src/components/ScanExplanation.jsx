@@ -44,10 +44,10 @@ const getExplanation = (scan) => {
 
   if (status === 'Safe' && hasPiracyContent(scan?.categories)) {
     return {
-      title: 'Piracy content warning; file not scanned',
+      title: 'Caution - piracy risk',
       icon: AlertTriangle,
       tone: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300',
-      summary: 'The URL did not show strong phishing indicators, but that result does not rate any downloadable file. Piracy-related files may still involve malware, fake mirrors, tampering, or copyright risk.',
+      summary: 'The URL did not show strong phishing indicators. The downloadable file was not scanned. Piracy-related files may still involve malware, fake mirrors, tampering, or copyright risk.',
       mainSignal: 'Piracy-related content detected',
       matchedIntel,
       unavailableIntel,
