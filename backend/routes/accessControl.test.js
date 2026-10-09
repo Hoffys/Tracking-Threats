@@ -42,6 +42,7 @@ test('client records require ownership and admin deletion is audited', async (t)
       PHISHTANK_APP_KEY: '',
       VIRUSTOTAL_API_KEY: '',
       MALWAREBAZAAR_AUTH_KEY: '',
+      METADEFENDER_API_KEY: '',
       GOOGLE_SAFE_BROWSING_API_KEY: '',
       ABUSEIPDB_API_KEY: '',
     },

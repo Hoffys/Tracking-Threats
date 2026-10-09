@@ -178,7 +178,8 @@ checks, not exhaustive detection.
 Image files up to 8 MB can be processed locally in the user's browser for English
 OCR and QR/barcode values before extracted text is submitted for scanning. Files
 are not uploaded to a sandbox or executed by Tracking Threats. When a supplied
-hash already has VirusTotal verdicts or a MalwareBazaar listing, that remote
+hash already has VirusTotal verdicts, a MalwareBazaar listing, or a MetaDefender
+multi-engine result, that remote
 reputation evidence is used.
 Unknown files are not submitted for detonation. Document signature validation,
 issuing-organization verification, and full binary forensics are not provided.

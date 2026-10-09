@@ -12,9 +12,11 @@ const restoreEnvironment = (name, previous) => {
 test('MalwareBazaar hash matches produce bounded high-confidence file evidence', async () => {
   const previousFetch = globalThis.fetch
   const previousMalwareBazaarKey = process.env.MALWAREBAZAAR_AUTH_KEY
+  const previousMetaDefenderKey = process.env.METADEFENDER_API_KEY
   const previousVirusTotalKey = process.env.VIRUSTOTAL_API_KEY
   const previousReputationEnabled = process.env.REPUTATION_ENABLED
   process.env.MALWAREBAZAAR_AUTH_KEY = 'test-malwarebazaar-key'
+  delete process.env.METADEFENDER_API_KEY
   delete process.env.VIRUSTOTAL_API_KEY
   process.env.REPUTATION_ENABLED = 'true'
 
@@ -45,6 +47,7 @@ test('MalwareBazaar hash matches produce bounded high-confidence file evidence',
   } finally {
     globalThis.fetch = previousFetch
     restoreEnvironment('MALWAREBAZAAR_AUTH_KEY', previousMalwareBazaarKey)
+    restoreEnvironment('METADEFENDER_API_KEY', previousMetaDefenderKey)
     restoreEnvironment('VIRUSTOTAL_API_KEY', previousVirusTotalKey)
     restoreEnvironment('REPUTATION_ENABLED', previousReputationEnabled)
   }
@@ -53,9 +56,11 @@ test('MalwareBazaar hash matches produce bounded high-confidence file evidence',
 test('an unknown MalwareBazaar hash remains incomplete instead of being called safe proof', async () => {
   const previousFetch = globalThis.fetch
   const previousMalwareBazaarKey = process.env.MALWAREBAZAAR_AUTH_KEY
+  const previousMetaDefenderKey = process.env.METADEFENDER_API_KEY
   const previousVirusTotalKey = process.env.VIRUSTOTAL_API_KEY
   const previousReputationEnabled = process.env.REPUTATION_ENABLED
   process.env.MALWAREBAZAAR_AUTH_KEY = 'test-malwarebazaar-key'
+  delete process.env.METADEFENDER_API_KEY
   delete process.env.VIRUSTOTAL_API_KEY
   process.env.REPUTATION_ENABLED = 'true'
 
@@ -75,6 +80,77 @@ test('an unknown MalwareBazaar hash remains incomplete instead of being called s
   } finally {
     globalThis.fetch = previousFetch
     restoreEnvironment('MALWAREBAZAAR_AUTH_KEY', previousMalwareBazaarKey)
+    restoreEnvironment('METADEFENDER_API_KEY', previousMetaDefenderKey)
+    restoreEnvironment('VIRUSTOTAL_API_KEY', previousVirusTotalKey)
+    restoreEnvironment('REPUTATION_ENABLED', previousReputationEnabled)
+  }
+})
+
+test('MetaDefender multi-engine detections produce dangerous file evidence', async () => {
+  const previousFetch = globalThis.fetch
+  const previousMalwareBazaarKey = process.env.MALWAREBAZAAR_AUTH_KEY
+  const previousMetaDefenderKey = process.env.METADEFENDER_API_KEY
+  const previousVirusTotalKey = process.env.VIRUSTOTAL_API_KEY
+  const previousReputationEnabled = process.env.REPUTATION_ENABLED
+  delete process.env.MALWAREBAZAAR_AUTH_KEY
+  process.env.METADEFENDER_API_KEY = 'test-metadefender-key'
+  delete process.env.VIRUSTOTAL_API_KEY
+  process.env.REPUTATION_ENABLED = 'true'
+
+  globalThis.fetch = async (url, options = {}) => {
+    assert.equal(url, `https://api.metadefender.com/v4/hash/${sha256}`)
+    assert.equal(options.headers.apikey, 'test-metadefender-key')
+    return new Response(JSON.stringify({
+      scan_results: {
+        scan_all_result_i: 1,
+        total_detected_avs: 7,
+        total_avs: 25,
+      },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  try {
+    const result = await scanFile({ fileName: 'sample.bin', size: 10, sha256 })
+    const provider = result.details.threatIntel.find((item) => item.provider === 'MetaDefender Cloud')
+    assert.equal(provider.checked, true)
+    assert.equal(provider.found, true)
+    assert.equal(provider.detectedEngines, 7)
+    assert.equal(provider.totalEngines, 25)
+    assert.match(provider.warning, /7 of 25 anti-malware engines detected/i)
+    assert.equal(result.status, 'Dangerous')
+  } finally {
+    globalThis.fetch = previousFetch
+    restoreEnvironment('MALWAREBAZAAR_AUTH_KEY', previousMalwareBazaarKey)
+    restoreEnvironment('METADEFENDER_API_KEY', previousMetaDefenderKey)
+    restoreEnvironment('VIRUSTOTAL_API_KEY', previousVirusTotalKey)
+    restoreEnvironment('REPUTATION_ENABLED', previousReputationEnabled)
+  }
+})
+
+test('an unknown MetaDefender hash remains incomplete instead of being called clean', async () => {
+  const previousFetch = globalThis.fetch
+  const previousMalwareBazaarKey = process.env.MALWAREBAZAAR_AUTH_KEY
+  const previousMetaDefenderKey = process.env.METADEFENDER_API_KEY
+  const previousVirusTotalKey = process.env.VIRUSTOTAL_API_KEY
+  const previousReputationEnabled = process.env.REPUTATION_ENABLED
+  delete process.env.MALWAREBAZAAR_AUTH_KEY
+  process.env.METADEFENDER_API_KEY = 'test-metadefender-key'
+  delete process.env.VIRUSTOTAL_API_KEY
+  process.env.REPUTATION_ENABLED = 'true'
+
+  globalThis.fetch = async () => new Response(null, { status: 404 })
+
+  try {
+    const result = await scanFile({ fileName: 'notes.txt', size: 10, sha256 })
+    const provider = result.details.threatIntel.find((item) => item.provider === 'MetaDefender Cloud')
+    assert.equal(provider.checked, false)
+    assert.equal(provider.found, false)
+    assert.match(provider.skipped, /not in the provider database/i)
+    assert.equal(result.details.coverage.status, 'unavailable')
+  } finally {
+    globalThis.fetch = previousFetch
+    restoreEnvironment('MALWAREBAZAAR_AUTH_KEY', previousMalwareBazaarKey)
+    restoreEnvironment('METADEFENDER_API_KEY', previousMetaDefenderKey)
     restoreEnvironment('VIRUSTOTAL_API_KEY', previousVirusTotalKey)
     restoreEnvironment('REPUTATION_ENABLED', previousReputationEnabled)
   }

@@ -125,6 +125,15 @@ export function buildThreatClassification(type, analysis = {}) {
     })
   }
 
+  const metaDefenderFile = matchedProviders.find((provider) => provider.provider === 'MetaDefender Cloud')
+  if (metaDefenderFile) {
+    const malicious = metaDefenderFile.resultCode === 1 || Number(metaDefenderFile.detectedEngines ?? 0) > 0
+    return result({
+      threatName: malicious ? 'Malicious file reputation' : 'Suspicious file reputation',
+      threatType: 'Malware / file reputation', confidence: malicious ? 'High' : 'Medium', whyDetected, evidenceSources,
+    })
+  }
+
   const virusTotalFile = matchedProviders.find((provider) => provider.provider === 'VirusTotal File')
   if (virusTotalFile) {
     const malicious = Number(virusTotalFile.stats?.malicious ?? 0) > 0 || Number(virusTotalFile.sandbox?.malicious ?? 0) > 0

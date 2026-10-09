@@ -62,6 +62,18 @@ test('treats a MalwareBazaar match as known malware without asserting its family
   assert.deepEqual(classification.evidenceSources, ['MalwareBazaar'])
 })
 
+test('uses MetaDefender detection counts without inventing a malware family', () => {
+  const classification = buildThreatClassification('File', {
+    status: 'Dangerous', warningSigns: ['MetaDefender reports 7 of 25 anti-malware engines detected this file hash'],
+    details: { categories: ['file-risk'], threatIntel: [{ provider: 'MetaDefender Cloud', checked: true, found: true, resultCode: 1, detectedEngines: 7, totalEngines: 25, warning: 'MetaDefender reports 7 of 25 anti-malware engines detected this file hash' }] },
+  })
+
+  assert.equal(classification.threatName, 'Malicious file reputation')
+  assert.equal(classification.threatType, 'Malware / file reputation')
+  assert.equal(classification.confidence, 'High')
+  assert.deepEqual(classification.evidenceSources, ['MetaDefender Cloud'])
+})
+
 test('returns a qualified no-threat result for a safe scan', () => {
   const classification = buildThreatClassification('Message', {
     status: 'Safe', summary: 'No strong local message phishing indicators were found.', warningSigns: [],

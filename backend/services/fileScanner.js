@@ -177,6 +177,71 @@ async function checkMalwareBazaarFileHash(sha256) {
   }
 }
 
+async function checkMetaDefenderFileHash(sha256) {
+  const apiKey = process.env.METADEFENDER_API_KEY
+  if (process.env.REPUTATION_ENABLED === 'false' || !apiKey || !sha256Pattern.test(sha256 ?? '')) return null
+
+  const response = await withTimeout(
+    `https://api.metadefender.com/v4/hash/${encodeURIComponent(sha256)}`,
+    {
+      headers: {
+        accept: 'application/json',
+        apikey: apiKey,
+        'User-Agent': 'TrackingThreats/1.0',
+      },
+    },
+  )
+
+  if (response.status === 404) {
+    return {
+      provider: 'MetaDefender Cloud',
+      checked: false,
+      skipped: 'File hash is not in the provider database',
+      found: false,
+      warning: null,
+      deduction: 0,
+    }
+  }
+
+  if (!response.ok) throw new Error(`MetaDefender file lookup returned ${response.status}`)
+
+  const payload = await response.json()
+  const scanResults = payload?.scan_results
+  const totalEngines = Math.max(0, Number(scanResults?.total_avs ?? 0))
+  const detectedEngines = Math.max(0, Number(scanResults?.total_detected_avs ?? 0))
+  const resultCode = Number(scanResults?.scan_all_result_i)
+
+  if (!scanResults || totalEngines === 0 || !Number.isFinite(resultCode)) {
+    return {
+      provider: 'MetaDefender Cloud',
+      checked: false,
+      skipped: 'File hash has no completed multi-engine scan result',
+      found: false,
+      warning: null,
+      deduction: 0,
+    }
+  }
+
+  const suspicious = resultCode === 2
+  const malicious = resultCode === 1 || detectedEngines > 0
+
+  return {
+    provider: 'MetaDefender Cloud',
+    checked: true,
+    found: malicious || suspicious,
+    sha256,
+    resultCode,
+    detectedEngines,
+    totalEngines,
+    warning: malicious
+      ? `MetaDefender reports ${detectedEngines} of ${totalEngines} anti-malware engines detected this file hash`
+      : suspicious
+        ? `MetaDefender classified this file hash as suspicious across ${totalEngines} anti-malware engines`
+        : null,
+    deduction: malicious ? 65 : suspicious ? 30 : 0,
+  }
+}
+
 async function resolveFileReputation(provider, sha256, lookup) {
   try {
     const result = await lookup(sha256)
@@ -214,15 +279,22 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
       checked: false,
       error: 'Invalid SHA-256 hash',
     })
+    threatIntel.push({
+      provider: 'MetaDefender Cloud',
+      checked: false,
+      error: 'Invalid SHA-256 hash',
+    })
   } else if (sha256) {
     threatIntel.push(...await Promise.all([
       resolveFileReputation('VirusTotal File', sha256, checkVirusTotalFileHash),
       resolveFileReputation('MalwareBazaar', sha256, checkMalwareBazaarFileHash),
+      resolveFileReputation('MetaDefender Cloud', sha256, checkMetaDefenderFileHash),
     ]))
   } else {
     threatIntel.push(
       { provider: 'VirusTotal File', checked: false, found: false, skipped: 'No file hash was supplied' },
       { provider: 'MalwareBazaar', checked: false, found: false, skipped: 'No file hash was supplied' },
+      { provider: 'MetaDefender Cloud', checked: false, found: false, skipped: 'No file hash was supplied' },
     )
   }
 
@@ -284,7 +356,7 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
       },
       threatIntel,
       coverage: providerCoverage(threatIntel, [
-        'File metadata and limited text were checked. When available, VirusTotal verdicts and MalwareBazaar listings for the supplied hash were used; unknown files are not uploaded or executed by Tracking Threats.',
+        'File metadata and limited text were checked. When available, VirusTotal verdicts, MalwareBazaar listings, and MetaDefender multi-engine results for the supplied hash were used; unknown files are not uploaded or executed by Tracking Threats.',
       ]),
       categories: warnings.length ? ['file-risk'] : [],
     },

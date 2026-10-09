@@ -128,6 +128,7 @@ URLHAUS_AUTH_KEY=your_urlhaus_auth_key
 PHISHTANK_APP_KEY=your_phishtank_app_key
 VIRUSTOTAL_API_KEY=your_virustotal_key
 MALWAREBAZAAR_AUTH_KEY=your_malwarebazaar_auth_key
+METADEFENDER_API_KEY=your_metadefender_api_key
 GOOGLE_SAFE_BROWSING_API_KEY=your_google_safe_browsing_key
 ABUSEIPDB_API_KEY=your_abuseipdb_key
 ```
@@ -137,7 +138,9 @@ so personal API keys do not get committed.
 
 URLhaus and MalwareBazaar Community API lookups need free abuse.ch `Auth-Key`
 values from `https://auth.abuse.ch/`. MalwareBazaar performs hash-only file reputation lookups; Tracking
-Threats does not automatically upload unknown files. PhishTank URL
+Threats also uses MetaDefender Cloud for hash-only multi-engine results when
+`METADEFENDER_API_KEY` is configured. It does not automatically upload unknown
+files to either service. PhishTank URL
 checks can run without an application key for a small number of lookups, but a
 free app key gives a better rate limit. VirusTotal, Google Safe Browsing, and
 AbuseIPDB are skipped until their keys are configured.
@@ -149,6 +152,7 @@ $env:URLHAUS_AUTH_KEY="your_urlhaus_auth_key"
 $env:PHISHTANK_APP_KEY="your_phishtank_app_key"
 $env:VIRUSTOTAL_API_KEY="your_virustotal_key"
 $env:MALWAREBAZAAR_AUTH_KEY="your_malwarebazaar_auth_key"
+$env:METADEFENDER_API_KEY="your_metadefender_api_key"
 $env:GOOGLE_SAFE_BROWSING_API_KEY="your_google_safe_browsing_key"
 $env:ABUSEIPDB_API_KEY="your_abuseipdb_key"
 npm run dev
