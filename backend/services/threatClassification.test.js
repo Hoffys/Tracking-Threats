@@ -50,6 +50,18 @@ test('does not invent an exact malware family from VirusTotal counts', () => {
   assert.equal(classification.confidence, 'High')
 })
 
+test('treats a MalwareBazaar match as known malware without asserting its family', () => {
+  const classification = buildThreatClassification('File', {
+    status: 'Dangerous', warningSigns: ['MalwareBazaar lists this file hash as Example RAT'],
+    details: { categories: ['file-risk'], threatIntel: [{ provider: 'MalwareBazaar', checked: true, found: true, signature: 'Example RAT', warning: 'MalwareBazaar lists this file hash as Example RAT' }] },
+  })
+
+  assert.equal(classification.threatName, 'Known malware file hash')
+  assert.equal(classification.threatType, 'Malware / file reputation')
+  assert.equal(classification.confidence, 'High')
+  assert.deepEqual(classification.evidenceSources, ['MalwareBazaar'])
+})
+
 test('returns a qualified no-threat result for a safe scan', () => {
   const classification = buildThreatClassification('Message', {
     status: 'Safe', summary: 'No strong local message phishing indicators were found.', warningSigns: [],

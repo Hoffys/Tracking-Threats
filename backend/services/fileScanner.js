@@ -26,6 +26,8 @@ const doubleExtensionPattern = /\.(pdf|docx?|xlsx?|pptx?|txt|jpg|png)\.(exe|scr|
 const sha256Pattern = /^[a-f0-9]{64}$/i
 
 const withTimeout = providerRequest
+const boundedProviderText = (value, limit = 120) =>
+  (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, limit) : '')
 
 export function summarizeSandboxVerdicts(verdicts = {}) {
   const entries = Object.values(verdicts ?? {}).filter((item) => item && typeof item === 'object')
@@ -117,6 +119,82 @@ async function checkVirusTotalFileHash(sha256) {
   }
 }
 
+async function checkMalwareBazaarFileHash(sha256) {
+  const authKey = process.env.MALWAREBAZAAR_AUTH_KEY
+  if (process.env.REPUTATION_ENABLED === 'false' || !authKey || !sha256Pattern.test(sha256 ?? '')) return null
+
+  const response = await withTimeout(
+    'https://mb-api.abuse.ch/api/v1/',
+    {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'Auth-Key': authKey,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'TrackingThreats/1.0',
+      },
+      body: new URLSearchParams({ query: 'get_info', hash: sha256 }),
+    },
+  )
+
+  if (!response.ok) throw new Error(`MalwareBazaar file lookup returned ${response.status}`)
+
+  const payload = await response.json()
+  if (payload?.query_status === 'hash_not_found') {
+    return {
+      provider: 'MalwareBazaar',
+      checked: false,
+      skipped: 'File hash is not in the provider database',
+      found: false,
+      warning: null,
+      deduction: 0,
+    }
+  }
+
+  if (payload?.query_status !== 'ok' || !Array.isArray(payload.data) || payload.data.length === 0) {
+    throw new Error(`MalwareBazaar lookup returned ${payload?.query_status || 'an invalid response'}`)
+  }
+
+  const sample = payload.data[0] ?? {}
+  const signature = boundedProviderText(sample.signature)
+  const tags = Array.isArray(sample.tags)
+    ? sample.tags.map((tag) => boundedProviderText(tag, 40)).filter(Boolean).slice(0, 20)
+    : []
+  const description = signature || tags.slice(0, 3).join(', ') || 'a known malware sample'
+
+  return {
+    provider: 'MalwareBazaar',
+    checked: true,
+    found: true,
+    sha256,
+    signature: signature || null,
+    tags,
+    fileType: boundedProviderText(sample.file_type, 40) || null,
+    firstSeen: boundedProviderText(sample.first_seen, 40) || null,
+    lastSeen: boundedProviderText(sample.last_seen, 40) || null,
+    warning: `MalwareBazaar lists this file hash as ${description}`,
+    deduction: 70,
+  }
+}
+
+async function resolveFileReputation(provider, sha256, lookup) {
+  try {
+    const result = await lookup(sha256)
+    return result ?? {
+      provider,
+      checked: false,
+      found: false,
+      skipped: 'File reputation is not configured',
+    }
+  } catch (error) {
+    return {
+      provider,
+      checked: true,
+      error: formatProviderError(error),
+    }
+  }
+}
+
 export async function scanFile({ fileName = '', mimeType = '', size = 0, content = '', sha256 = '' }) {
   const name = fileName.trim() || 'Unnamed file'
   const extension = getExtension(name)
@@ -131,22 +209,21 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
       checked: false,
       error: 'Invalid SHA-256 hash',
     })
+    threatIntel.push({
+      provider: 'MalwareBazaar',
+      checked: false,
+      error: 'Invalid SHA-256 hash',
+    })
   } else if (sha256) {
-    try {
-      const result = await checkVirusTotalFileHash(sha256)
-      if (result) threatIntel.push(result)
-    } catch (error) {
-      threatIntel.push({
-        provider: 'VirusTotal File',
-        checked: true,
-        error: formatProviderError(error),
-      })
-    }
-  }
-
-  if (threatIntel.length === 0) {
-    threatIntel.push({ provider: 'VirusTotal File', checked: false, found: false,
-      skipped: sha256 ? 'File reputation is not configured' : 'No file hash was supplied' })
+    threatIntel.push(...await Promise.all([
+      resolveFileReputation('VirusTotal File', sha256, checkVirusTotalFileHash),
+      resolveFileReputation('MalwareBazaar', sha256, checkMalwareBazaarFileHash),
+    ]))
+  } else {
+    threatIntel.push(
+      { provider: 'VirusTotal File', checked: false, found: false, skipped: 'No file hash was supplied' },
+      { provider: 'MalwareBazaar', checked: false, found: false, skipped: 'No file hash was supplied' },
+    )
   }
 
   addWarning(warnings, !extension, 'File has no visible extension', 12)
@@ -207,7 +284,7 @@ export async function scanFile({ fileName = '', mimeType = '', size = 0, content
       },
       threatIntel,
       coverage: providerCoverage(threatIntel, [
-        'File metadata and limited text were checked. When available, VirusTotal sandbox verdicts for the supplied hash were used; unknown files are not uploaded or executed by Tracking Threats.',
+        'File metadata and limited text were checked. When available, VirusTotal verdicts and MalwareBazaar listings for the supplied hash were used; unknown files are not uploaded or executed by Tracking Threats.',
       ]),
       categories: warnings.length ? ['file-risk'] : [],
     },

@@ -118,6 +118,13 @@ export function buildThreatClassification(type, analysis = {}) {
     return result({ threatName: 'Known malware-hosting domain', threatType: 'Malware distribution', confidence: 'High', whyDetected, evidenceSources })
   }
 
+  if (matchedProviders.some((provider) => provider.provider === 'MalwareBazaar')) {
+    return result({
+      threatName: 'Known malware file hash',
+      threatType: 'Malware / file reputation', confidence: 'High', whyDetected, evidenceSources,
+    })
+  }
+
   const virusTotalFile = matchedProviders.find((provider) => provider.provider === 'VirusTotal File')
   if (virusTotalFile) {
     const malicious = Number(virusTotalFile.stats?.malicious ?? 0) > 0 || Number(virusTotalFile.sandbox?.malicious ?? 0) > 0
