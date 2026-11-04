@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Download, Puzzle, X } from 'lucide-react'
-import { extensionDownloadUrl } from '../services/api'
+import { chromeWebStoreUrl, extensionDownloadUrl } from '../services/api'
 
 export function GetExtension() {
   const [open, setOpen] = useState(false)
@@ -12,11 +12,21 @@ export function GetExtension() {
       {open && (
         <section id="extension-setup" className="fixed inset-x-4 top-24 z-50 mx-auto max-h-[75vh] max-w-lg overflow-y-auto rounded-xl border border-emerald-300 bg-white p-5 text-sm shadow-2xl dark:border-slate-600 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-lg font-semibold">Download browser extension</h2>
+            <h2 className="text-lg font-semibold">Get the browser extension</h2>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close extension setup"><X size={22} /></button>
           </div>
-          <p className="mt-3">For desktop Chrome and Edge. This ZIP needs a one-time manual installation; it is not a browser store listing.</p>
-          <a href={extensionDownloadUrl} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700">
+          <p className="mt-3">For desktop Chrome and Edge. Choose the Chrome Web Store for the simple install, or use the ZIP for manual setup.</p>
+          {chromeWebStoreUrl ? (
+            <a href={chromeWebStoreUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700">
+              <Puzzle size={18} /> Add to Chrome
+            </a>
+          ) : (
+            <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+              Chrome Web Store installation will appear here after the extension is published. For now, use the manual ZIP installation below.
+            </p>
+          )}
+          <h3 className="mt-5 font-semibold">Manual installation</h3>
+          <a href={extensionDownloadUrl} className="mt-2 inline-flex items-center gap-2 rounded-lg border border-emerald-600 px-4 py-3 font-semibold text-emerald-800 hover:bg-emerald-50 dark:text-emerald-200 dark:hover:bg-slate-800">
             <Download size={18} /> Download Extension ZIP
           </a>
           <ol className="mt-4 list-decimal space-y-3 pl-5">

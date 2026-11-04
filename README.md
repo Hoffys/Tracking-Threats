@@ -60,8 +60,13 @@ DATABASE_POOL_SIZE=10
 FRONTEND_ORIGIN=https://your-railway-domain.up.railway.app
 CORS_ORIGINS=https://your-railway-domain.up.railway.app
 VITE_API_BASE_URL=
+VITE_CHROME_WEB_STORE_URL=
 CORS_ALLOW_CHROME_EXTENSIONS=false
 ```
+
+Set `VITE_CHROME_WEB_STORE_URL` to the extension's published Chrome Web Store
+listing URL to show the **Add to Chrome** button in the site. Leave it empty
+until the listing is published; the manual ZIP installation remains available.
 
 Create the PostgreSQL service in the same Railway project and reference its
 private `DATABASE_URL` from the web service. If the database service has a name
