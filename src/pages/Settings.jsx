@@ -498,7 +498,10 @@ export function Settings() {
               <h2 className="text-lg font-semibold">Contact the staff of Tracking Threats</h2>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-              {['Alemari Acuesta | Alemariacuesta@gmail.com', 'Bryan Duran | Bryan.duran@gmail.com', 'Niccolo Valero | Niccolo.valero@gmail.com', 'James Torralba | James.torralba@gmail.com'].map(
+              {['Alemari Acuesta | Alemariacuesta@gmail.com', 
+                'Bryan Duran     | Bryan.duran@gmail.com', 
+                'Niccolo Valero  | Niccolo.valero@gmail.com', 
+                'James Torralba  | James.torralba@gmail.com'].map(
                 (name) => (
                   <div
                     key={name}
