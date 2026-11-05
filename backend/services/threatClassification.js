@@ -6,7 +6,7 @@ const uniqueStrings = (values, limit = 8) => [...new Set(
 )].slice(0, limit)
 
 const providerMatched = (provider) =>
-  provider?.checked === true && !provider.error && !provider.skipped && provider.found === true
+  provider?.checked === true && provider.riskAffecting !== false && !provider.error && !provider.skipped && provider.found === true
 
 const humanizeProviderThreat = (value) => {
   const text = String(value ?? '')

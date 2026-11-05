@@ -3,7 +3,7 @@ import test from 'node:test'
 import { scanMessage } from './messageScanner.js'
 import { analyzeEmail } from './emailAnalyzer.js'
 import { enrichContentLinks, maxReputationLinks } from './linkReputation.js'
-import { combineUrlReputation, runProviderChecks } from './threatIntel.js'
+import { combineUrlReputation, parseUrlhausHostResponse, runProviderChecks } from './threatIntel.js'
 import { scanUrl } from './urlScanner.js'
 
 const malicious = { provider: 'PhishTank', checked: true, found: true, warning: 'Verified phishing match', deduction: 60 }
@@ -48,6 +48,22 @@ test('email and SMS inherit dangerous embedded-link reputation without averaging
     assert.equal(result.details.coverage.linksChecked, 1)
     assert.ok(result.warningSigns.some((warning) => warning.includes('Verified phishing match')))
   }
+})
+
+test('historical URLhaus host evidence on embedded links stays informational', async () => {
+  const text = 'See https://example.com'
+  const hostEvidence = parseUrlhausHostResponse('example.com', {
+    query_status: 'ok', url_count: '4',
+    urls: [{ url: 'http://example.com/old-payload.exe', url_status: 'offline' }],
+  })
+  const result = await enrichContentLinks(text, scanMessage(text), async (_url, local) =>
+    combineUrlReputation(local, [hostEvidence]))
+
+  assert.equal(result.status, 'Safe')
+  assert.equal(result.score, 100)
+  assert.deepEqual(result.warningSigns, [])
+  assert.equal(result.details.threatIntel[0].evidenceType, 'historical-host-association')
+  assert.match(result.details.threatIntel[0].warning, /exact URL was not confirmed/i)
 })
 
 test('links are deduplicated, bounded, and no more than two lookups run concurrently', async () => {

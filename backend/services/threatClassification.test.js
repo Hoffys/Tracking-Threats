@@ -87,7 +87,7 @@ test('returns a qualified no-threat result for a safe scan', () => {
   assert.equal(classification.confidence, 'No threat detected')
 })
 
-test('describes historical example.com URLhaus evidence as contextual, not confirmed', () => {
+test('historical example.com URLhaus evidence is informational and does not change the verdict', () => {
   const hostEvidence = parseUrlhausHostResponse('example.com', {
     query_status: 'ok', url_count: '4',
     urls: [{ url: 'http://example.com/old-payload.exe', url_status: 'offline' }],
@@ -95,20 +95,25 @@ test('describes historical example.com URLhaus evidence as contextual, not confi
   const scan = combineUrlReputation(scanUrl('https://example.com/'), [hostEvidence])
   const classification = buildThreatClassification('URL', scan)
 
-  assert.equal(scan.status, 'Suspicious')
-  assert.equal(classification.threatName, 'Historical URLhaus host association; exact URL not confirmed.')
-  assert.equal(classification.threatType, 'Contextual malware-host reputation')
-  assert.equal(classification.confidence, 'Low')
-  assert.match(classification.whyDetected.join(' '), /exact URL was not confirmed/i)
+  assert.equal(scan.status, 'Safe')
+  assert.equal(scan.score, 100)
+  assert.deepEqual(scan.warningSigns, [])
+  assert.equal(classification.threatName, 'No threat identified')
+  assert.ok(scan.details.threatIntel.some((provider) =>
+    provider.evidenceType === 'historical-host-association' && /historical host evidence.*exact URL was not confirmed/i.test(provider.warning)))
 })
 
-test('describes active host-level URLhaus evidence as an unconfirmed association', () => {
+test('active host-level URLhaus evidence retains contextual risk scoring and wording', () => {
   const hostEvidence = parseUrlhausHostResponse('example.com', {
     query_status: 'ok', url_count: '1',
     urls: [{ url: 'https://example.com/other-path.exe', url_status: 'online' }],
   })
-  const classification = buildThreatClassification('URL', combineUrlReputation(scanUrl('https://example.com/'), [hostEvidence]))
+  const scan = combineUrlReputation(scanUrl('https://example.com/'), [hostEvidence])
+  const classification = buildThreatClassification('URL', scan)
 
+  assert.equal(scan.status, 'Suspicious')
+  assert.equal(scan.score, 75)
+  assert.equal(scan.warningSigns.length, 1)
   assert.equal(classification.threatName, 'URLhaus host association; exact URL not confirmed.')
   assert.equal(classification.confidence, 'Low')
 })
@@ -127,7 +132,7 @@ test('keeps a confirmed exact URLhaus URL match high-confidence and dangerous', 
   assert.equal(classification.confidence, 'High')
 })
 
-test('retains independent phishing classification and aggregate risk alongside URLhaus host evidence', () => {
+test('historical URLhaus evidence does not alter independent phishing score or classification', () => {
   const hostEvidence = parseUrlhausHostResponse('example.com', {
     query_status: 'ok', url_count: '1',
     urls: [{ url: 'https://example.com/old.exe', url_status: 'offline' }],
@@ -140,9 +145,10 @@ test('retains independent phishing classification and aggregate risk alongside U
   const classification = buildThreatClassification('URL', scan)
 
   assert.equal(scan.status, 'Dangerous')
-  assert.equal(scan.score, 15)
+  assert.equal(scan.score, 40)
+  assert.deepEqual(scan.warningSigns, [phishingEvidence.warning])
   assert.equal(classification.threatName, 'Verified phishing page')
   assert.equal(classification.confidence, 'High')
-  assert.ok(classification.evidenceSources.includes('URLhaus Host'))
+  assert.ok(scan.details.threatIntel.some((provider) => provider.provider === 'URLhaus Host' && provider.riskAffecting === false))
   assert.ok(classification.evidenceSources.includes('PhishTank'))
 })

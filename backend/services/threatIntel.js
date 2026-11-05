@@ -302,6 +302,7 @@ export function parseUrlhausHostResponse(host, payload) {
   const urlCount = reportedCount
   const activeUrlCount = records.filter((record) => record.status === 'online').length
   const historicalUrlCount = records.length - activeUrlCount
+  const historicalOnly = activeUrlCount === 0
 
   return {
     provider: 'URLhaus Host',
@@ -311,11 +312,14 @@ export function parseUrlhausHostResponse(host, payload) {
     urlCount,
     activeUrlCount,
     historicalUrlCount,
-    warning: `URLhaus reports ${urlCount} malware URL${urlCount === 1 ? '' : 's'} on ${exactHost} (${activeUrlCount} active in returned records); the exact URL was not confirmed by the URL lookup`,
-    // A hostname-level match is contextual evidence. It can raise a scan to
-    // Suspicious, while the exact-URL lookup or additional signals are needed
-    // to make an otherwise clean URL Dangerous.
-    deduction: 25,
+    evidenceType: historicalOnly ? 'historical-host-association' : 'active-host-association',
+    riskAffecting: !historicalOnly,
+    warning: historicalOnly
+      ? `URLhaus reports ${urlCount} malware URL${urlCount === 1 ? '' : 's'} on ${exactHost}; 0 active URLs were returned, so this is historical host evidence and the exact URL was not confirmed`
+      : `URLhaus reports ${urlCount} malware URL${urlCount === 1 ? '' : 's'} on ${exactHost} (${activeUrlCount} active in returned records); the exact URL was not confirmed by the URL lookup`,
+    // Active host associations remain contextual risk evidence. Historical
+    // associations are retained for details but do not affect risk scoring.
+    deduction: historicalOnly ? 0 : 25,
   }
 }
 
@@ -590,7 +594,7 @@ export function combineUrlReputation(baseAnalysis, providerResults) {
   const activeResults = providerResults.filter(Boolean)
   const externalWarnings = []
   for (const result of activeResults) {
-    addWarning(externalWarnings, result.checked === true && !result.error && !result.skipped && Boolean(result.warning), result.warning, result.deduction ?? 0)
+    addWarning(externalWarnings, result.riskAffecting !== false && result.checked === true && !result.error && !result.skipped && Boolean(result.warning), result.warning, result.deduction ?? 0)
   }
 
   const score = scoreWarnings([
@@ -601,7 +605,7 @@ export function combineUrlReputation(baseAnalysis, providerResults) {
   const risk = getRiskFromScore(finalScore)
   const categories = [...new Set([
     ...(baseAnalysis.details?.categories ?? []),
-    ...activeResults.filter((result) => result.checked && !result.error && !result.skipped && result.found).flatMap((result) =>
+    ...activeResults.filter((result) => result.riskAffecting !== false && result.checked && !result.error && !result.skipped && result.found).flatMap((result) =>
       result.provider === 'PhishTank' ? ['phishing-indicators']
         : result.provider.startsWith('URLhaus') ? ['malware-reputation']
           : result.provider === 'Google Safe Browsing' ? (result.threatTypes ?? []).map((type) => type === 'SOCIAL_ENGINEERING' ? 'phishing-indicators' : 'malware-reputation')

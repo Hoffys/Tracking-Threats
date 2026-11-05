@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { combineUrlReputation, hasVirusTotalDetections, parseProviderFlag, parseUrlhausHostResponse } from './threatIntel.js'
+import { combineUrlReputation, hasVirusTotalDetections, parseProviderFlag, parseUrlhausHostResponse, runProviderChecks } from './threatIntel.js'
 import { scanUrl } from './urlScanner.js'
 
 test('parseProviderFlag accepts explicit provider truth values', () => {
@@ -21,7 +21,7 @@ test('VirusTotal requires an actual malicious or suspicious detection', () => {
   assert.equal(hasVirusTotalDetections({ malicious: 0, suspicious: 2 }), true)
 })
 
-test('URLhaus host history on example.com raises caution without blocking an unrelated URL', () => {
+test('URLhaus host history on example.com remains informational for an unrelated URL', () => {
   const result = parseUrlhausHostResponse('example.com', {
     query_status: 'ok',
     url_count: '4',
@@ -31,13 +31,18 @@ test('URLhaus host history on example.com raises caution without blocking an unr
   assert.equal(result.urlCount, 4)
   assert.equal(result.activeUrlCount, 0)
   assert.equal(result.historicalUrlCount, 1)
-  assert.equal(result.deduction, 25)
-  assert.match(result.warning, /exact URL was not confirmed/i)
+  assert.equal(result.deduction, 0)
+  assert.equal(result.riskAffecting, false)
+  assert.equal(result.evidenceType, 'historical-host-association')
+  assert.match(result.warning, /historical host evidence.*exact URL was not confirmed/i)
 
   const scan = combineUrlReputation(scanUrl('https://example.com/'), [result])
-  assert.equal(scan.status, 'Suspicious')
-  assert.equal(scan.score, 75)
-  assert.equal(scan.action, 'Review')
+  assert.equal(scan.status, 'Safe')
+  assert.equal(scan.score, 100)
+  assert.equal(scan.action, 'Allowed')
+  assert.deepEqual(scan.warningSigns, [])
+  assert.equal(scan.details.threatIntel[0].warning, result.warning)
+  assert.equal(scan.details.categories.includes('malware-reputation'), false)
 })
 
 test('an exact-host URLhaus match is cautionary; an exact URL match remains dangerous', () => {
@@ -50,6 +55,8 @@ test('an exact-host URLhaus match is cautionary; an exact URL match remains dang
   assert.equal(hostScan.status, 'Suspicious')
   assert.equal(hostScan.score, 75)
   assert.equal(hostScan.action, 'Review')
+  assert.equal(hostMatch.riskAffecting, true)
+  assert.equal(hostMatch.deduction, 25)
 
   const exactUrlScan = combineUrlReputation(scanUrl('https://example.com/other-path.exe'), [{
     provider: 'URLhaus URL', checked: true, found: true,
@@ -57,6 +64,21 @@ test('an exact-host URLhaus match is cautionary; an exact URL match remains dang
   }])
   assert.equal(exactUrlScan.status, 'Dangerous')
   assert.equal(exactUrlScan.action, 'Blocked')
+})
+
+test('VirusTotal rate limits remain unavailable and do not create threat evidence', async () => {
+  const providers = await runProviderChecks([{
+    provider: 'VirusTotal',
+    run: () => { throw new Error('VirusTotal returned 429') },
+  }])
+  const scan = combineUrlReputation(scanUrl('https://example.com/'), providers)
+
+  assert.equal(providers[0].checked, false)
+  assert.match(providers[0].error, /429/)
+  assert.equal(providers[0].found, undefined)
+  assert.equal(scan.status, 'Safe')
+  assert.equal(scan.score, 100)
+  assert.deepEqual(scan.warningSigns, [])
 })
 
 test('URLhaus host matching is exact across www, sibling domains and subdomains', () => {

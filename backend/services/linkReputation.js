@@ -52,7 +52,7 @@ export async function enrichContentLinks(content, baseAnalysis, lookup = enrichU
   const recommendations = recommendationsFor(risk.status, categories)
   const warningSigns = [...new Set([
     ...baseAnalysis.warningSigns,
-    ...providers.filter((result) => result.checked && !result.error && !result.skipped && result.warning)
+    ...providers.filter((result) => result.riskAffecting !== false && result.checked && !result.error && !result.skipped && result.warning)
       .map((result) => `Embedded link: ${result.warning}`),
   ])]
   return {
