@@ -137,9 +137,9 @@ function renderStatus(threattrackStatus) {
 
   if (!threattrackStatus.ok) {
     message.textContent = threattrackStatus.error
-      ? `Scanner offline: ${threattrackStatus.error}`
-      : 'Scanner offline'
-    pill.textContent = 'Offline'
+      ? `Scan unavailable: ${threattrackStatus.error}`
+      : 'Scan unavailable'
+    pill.textContent = 'Unavailable'
     pill.classList.add('error')
     return
   }

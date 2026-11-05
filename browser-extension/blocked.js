@@ -65,6 +65,24 @@ function applyBlockCopy({ piracyPolicyBlocked = false, score = '0' } = {}) {
   document.getElementById('score').textContent = `Status: Blocked - Safety score ${score}/100`
 }
 
+function formatScanDetails(coverage, categories = []) {
+  const parts = []
+  if (coverage?.status) parts.push(`Coverage: ${coverage.status}.`)
+  if (Number.isInteger(coverage?.checkedProviders) && Number.isInteger(coverage?.totalProviders)) {
+    parts.push(`${coverage.checkedProviders}/${coverage.totalProviders} providers checked.`)
+  }
+  if (Number.isInteger(coverage?.linksChecked) && Number.isInteger(coverage?.totalLinks)) {
+    parts.push(`${coverage.linksChecked}/${coverage.totalLinks} links checked.`)
+  }
+  if (Array.isArray(categories) && categories.length) {
+    parts.push(`Risk categories: ${categories.filter((item) => typeof item === 'string').slice(0, 8).join(', ')}.`)
+  }
+  if (Array.isArray(coverage?.limitations) && coverage.limitations.length) {
+    parts.push(`Limitations: ${coverage.limitations.slice(0, 2).map((item) => String(item).slice(0, 240)).join(' ')}`)
+  }
+  return parts.join(' ') || 'Scan coverage details are unavailable. See the saved scan history for the full report.'
+}
+
 function getDetailsUrl({ appUrl = APP_URL, url = '', host = '', scanId = '' } = {}) {
   const detailsUrl = new URL(APP_URL)
   detailsUrl.href = appUrl
@@ -96,6 +114,7 @@ function updateDetailsLink({ url = '', host = '', scanId = blockedScanId } = {})
     document.getElementById('threat-name').textContent = `Threat name: ${response.scan.threatName || 'Dangerous website'}`
     document.getElementById('threat-type').textContent = `Threat type: ${response.scan.threatType || 'Website risk'}`
     document.getElementById('threat-reason').textContent = reason || 'The scanner found dangerous URL indicators.'
+    document.getElementById('scan-details').textContent = formatScanDetails(response.scan.coverage, response.scan.categories)
     applyBlockCopy({ piracyPolicyBlocked, score: response.scan.score })
     detailsLink.href = getDetailsUrl({ appUrl: response.appUrl, url, host, scanId: blockedScanId })
     detailsLink.removeAttribute('aria-disabled')
@@ -115,6 +134,8 @@ function renderBlockedPage({
   primaryWarning = '',
   scanId = '',
   policyBlocked = false,
+  coverage = null,
+  categories = [],
 }) {
   blockedUrl = url
   blockedScanId = scanId || blockedScanId
@@ -130,6 +151,7 @@ function renderBlockedPage({
   document.getElementById('threat-name').textContent = `Threat name: ${displayedThreatName}`
   document.getElementById('threat-type').textContent = `Threat type: ${displayedThreatType}`
   document.getElementById('threat-reason').textContent = displayedPrimaryWarning
+  document.getElementById('scan-details').textContent = formatScanDetails(coverage, categories)
   applyBlockCopy({ piracyPolicyBlocked, score })
   updateDetailsLink({ url: blockedUrl, host, scanId: blockedScanId })
 }
@@ -153,7 +175,7 @@ async function loadBlockedContext() {
   const context = stored[key]
 
   if (context?.expiresAt && Date.now() <= context.expiresAt) {
-    renderBlockedPage(context)
+    renderBlockedPage({ ...context, url: blockedUrl || context.url, host: blockedHost })
     return
   }
 

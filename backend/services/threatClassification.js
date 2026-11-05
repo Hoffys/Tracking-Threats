@@ -114,10 +114,6 @@ export function buildThreatClassification(type, analysis = {}) {
     })
   }
 
-  if (matchedProviders.some((provider) => provider.provider === 'URLhaus Host')) {
-    return result({ threatName: 'Known malware-hosting domain', threatType: 'Malware distribution', confidence: 'High', whyDetected, evidenceSources })
-  }
-
   if (matchedProviders.some((provider) => provider.provider === 'MalwareBazaar')) {
     return result({
       threatName: 'Known malware file hash',
@@ -168,6 +164,19 @@ export function buildThreatClassification(type, analysis = {}) {
     }
     evidenceSources.push(type === 'URL' ? 'URL and page rules' : type === 'File' ? 'File content rules' : `${type} content rules`)
     return result({ threatName: threatNames[type] ?? 'Suspected phishing attempt', threatType: 'Phishing / credential theft', confidence: 'Medium', whyDetected, evidenceSources })
+  }
+
+  const urlhausHost = matchedProviders.find((provider) => provider.provider === 'URLhaus Host')
+  if (urlhausHost) {
+    return result({
+      threatName: Number(urlhausHost.activeUrlCount ?? 0) > 0
+        ? 'URLhaus host association; exact URL not confirmed.'
+        : 'Historical URLhaus host association; exact URL not confirmed.',
+      threatType: 'Contextual malware-host reputation',
+      confidence: 'Low',
+      whyDetected: whyDetected.length ? whyDetected : ['URLhaus host-level evidence is contextual and does not confirm this URL.'],
+      evidenceSources,
+    })
   }
 
   if (/dmarc|dkim|spf|sender authentication/.test(warningText)) {

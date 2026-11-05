@@ -8,6 +8,8 @@ const SAFE_HOSTS_URL = `${API_BASE_URL}/api/safe-hosts`
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const APP_ORIGIN = new URL(APP_URL).origin
 const COOLDOWN_MS = 15000
+const FAILURE_BACKOFF_BASE_MS = 5000
+const FAILURE_BACKOFF_MAX_MS = 5 * 60 * 1000
 const SAFE_HOST_SYNC_MS = 5000
 const MAX_TRACKED = 200
 const BLOCK_RULE_ID_BASE = 10000
@@ -28,6 +30,8 @@ const PASS_THROUGH_HOSTS = new Set([
   'fbsbx.com',
   'github.com',
   'google.com',
+  'www.google.com',
+  'www.bing.com',
   'icloud.com',
   'mail.aol.com',
   'mail.com',
@@ -44,14 +48,22 @@ const PASS_THROUGH_HOSTS = new Set([
 ])
 
 const recentScans = new Map()
+const inFlightScans = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
 const notificationTargets = new Map()
 const tabRedirectChains = new Map()
+const tabNavigationTargets = new Map()
+const tabNavigationVersions = new Map()
 let clientToken = ''
 let credentialPromise = null
 let allowedHosts = new Set()
 let safeHosts = new Set()
+let safeHostsSyncedAt = 0
+let safeHostsSyncPromise = null
+let protectionReady = Promise.resolve()
+let scanFailureCount = 0
+let scanRetryAfter = 0
 
 async function getClientCredentials(rejectedClientId = '') {
   if (credentialPromise) {
@@ -68,7 +80,10 @@ async function getClientCredentials(rejectedClientId = '') {
         return { clientId: stored[CLIENT_ID_KEY], token: clientToken }
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/public/clients`, { method: 'POST' })
+      const response = await fetch(`${API_BASE_URL}/api/public/clients`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000),
+      })
       if (!response.ok) throw new Error(await getScannerError(response, 'Client registration'))
       const credential = await response.json()
       if (!/^cl_[a-f0-9]{32}$/.test(credential.clientId ?? '') ||
@@ -357,7 +372,18 @@ function getHistoryUrl(clientId, target = '') {
 
 async function loadBlockedHosts() {
   const stored = await chrome.storage.local.get('blockedHosts')
-  blockedHosts = new Map(stored.blockedHosts ?? [])
+  const entries = (stored.blockedHosts ?? []).filter((entry) =>
+    Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' &&
+    /^[a-z0-9.-]+$/i.test(entry[0]) && Number.isInteger(entry[1]) &&
+    entry[1] >= BLOCK_RULE_ID_BASE && entry[1] < BLOCK_RULE_ID_BASE + MAX_BLOCK_RULES,
+  )
+  const ids = new Set()
+  blockedHosts = new Map()
+  for (const [host, id] of entries) {
+    if (blockedHosts.size >= MAX_BLOCK_RULES || ids.has(id)) continue
+    blockedHosts.set(normalizeHost(host), id)
+    ids.add(id)
+  }
 }
 
 async function saveBlockedHosts() {
@@ -395,7 +421,7 @@ async function saveAllowedHosts() {
 }
 
 function normalizeHost(host) {
-  return host.replace(/^www\./, '')
+  return host.toLowerCase().replace(/^www\./, '').replace(/\.$/, '')
 }
 
 function getHost(rawUrl) {
@@ -433,24 +459,48 @@ async function linkAppTab(tabId, rawUrl) {
 
 function isPassThroughHost(host) {
   const normalizedHost = normalizeHost(host)
-  return Array.from(PASS_THROUGH_HOSTS).some(
-    (passThroughHost) =>
-      normalizedHost === passThroughHost || normalizedHost.endsWith(`.${passThroughHost}`),
-  )
+  return PASS_THROUGH_HOSTS.has(normalizedHost) || normalizedHost.endsWith('.mail.com')
 }
 
 function isMarkedSafeHost(host) {
   const normalizedHost = normalizeHost(host)
-  return Array.from(safeHosts).some(
-    (safeHost) => normalizedHost === safeHost || normalizedHost.endsWith(`.${safeHost}`),
-  )
+  return safeHosts.has(normalizedHost)
 }
 
 function isAllowedHost(host) {
   const normalizedHost = normalizeHost(host)
-  return Array.from(allowedHosts).some(
-    (allowedHost) => normalizedHost === allowedHost || normalizedHost.endsWith(`.${allowedHost}`),
-  )
+  return allowedHosts.has(normalizedHost)
+}
+
+function validateUrlScanResponse(scan) {
+  if (!scan || typeof scan !== 'object' || Array.isArray(scan) || scan.ok === false) {
+    throw new Error('Scan unavailable: malformed URL scan response.')
+  }
+  if (!['Safe', 'Suspicious', 'Dangerous'].includes(scan.status) ||
+      typeof scan.score !== 'number' || !Number.isFinite(scan.score) || scan.score < 0 || scan.score > 100 ||
+      typeof scan.action !== 'string' || typeof scan.blocked !== 'boolean') {
+    throw new Error('Scan unavailable: URL scan response is missing required verdict fields.')
+  }
+  const policyBlocked = scan.categories?.includes('piracy-content') === true
+  const statusBlocked = scan.status === 'Dangerous'
+  const expectedAction = { Safe: 'Allowed', Suspicious: 'Review', Dangerous: 'Blocked' }[scan.status]
+  const contradictory = (scan.blocked && !statusBlocked && !policyBlocked) ||
+    (scan.status === 'Safe' && (scan.action === 'Blocked' || scan.responseStatus === 'Blocked') && !policyBlocked) ||
+    (statusBlocked && (!scan.blocked || scan.action !== 'Blocked')) ||
+    (scan.action !== expectedAction && !(policyBlocked && scan.action === 'Blocked')) ||
+    (scan.action === 'Blocked' && !statusBlocked && !policyBlocked)
+  if (contradictory) throw new Error('Scan unavailable: contradictory URL scan verdict fields.')
+  return scan
+}
+
+function noteScanFailure() {
+  scanFailureCount += 1
+  scanRetryAfter = Date.now() + Math.min(FAILURE_BACKOFF_BASE_MS * (2 ** (scanFailureCount - 1)), FAILURE_BACKOFF_MAX_MS)
+}
+
+function noteScanSuccess() {
+  scanFailureCount = 0
+  scanRetryAfter = 0
 }
 
 function getNextRuleId() {
@@ -540,6 +590,8 @@ async function saveBlockedContext(host, rawUrl, scan) {
       threatName: getThreatName(scan),
       threatType: getDetectedThreat(scan),
       primaryWarning: getPrimaryWarning(scan),
+      coverage: scan?.coverage ?? null,
+      categories: scan?.categories ?? [],
       policyBlocked: piracyPolicyBlocked,
       expiresAt: Date.now() + BLOCK_CONTEXT_TTL_MS,
     },
@@ -564,9 +616,14 @@ function getBlockRule(host, ruleId) {
 
 async function syncBlockRules() {
   const entries = Array.from(blockedHosts.entries())
-  const ruleIds = entries.map(([, ruleId]) => ruleId)
-
-  if (ruleIds.length === 0) return
+  const existingRules = await chrome.declarativeNetRequest.getDynamicRules()
+  const ruleIds = existingRules
+    .filter((rule) => rule.id >= BLOCK_RULE_ID_BASE && rule.id < BLOCK_RULE_ID_BASE + MAX_BLOCK_RULES)
+    .map((rule) => rule.id)
+  if (entries.length > MAX_BLOCK_RULES) {
+    console.warn('[Tracking Threats] Stored blocked-host list exceeds local capacity; restoring supported rules only.')
+  }
+  if (ruleIds.length === 0 && entries.length === 0) return
 
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: ruleIds,
@@ -588,11 +645,18 @@ async function clearPassThroughBlockRules() {
 }
 
 async function syncSafeHosts() {
+  if (safeHostsSyncPromise) return safeHostsSyncPromise
+  if (Date.now() - safeHostsSyncedAt < SAFE_HOST_SYNC_MS) return true
+
+  safeHostsSyncPromise = (async () => {
   try {
-    const response = await fetch(SAFE_HOSTS_URL)
+    const response = await fetch(SAFE_HOSTS_URL, { signal: AbortSignal.timeout(5000) })
     if (!response.ok) throw new Error(`Safe host sync returned ${response.status}`)
     const payload = await response.json()
-    safeHosts = new Set((payload.hosts ?? []).map(normalizeHost).filter(Boolean))
+    if (!payload || !Array.isArray(payload.hosts) || payload.hosts.some((host) => typeof host !== 'string')) {
+      throw new Error('Safe-host response was malformed')
+    }
+    safeHosts = new Set(payload.hosts.map(normalizeHost).filter(Boolean))
 
     const entriesToRemove = Array.from(blockedHosts.entries()).filter(([host]) =>
       isMarkedSafeHost(host),
@@ -609,15 +673,17 @@ async function syncSafeHosts() {
       await saveBlockedHosts()
     }
 
+    safeHostsSyncedAt = Date.now()
     return true
   } catch (error) {
-    await saveStatus({
-      ok: false,
-      lastUrl: 'Safe host sync',
-      error: error.message,
+    safeHostsSyncedAt = Date.now()
+    console.warn('[Tracking Threats] Safe-host refresh unavailable; continuing with the cached list.', {
+      reason: error?.name || 'backend-error',
     })
     return false
   }
+  })().finally(() => { safeHostsSyncPromise = null })
+  return safeHostsSyncPromise
 }
 
 function isTrackableUrl(rawUrl) {
@@ -633,7 +699,7 @@ function isTrackableUrl(rawUrl) {
 }
 
 function remember(url, scan = null) {
-  recentScans.set(url, { scan, timestamp: Date.now() })
+  recentScans.set(getScanCacheKey(url), { scan, timestamp: Date.now() })
   if (recentScans.size > MAX_TRACKED) {
     const oldest = recentScans.keys().next().value
     recentScans.delete(oldest)
@@ -641,13 +707,35 @@ function remember(url, scan = null) {
 }
 
 function getRecentScan(url) {
-  const previous = recentScans.get(url)
+  const key = getScanCacheKey(url)
+  const previous = recentScans.get(key)
   if (!previous) return null
   if (Date.now() - previous.timestamp >= COOLDOWN_MS) {
-    recentScans.delete(url)
+    recentScans.delete(key)
     return null
   }
   return previous.scan
+}
+
+function getScanCacheKey(rawUrl) {
+  try {
+    const url = new URL(rawUrl)
+    url.hash = ''
+    return url.toString()
+  } catch {
+    return rawUrl
+  }
+}
+
+function runDeduplicatedScan(requests, key, createRequest) {
+  const existing = requests.get(key)
+  if (existing) return existing
+
+  const request = Promise.resolve().then(createRequest)
+  requests.set(key, request)
+  return request.finally(() => {
+    if (requests.get(key) === request) requests.delete(key)
+  })
 }
 
 function isBlockedScan(scan) {
@@ -690,7 +778,10 @@ async function rememberBlockedSite(rawUrl, scan = null) {
   let ruleId = blockedHosts.get(host)
   if (!ruleId) {
     ruleId = getNextRuleId()
-    if (!ruleId) return
+    if (!ruleId) {
+      console.warn('[Tracking Threats] Block-rule capacity reached.', { host })
+      return
+    }
     blockedHosts.set(host, ruleId)
     await saveBlockedHosts()
   }
@@ -703,6 +794,16 @@ async function rememberBlockedSite(rawUrl, scan = null) {
     addRules: [getBlockRule(host, ruleId)],
     removeRuleIds: [],
   })
+}
+
+async function ensureBlockedSite(rawUrl, scan) {
+  try {
+    await rememberBlockedSite(rawUrl, scan)
+  } catch (error) {
+    console.warn('[Tracking Threats] Could not persist a blocked-host rule.', {
+      host: getHost(rawUrl), reason: error?.name || 'rule-update-error',
+    })
+  }
 }
 
 async function unblockSite({ rawUrl, host: fallbackHost }) {
@@ -775,7 +876,7 @@ async function saveStatus(status) {
 async function updateBadge(status) {
   if (!chrome.action) return
   const incomplete = status.coverage?.status !== 'complete'
-  const text = !status.ok ? 'OFF' : status.policyBlocked || ['Dangerous', 'Blocked'].includes(status.lastStatus) ? '!'
+  const text = !status.ok ? 'UNV' : status.policyBlocked || ['Dangerous', 'Blocked'].includes(status.lastStatus) ? '!'
     : status.lastStatus === 'Suspicious' ? '?' : incomplete ? '?' : 'OK'
   const color = !status.ok ? '#64748b' : text === '!' ? '#be123c' : text === '?' ? '#b45309' : '#0f766e'
   await Promise.all([
@@ -863,11 +964,26 @@ async function notifyScanResult(rawUrl, scan) {
   }
 }
 
+function notifyScanUnavailable(rawUrl, message) {
+  if (!chrome.notifications?.create) return
+  const host = getHost(rawUrl) || 'This destination'
+  try {
+    Promise.resolve(chrome.notifications.create(`${NOTIFICATION_PREFIX}unavailable-${Date.now()}`, {
+      type: 'basic', iconUrl: 'icons/icon-128.png',
+      title: 'Tracking Threats: scan unavailable',
+      message: `${host}: ${message} Navigation was allowed because no verdict was available.`,
+      priority: 0,
+    })).catch(() => {})
+  } catch {
+    // A notification failure must not affect navigation.
+  }
+}
+
 function openBlockedPage(tabId, rawUrl, scan) {
   if (!tabId || tabId < 0) return
 
   const blockedUrl = chrome.runtime.getURL(
-    `blocked.html?url=${encodeURIComponent(rawUrl)}&score=${encodeURIComponent(
+    `blocked.html?url=${encodeURIComponent(rawUrl)}&host=${encodeURIComponent(getHost(rawUrl))}&score=${encodeURIComponent(
       scan.score,
     )}&status=${encodeURIComponent(scan.status)}&threat=${encodeURIComponent(
       getDetectedThreat(scan),
@@ -888,7 +1004,32 @@ function openBlockedPage(tabId, rawUrl, scan) {
   }
 }
 
-async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
+async function openBlockedPageForCurrentNavigation(tabId, rawUrl, scan, navigationVersion = null) {
+  if (!Number.isInteger(tabId) || tabId < 0) return
+  const host = getHost(rawUrl)
+  if (navigationVersion !== null && tabNavigationVersions.get(tabId) !== navigationVersion) return
+  const latestTarget = tabNavigationTargets.get(tabId)
+  if (latestTarget && (getHost(latestTarget) !== host || getScanCacheKey(latestTarget) !== getScanCacheKey(rawUrl))) {
+    console.debug('[Tracking Threats] Ignored stale scan result for a tab that navigated elsewhere.', { host })
+    return
+  }
+
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    if (!tab || tab.url?.startsWith(chrome.runtime.getURL('blocked.html'))) return
+    const currentHost = getHost(tab.pendingUrl || tab.url || '')
+    if (currentHost && currentHost !== host && (!latestTarget || getHost(latestTarget) !== host)) {
+      console.debug('[Tracking Threats] Ignored stale block result after tab URL changed.', { host })
+      return
+    }
+  } catch {
+    return
+  }
+  if (navigationVersion !== null && tabNavigationVersions.get(tabId) !== navigationVersion) return
+  openBlockedPage(tabId, rawUrl, scan)
+}
+
+async function scanUrl(rawUrl, reason = 'navigation', tabId = null, navigationVersion = null) {
   if (!isTrackableUrl(rawUrl)) return null
   await syncSafeHosts()
   const host = getHost(rawUrl)
@@ -921,61 +1062,83 @@ async function scanUrl(rawUrl, reason = 'navigation', tabId = null) {
   const previewOnly = reason === 'google-search-result'
   const bypassActive = hasBypass(getHost(rawUrl))
 
+  if (Date.now() < scanRetryAfter) {
+    const error = 'Scan unavailable: the scanner is temporarily backing off after repeated failures.'
+    await saveStatus({ ok: false, lastUrl: rawUrl, error })
+    notifyScanUnavailable(rawUrl, error)
+    return { ok: false, error }
+  }
+
   const recentScan = previewOnly ? null : getRecentScan(rawUrl)
   if (recentScan) {
     if (isBlockedScan(recentScan) && !bypassActive) {
-      await rememberBlockedSite(rawUrl, recentScan)
-      openBlockedPage(tabId, rawUrl, recentScan)
+      await ensureBlockedSite(rawUrl, recentScan)
+      await openBlockedPageForCurrentNavigation(tabId, rawUrl, recentScan, navigationVersion)
     }
     return recentScan
   }
 
   if (!previewOnly) remember(rawUrl)
-  try {
-    const clientId = await getClientId()
-    const response = await scanFetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: rawUrl,
-        source: 'browser-extension',
-        reason,
-        preview: previewOnly,
-        clientId,
-      }),
-    })
+  const cacheKey = getScanCacheKey(rawUrl)
+  const scan = await runDeduplicatedScan(inFlightScans, `${previewOnly ? 'preview:' : 'navigation:'}${cacheKey}`, async () => {
+    try {
+      const clientId = await getClientId()
+      const timeoutSignal = AbortSignal.timeout(12000)
+      const response = await scanFetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: rawUrl,
+          source: 'browser-extension',
+          reason,
+          preview: previewOnly,
+          clientId,
+        }),
+        signal: timeoutSignal,
+      })
 
-    if (!response.ok) throw new Error(await getScannerError(response))
-    const scan = await response.json()
-    if (!previewOnly) remember(rawUrl, scan)
-    await saveStatus({
-      ok: true,
-      lastUrl: rawUrl,
-      lastStatus: scan.status,
-      lastScore: scan.score,
-      coverage: scan.coverage,
-      categories: scan.categories,
-      policyBlocked: isPiracyPolicyBlocked(scan),
-      ...getCompactThreatDetails(scan),
-    })
-    if (!previewOnly) {
-      await notifyScanResult(rawUrl, scan)
+      if (!response.ok) throw new Error(await getScannerError(response))
+      const result = validateUrlScanResponse(await response.json())
+      noteScanSuccess()
+      if (!previewOnly) remember(rawUrl, result)
+      await saveStatus({
+        ok: true,
+        lastUrl: rawUrl,
+        lastStatus: result.status,
+        lastScore: result.score,
+        coverage: result.coverage,
+        categories: result.categories,
+        policyBlocked: isPiracyPolicyBlocked(result),
+        ...getCompactThreatDetails(result),
+      })
+      if (!previewOnly && isBlockedScan(result) && !hasBypass(host)) {
+        await ensureBlockedSite(rawUrl, result)
+      }
+      if (!previewOnly) await notifyScanResult(rawUrl, result)
+      console.debug('[Tracking Threats] URL scan completed.', { host: getHost(rawUrl), status: result.status })
+      return result
+    } catch (error) {
+      noteScanFailure()
+      const message = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+        ? 'URL scan timed out; navigation was allowed because no verdict was available.'
+        : error?.message || 'URL scan failed; navigation was allowed because no verdict was available.'
+      try {
+        await saveStatus({ ok: false, lastUrl: rawUrl, error: message })
+      } catch {
+        // A status-storage failure must not prevent the current navigation.
+      }
+      notifyScanUnavailable(rawUrl, message)
+      console.warn('[Tracking Threats] URL scan unavailable; allowing navigation.', {
+        host: getHost(rawUrl), reason: error?.name === 'TimeoutError' ? 'timeout' : 'backend-error',
+      })
+      return { ok: false, error: message }
     }
+  })
 
-    if (!previewOnly && isBlockedScan(scan) && !bypassActive) {
-      await rememberBlockedSite(rawUrl, scan)
-      openBlockedPage(tabId, rawUrl, scan)
-    }
-
-    return scan
-  } catch (error) {
-    await saveStatus({
-      ok: false,
-      lastUrl: rawUrl,
-      error: error.message,
-    })
-    return { ok: false, error: error.message }
+  if (!previewOnly && isBlockedScan(scan) && !bypassActive) {
+    await openBlockedPageForCurrentNavigation(tabId, rawUrl, scan, navigationVersion)
   }
+  return scan
 }
 
 async function previewUrl(rawUrl, reason = 'search-result-preview') {
@@ -1008,7 +1171,7 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
   })
 
   if (!response.ok) throw new Error(await getScannerError(response))
-  return response.json()
+  return validateUrlScanResponse(await response.json())
 }
 
 const blockedDetailsRequests = new Map()
@@ -1042,6 +1205,12 @@ async function recordBlockedVisit(rawUrl) {
   if (!isTrackableUrl(rawUrl)) return null
   await syncSafeHosts()
   const host = getHost(rawUrl)
+  if (Date.now() < scanRetryAfter) {
+    const error = 'Scan unavailable: the scanner is temporarily backing off after repeated failures.'
+    await saveStatus({ ok: false, lastUrl: rawUrl, error })
+    notifyScanUnavailable(rawUrl, error)
+    return { ok: false, error }
+  }
   if (isAllowedHost(host)) {
     await unblockSite({ rawUrl, host })
     return { status: 'Allowed', score: 100, blocked: false, coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [] }
@@ -1066,7 +1235,8 @@ async function recordBlockedVisit(rawUrl) {
     })
 
     if (!response.ok) throw new Error(await getScannerError(response))
-    const scan = await response.json()
+    const scan = validateUrlScanResponse(await response.json())
+    noteScanSuccess()
     remember(rawUrl, scan)
     if (!hasBypass(host) && isBlockedScan(scan)) {
       await rememberBlockedSite(rawUrl, scan)
@@ -1086,6 +1256,7 @@ async function recordBlockedVisit(rawUrl) {
     await notifyScanResult(rawUrl, scan)
     return scan
   } catch (error) {
+    noteScanFailure()
     await saveStatus({
       ok: false,
       lastUrl: rawUrl,
@@ -1169,7 +1340,7 @@ async function scanDownloadUrl(downloadItem, clientId) {
   })
 
   if (!response.ok) throw new Error(await getScannerError(response))
-  const scan = await response.json()
+  const scan = validateUrlScanResponse(await response.json())
   if (isBlockedScan(scan)) await rememberBlockedSite(downloadItem.url, scan)
   return scan
 }
@@ -1262,8 +1433,12 @@ async function scanDownload(downloadItem) {
 }
 
 async function handleTabUrl(tabId, url, reason) {
+  tabNavigationTargets.set(tabId, url)
+  const navigationVersion = (tabNavigationVersions.get(tabId) ?? 0) + 1
+  tabNavigationVersions.set(tabId, navigationVersion)
+  await protectionReady
   if (await linkAppTab(tabId, url)) return
-  scanUrl(url, reason, tabId)
+  await scanUrl(url, reason, tabId, navigationVersion)
 }
 
 function collectRenderedPageSignals() {
@@ -1308,7 +1483,7 @@ async function inspectActivePage() {
     body: JSON.stringify({ url: tab.url, source: 'browser-extension', reason: 'rendered-page-inspection', pageSnapshot: snapshot }),
   })
   if (!response.ok) throw new Error(await getScannerError(response))
-  const scan = await response.json()
+  const scan = validateUrlScanResponse(await response.json())
   remember(tab.url, scan)
   await saveStatus({ ok: true, lastUrl: tab.url, lastStatus: scan.status, lastScore: scan.score,
     coverage: scan.coverage, categories: scan.categories, policyBlocked: isPiracyPolicyBlocked(scan), ...getCompactThreatDetails(scan) })
@@ -1328,14 +1503,14 @@ if (chrome.downloads?.onCreated) {
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    handleTabUrl(tab.id, tab.url, 'tab-complete')
+    handleTabUrl(tab.id, tab.url, 'tab-complete').catch(() => {})
   }
 })
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   try {
     const tab = await chrome.tabs.get(tabId)
-    if (tab.url) handleTabUrl(tab.id, tab.url, 'tab-activated')
+    if (tab.url) await handleTabUrl(tab.id, tab.url, 'tab-activated')
   } catch {
     // Tab may disappear before Chrome returns it.
   }
@@ -1346,13 +1521,26 @@ chrome.webNavigation.onCommitted.addListener((details) => {
     const prior = tabRedirectChains.get(details.tabId) ?? []
     const redirected = details.transitionQualifiers?.some((item) => item === 'server_redirect' || item === 'client_redirect')
     tabRedirectChains.set(details.tabId, redirected ? [...prior, details.url].slice(-5) : [details.url])
-    handleTabUrl(details.tabId, details.url, details.transitionType ?? 'navigation')
+    handleTabUrl(details.tabId, details.url, details.transitionType ?? 'navigation').catch(() => {})
   }
 })
 
-chrome.tabs.onRemoved.addListener((tabId) => tabRedirectChains.delete(tabId))
+// Start scanning as soon as Chrome reports a top-level navigation intent. This
+// cannot suspend the browser's request while the backend evaluates the URL.
+chrome.webNavigation.onBeforeNavigate?.addListener((details) => {
+  if (details.frameId === 0) {
+    handleTabUrl(details.tabId, details.url, 'before-navigation').catch(() => {})
+  }
+})
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  tabRedirectChains.delete(tabId)
+  tabNavigationTargets.delete(tabId)
+  tabNavigationVersions.delete(tabId)
+})
 
 chrome.webNavigation.onErrorOccurred?.addListener(async (details) => {
+  await protectionReady
   const host = getHost(details.url)
   if (details.frameId !== 0 || !details.error?.includes('ERR_BLOCKED_BY_CLIENT') || !blockedHosts.has(host) || hasBypass(host)) return
   const key = getBlockContextKey(host)
@@ -1457,12 +1645,16 @@ chrome.notifications.onClicked.addListener((notificationId) => {
   chrome.notifications.clear(notificationId)
 })
 
-Promise.all([loadBlockedHosts(), loadBypassHosts(), loadAllowedHosts()])
-  .then(syncSafeHosts)
-  .then(clearPassThroughBlockRules)
-  .then(syncBlockRules)
-  .catch(() => {
-    // Storage may be temporarily unavailable during extension startup.
+protectionReady = Promise.all([loadBlockedHosts(), loadBypassHosts(), loadAllowedHosts()])
+  .then(async () => {
+    await syncSafeHosts()
+    await clearPassThroughBlockRules()
+    await syncBlockRules()
+  })
+  .catch((error) => {
+    console.warn('[Tracking Threats] Could not restore navigation protection state.', {
+      reason: error?.name || 'startup-error',
+    })
   })
 
 // MV3 workers suspend: alarms wake the worker, ordinary intervals do not.

@@ -257,10 +257,47 @@ function getDetailsUrl(url, appUrl = APP_URL, scan = null) {
   return detailsUrl.toString()
 }
 
+function isExtensionContextInvalidated(error) {
+  return /extension context invalidated/i.test(String(error?.message ?? error ?? ''))
+}
+
+function sendRuntimeMessage(message, callback) {
+  const contextUnavailable = { ok: false, error: 'Extension context invalidated' }
+  const invoke = (response, lastError = null) => {
+    try {
+      callback(response, lastError)
+    } catch (error) {
+      if (isExtensionContextInvalidated(error)) return
+      throw error
+    }
+  }
+
+  try {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) {
+      invoke(contextUnavailable, contextUnavailable)
+      return
+    }
+    chrome.runtime.sendMessage(message, (response) => {
+      let lastError = null
+      try {
+        lastError = chrome.runtime.lastError ?? null
+      } catch (error) {
+        if (!isExtensionContextInvalidated(error)) throw error
+        invoke(contextUnavailable, error)
+        return
+      }
+      invoke(response, lastError)
+    })
+  } catch (error) {
+    if (!isExtensionContextInvalidated(error)) throw error
+    invoke(contextUnavailable, error)
+  }
+}
+
 function setDetailsHref(anchor, url, scan) {
   anchor.href = getDetailsUrl(url, APP_URL, scan)
-  chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
-    if (chrome.runtime.lastError || !response?.ok || !response.appUrl) return
+  sendRuntimeMessage({ type: 'get-linked-app-url' }, (response, lastError) => {
+    if (lastError || !response?.ok || !response.appUrl) return
     anchor.href = getDetailsUrl(url, response.appUrl, scan)
   })
 }
@@ -305,9 +342,9 @@ function addBadge(anchor, scan) {
     event.stopPropagation()
     const normalized = normalizeCandidate(anchor.getAttribute('href'))
     if (!normalized) return
-    chrome.runtime.sendMessage({ type: 'get-linked-app-url' }, (response) => {
+    sendRuntimeMessage({ type: 'get-linked-app-url' }, (response, lastError) => {
       const appUrl =
-        chrome.runtime.lastError || !response?.ok || !response.appUrl ? APP_URL : response.appUrl
+        lastError || !response?.ok || !response.appUrl ? APP_URL : response.appUrl
       window.open(getDetailsUrl(normalized, appUrl, scan), '_blank', 'noopener,noreferrer')
     })
   }
@@ -715,13 +752,13 @@ function scanGoogleResults() {
     if (scannedResults.has(url)) return
     scannedResults.set(url, null)
 
-    chrome.runtime.sendMessage({
+    sendRuntimeMessage({
       type: 'preview-candidate-url',
       url,
       reason: 'search-result-preview',
-    }, (response) => {
+    }, (response, lastError) => {
       scannedResults.set(url, response?.scan ?? null)
-      if (chrome.runtime.lastError || !response?.ok || !response.scan || response.scan.ok === false) {
+      if (lastError || !response?.ok || !response.scan || response.scan.ok === false) {
         scanStats.failed += 1
         showSearchStatus()
         return

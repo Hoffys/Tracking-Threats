@@ -11,7 +11,7 @@ function extension(fetch) {
   const stored = { threattrackClientId: oldCredential.clientId, threattrackClientToken: oldCredential.token }
   const source = readFileSync(new URL('../../browser-extension/background.js', import.meta.url), 'utf8')
   const sandbox = {
-    URL, fetch, importScripts() {},
+    URL, AbortSignal, fetch, importScripts() {},
     TRACKING_THREATS_CONFIG: { API_BASE_URL: 'https://api.example', APP_URL: 'https://app.example' },
     chrome: {
       runtime: { onMessage: { addListener() {} } },
@@ -134,10 +134,15 @@ function webClient(fetch, linked = false) {
     localStorage: { getItem: (key) => storage.get(key), setItem: (key, value) => storage.set(key, value) },
   }
   const source = readFileSync(new URL('../../src/services/api.js', import.meta.url), 'utf8')
-    .replace('import.meta.env.VITE_API_BASE_URL', 'undefined')
+    .replaceAll('import.meta.env', 'viteEnv')
     .replaceAll('export const ', 'const ')
-  vm.runInNewContext(`${source}\nglobalThis.ensure = ensureClientCredential`, sandbox)
-  return { ensure: sandbox.ensure, storage, location }
+  assert.doesNotMatch(source, /import\.meta/)
+  const context = {
+    ...sandbox,
+    viteEnv: { VITE_API_BASE_URL: '', VITE_CHROME_WEB_STORE_URL: '' },
+  }
+  vm.runInNewContext(`${source}\nglobalThis.ensure = ensureClientCredential`, context)
+  return { ensure: context.ensure, storage, location }
 }
 
 test('web client replaces deleted credentials with a single registration', async () => {

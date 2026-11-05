@@ -49,6 +49,7 @@ const parseTarget = (target) => {
 }
 
 const getHost = (target) => parseTarget(target)?.hostname.toLowerCase().replace(/^www\./, '') ?? ''
+const getExactHost = (target) => parseTarget(target)?.hostname.toLowerCase().replace(/\.$/, '') ?? ''
 
 const isPrivateOrReservedIp = (value) => {
   if (net.isIP(value) === 4) {
@@ -239,7 +240,7 @@ async function checkUrlhausUrl(target) {
 }
 
 async function checkUrlhausHost(target) {
-  const host = getHost(target)
+  const host = getExactHost(target)
   if (!host || net.isIP(host)) return null
 
   const response = await postForm(
@@ -253,20 +254,68 @@ async function checkUrlhausHost(target) {
   }
   if (!response.ok) throw new Error(`URLhaus host lookup returned ${response.status}`)
 
-  const payload = await response.json()
-  const listed = payload.query_status === 'ok'
-  const activeUrls = Number(payload.urls?.length ?? 0)
+  return parseUrlhausHostResponse(host, await response.json())
+}
+
+export function parseUrlhausHostResponse(host, payload) {
+  const exactHost = String(host ?? '').toLowerCase().replace(/\.$/, '')
+  if (!exactHost || !payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('URLhaus host response was malformed')
+  }
+
+  if (payload.query_status === 'no_results') {
+    return {
+      provider: 'URLhaus Host', checked: true, found: false, host: exactHost,
+      urlCount: 0, activeUrlCount: 0, historicalUrlCount: 0, warning: null, deduction: 0,
+    }
+  }
+  if (payload.query_status !== 'ok' || !Array.isArray(payload.urls)) {
+    throw new Error('URLhaus host response was malformed')
+  }
+
+  const records = payload.urls.map((entry) => {
+    if (!entry || typeof entry !== 'object' || typeof entry.url !== 'string') {
+      throw new Error('URLhaus host response contained an invalid URL record')
+    }
+    let parsed
+    try { parsed = new URL(entry.url) } catch {
+      throw new Error('URLhaus host response contained an invalid URL record')
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol) ||
+        (entry.url_status != null && typeof entry.url_status !== 'string')) {
+      throw new Error('URLhaus host response contained an invalid URL record')
+    }
+    return {
+      host: parsed.hostname.toLowerCase().replace(/\.$/, ''),
+      status: entry.url_status === 'online' ? 'online' : 'inactive',
+    }
+  })
+
+  if (records.some((record) => record.host !== exactHost)) {
+    throw new Error('URLhaus host response did not match the queried host')
+  }
+
+  const reportedCount = Number(payload.url_count)
+  if (!Number.isInteger(reportedCount) || reportedCount <= 0 || reportedCount < records.length || records.length === 0) {
+    throw new Error('URLhaus host response had an inconsistent URL count')
+  }
+  const urlCount = reportedCount
+  const activeUrlCount = records.filter((record) => record.status === 'online').length
+  const historicalUrlCount = records.length - activeUrlCount
 
   return {
     provider: 'URLhaus Host',
     checked: true,
-    found: listed,
-    host,
-    urlCount: activeUrls,
-    warning: listed
-      ? `URLhaus reports malware URLs hosted on ${host}${activeUrls ? ` (${activeUrls} recent URL${activeUrls === 1 ? '' : 's'})` : ''}`
-      : null,
-    deduction: listed ? 55 : 0,
+    found: urlCount > 0,
+    host: exactHost,
+    urlCount,
+    activeUrlCount,
+    historicalUrlCount,
+    warning: `URLhaus reports ${urlCount} malware URL${urlCount === 1 ? '' : 's'} on ${exactHost} (${activeUrlCount} active in returned records); the exact URL was not confirmed by the URL lookup`,
+    // A hostname-level match is contextual evidence. It can raise a scan to
+    // Suspicious, while the exact-URL lookup or additional signals are needed
+    // to make an otherwise clean URL Dangerous.
+    deduction: 25,
   }
 }
 

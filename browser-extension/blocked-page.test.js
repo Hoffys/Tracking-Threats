@@ -31,3 +31,27 @@ test('piracy policy blocked page uses caution wording without claiming confirmed
   assert.match(html, /id="block-summary"/)
   assert.match(html, /id="block-warning"/)
 })
+
+test('blocked page summarizes coverage, checked links, and limitations from the scan', () => {
+  const start = source.indexOf('function formatScanDetails(')
+  const end = source.indexOf('\nfunction getDetailsUrl(', start)
+  const sandbox = {}
+  vm.runInNewContext(source.slice(start, end), sandbox)
+
+  const details = sandbox.formatScanDetails({
+    status: 'partial',
+    checkedProviders: 5,
+    totalProviders: 7,
+    linksChecked: 1,
+    totalLinks: 2,
+    limitations: ['Page content and redirects were not inspected.'],
+  }, ['malware-reputation'])
+
+  assert.match(details, /Coverage: partial/)
+  assert.match(details, /5\/7 providers checked/)
+  assert.match(details, /1\/2 links checked/)
+  assert.match(details, /malware-reputation/)
+  assert.match(details, /Page content and redirects were not inspected/)
+  assert.match(html, /id="scan-details"/)
+  assert.match(source, /renderBlockedPage\(\{ \.\.\.context, url: blockedUrl \|\| context\.url, host: blockedHost \}\)/)
+})

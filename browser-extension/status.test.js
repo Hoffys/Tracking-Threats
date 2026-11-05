@@ -9,7 +9,7 @@ test('toolbar badge distinguishes risk, caution, offline and incomplete safe che
   const context = vm.createContext({ chrome: { action: { setBadgeText: async (value) => calls.push(value.text), setBadgeBackgroundColor: async () => {} } } })
   vm.runInContext(source.slice(source.indexOf('async function updateBadge('), source.indexOf('async function getScannerError(')), context)
   for (const [status, expected] of [
-    [{ ok: false }, 'OFF'], [{ ok: true, lastStatus: 'Dangerous' }, '!'],
+    [{ ok: false }, 'UNV'], [{ ok: true, lastStatus: 'Dangerous' }, '!'],
     [{ ok: true, lastStatus: 'Suspicious' }, '?'],
     [{ ok: true, lastStatus: 'Safe', coverage: { status: 'partial' } }, '?'],
     [{ ok: true, lastStatus: 'Safe', coverage: { status: 'complete' } }, 'OK'],
@@ -38,5 +38,9 @@ test('popup live storage updates replace stale risk styles', () => {
   assert.doesNotMatch(context.pill.textContent, /100\/100/)
   assert.match(context.message.textContent, /URL phishing safety score 100\/100/)
   assert.match(context.message.textContent, /file was not scanned/i)
+  context.status = { ok: false, error: 'scanner timed out' }
+  vm.runInContext('renderStatus(status)', context)
+  assert.equal(context.pill.textContent, 'Unavailable')
+  assert.match(context.message.textContent, /Scan unavailable/i)
   assert.match(popup, /chrome\.storage\.onChanged\.addListener/)
 })

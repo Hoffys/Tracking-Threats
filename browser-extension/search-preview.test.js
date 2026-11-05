@@ -173,3 +173,45 @@ test('missing and failed preview replies produce an amber unavailable message', 
   assert.match(banner.children.map((child) => child.textContent).join(' '), /Could not assess/)
   assert.doesNotMatch(banner.children.map((child) => child.textContent).join(' '), /results appear safe/)
 })
+
+test('invalidated extension context in an async runtime callback is handled without changing the fallback link', () => {
+  let callback
+  const sandbox = {
+    URL, URLSearchParams,
+    TRACKING_THREATS_CONFIG: { APP_URL: appUrl },
+    chrome: { runtime: { sendMessage: (_message, done) => { callback = done } } },
+  }
+  vm.runInNewContext(source.slice(0, source.indexOf('function addBadge(')), sandbox)
+  const anchor = {}
+  sandbox.setDetailsHref(anchor, target, scan)
+  assert.doesNotThrow(() => {
+    Object.defineProperty(sandbox.chrome.runtime, 'lastError', {
+      configurable: true,
+      get() { throw new Error('Extension context invalidated.') },
+    })
+    callback({ ok: true, appUrl: 'https://linked.example/' })
+  })
+  assert.equal(new URL(anchor.href).origin, new URL(appUrl).origin)
+})
+
+test('synchronous context invalidation falls back, while unrelated runtime errors still surface', () => {
+  const makeSandbox = (messageError) => ({
+    URL, URLSearchParams,
+    TRACKING_THREATS_CONFIG: { APP_URL: appUrl },
+    chrome: { runtime: { sendMessage() { throw messageError } } },
+  })
+  const invalidated = makeSandbox(new Error('Extension context invalidated.'))
+  vm.runInNewContext(source.slice(0, source.indexOf('function addBadge(')), invalidated)
+  const anchor = {}
+  assert.doesNotThrow(() => invalidated.setDetailsHref(anchor, target, scan))
+  assert.equal(new URL(anchor.href).origin, new URL(appUrl).origin)
+
+  const unrelated = makeSandbox(new Error('Unexpected runtime failure'))
+  vm.runInNewContext(source.slice(0, source.indexOf('function addBadge(')), unrelated)
+  assert.throws(() => unrelated.setDetailsHref({}, target, scan), /Unexpected runtime failure/)
+})
+
+test('all Google result runtime messages use the guarded callback wrapper', () => {
+  assert.equal((source.match(/chrome\.runtime\.sendMessage\(/g) ?? []).length, 1)
+  assert.equal((source.match(/sendRuntimeMessage\(/g) ?? []).length, 4) // definition and three call sites
+})

@@ -1,5 +1,7 @@
 # Tracking Threats Browser Extension
 
+Version 1.0.42 starts URL scans at navigation intent, deduplicates concurrent navigation scans, reuses recent verdicts without fragment-only duplicates, and avoids applying a late verdict to a tab that has moved to another URL. Backend navigation scans time out after 12 seconds and fail open with a warning in extension status. Startup reconciles persistent dynamic rules with remembered blocked hosts. The blocked page displays the current original URL and scan coverage details. MV3 still cannot pause the first request to an unknown URL until the backend verdict returns. No permissions were added.
+
 The extension uses `activeTab` for user-requested rendered-page inspection instead
 of permanent access to every website. URL navigation and download monitoring remain
 in the background; opening the popup and choosing **Inspect this page** temporarily
