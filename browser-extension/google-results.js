@@ -44,9 +44,9 @@ function appendThreatClassification(parent, scan, includeReason = true) {
 
 function appendScanExplanation(parent, scan) {
   if (scan?.threatName && scan?.threatType) {
-    const reason = document.createElement('p')
+    const reason = document.createElement('div')
     reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
-    reason.style.cssText = 'margin:10px 0 0;color:#cbd5e1'
+    reason.style.cssText = 'margin:10px 0 0;border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:10px;color:#cbd5e1'
     parent.appendChild(reason)
   }
   const detail = document.createElement('p')
