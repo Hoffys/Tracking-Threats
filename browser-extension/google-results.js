@@ -21,7 +21,7 @@ function getCategoryText(scan) {
   return [(scan?.categoryWarnings?.length ? 'Content category warnings (not phishing proof): ' + scan.categoryWarnings.join(' ') : ''), risk.length ? 'Risk categories: ' + risk.map((category) => labels[category]).join(', ') + '.' : '', content.length ? 'Content warnings: ' + content.map((category) => labels[category]).join(', ') + '. These do not establish phishing.' : '', piracyCaution].filter(Boolean).join(' ')
 }
 
-function appendScanContext(parent, scan) {
+function appendThreatClassification(parent, scan, includeReason = true) {
   if (scan?.threatName && scan?.threatType) {
     const classification = document.createElement('div')
     classification.style.cssText = 'margin:10px 0 0;border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:10px;color:#e2e8f0'
@@ -31,12 +31,19 @@ function appendScanContext(parent, scan) {
     const type = document.createElement('p')
     type.textContent = `Threat type: ${scan.threatType}${scan.confidence ? ` - Confidence: ${scan.confidence}` : ''}`
     type.style.cssText = 'margin:4px 0 0'
-    const reason = document.createElement('p')
-    reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
-    reason.style.cssText = 'margin:4px 0 0;color:#cbd5e1'
-    classification.append(heading, type, reason)
+    classification.append(heading, type)
+    if (includeReason) {
+      const reason = document.createElement('p')
+      reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
+      reason.style.cssText = 'margin:4px 0 0;color:#cbd5e1'
+      classification.appendChild(reason)
+    }
     parent.appendChild(classification)
   }
+}
+
+function appendScanContext(parent, scan) {
+  appendThreatClassification(parent, scan)
   const detail = document.createElement('p')
   detail.textContent = [getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
   detail.style.cssText = `margin:10px 0 0;color:${hasIncompleteChecks(scan) ? '#fde68a' : '#cbd5e1'}`
@@ -644,7 +651,8 @@ function showClickPreview(url, scan, anchor) {
   score.textContent = `Status: ${style.label} - ${getScoreText(scan)}`
   score.style.cssText = `margin:10px 0 0;color:${accentColor};font-weight:700`
   card.appendChild(score)
-  appendScanContext(card, scan)
+  appendThreatClassification(card, scan, false)
+  appendScanDetailsDisclosure(card, scan)
 
   if (warnings.length > 0) {
     const list = document.createElement('ul')
