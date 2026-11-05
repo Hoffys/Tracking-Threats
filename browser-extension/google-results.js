@@ -42,8 +42,8 @@ function appendThreatClassification(parent, scan, includeReason = true) {
   }
 }
 
-function appendScanExplanation(parent, scan) {
-  if (scan?.threatName && scan?.threatType) {
+function appendScanExplanation(parent, scan, includeReason = true) {
+  if (includeReason && scan?.threatName && scan?.threatType) {
     const reason = document.createElement('div')
     reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
     reason.style.cssText = 'margin:10px 0 0;border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:10px;color:#cbd5e1'
@@ -55,7 +55,7 @@ function appendScanExplanation(parent, scan) {
   parent.appendChild(detail)
 }
 
-function appendScanDetailsDisclosure(parent, scan, includeClassification = true) {
+function appendScanDetailsDisclosure(parent, scan, includeClassification = true, includeReason = true) {
   const details = document.createElement('details')
   details.style.cssText = 'margin-top:10px;border-top:1px solid #263449;padding-top:8px'
   const summary = document.createElement('summary')
@@ -63,7 +63,7 @@ function appendScanDetailsDisclosure(parent, scan, includeClassification = true)
   summary.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 12px/1.4 Arial,sans-serif'
   details.appendChild(summary)
   if (includeClassification) appendThreatClassification(details, scan)
-  appendScanExplanation(details, scan)
+  appendScanExplanation(details, scan, includeReason)
   parent.appendChild(details)
 }
 
@@ -657,8 +657,8 @@ function showClickPreview(url, scan, anchor) {
   score.textContent = `Status: ${style.label} - ${getScoreText(scan)}`
   score.style.cssText = `margin:10px 0 0;color:${accentColor};font-weight:700`
   card.appendChild(score)
-  appendThreatClassification(card, scan, false)
-  appendScanDetailsDisclosure(card, scan, false)
+  appendThreatClassification(card, scan)
+  appendScanDetailsDisclosure(card, scan, false, false)
 
   if (warnings.length > 0) {
     const list = document.createElement('ul')
