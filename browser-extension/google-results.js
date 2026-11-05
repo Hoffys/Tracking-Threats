@@ -42,22 +42,28 @@ function appendThreatClassification(parent, scan, includeReason = true) {
   }
 }
 
-function appendScanContext(parent, scan) {
-  appendThreatClassification(parent, scan)
+function appendScanExplanation(parent, scan) {
+  if (scan?.threatName && scan?.threatType) {
+    const reason = document.createElement('p')
+    reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
+    reason.style.cssText = 'margin:10px 0 0;color:#cbd5e1'
+    parent.appendChild(reason)
+  }
   const detail = document.createElement('p')
   detail.textContent = [getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
   detail.style.cssText = `margin:10px 0 0;color:${hasIncompleteChecks(scan) ? '#fde68a' : '#cbd5e1'}`
   parent.appendChild(detail)
 }
 
-function appendScanDetailsDisclosure(parent, scan) {
+function appendScanDetailsDisclosure(parent, scan, includeClassification = true) {
   const details = document.createElement('details')
   details.style.cssText = 'margin-top:10px;border-top:1px solid #263449;padding-top:8px'
   const summary = document.createElement('summary')
   summary.textContent = 'View more details'
   summary.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 12px/1.4 Arial,sans-serif'
   details.appendChild(summary)
-  appendScanContext(details, scan)
+  if (includeClassification) appendThreatClassification(details, scan)
+  appendScanExplanation(details, scan)
   parent.appendChild(details)
 }
 
@@ -652,7 +658,7 @@ function showClickPreview(url, scan, anchor) {
   score.style.cssText = `margin:10px 0 0;color:${accentColor};font-weight:700`
   card.appendChild(score)
   appendThreatClassification(card, scan, false)
-  appendScanDetailsDisclosure(card, scan)
+  appendScanDetailsDisclosure(card, scan, false)
 
   if (warnings.length > 0) {
     const list = document.createElement('ul')
