@@ -63,7 +63,7 @@ function appendScanDetailsDisclosure(parent, scan, includeClassification = true,
   summary.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 12px/1.4 Arial,sans-serif'
   details.appendChild(summary)
   if (includeClassification) appendThreatClassification(details, scan)
-  appendScanExplanation(details, scan, includeReason)
+  appendScanExplanation(details, scan, includeReason && !includeClassification)
   parent.appendChild(details)
 }
 
