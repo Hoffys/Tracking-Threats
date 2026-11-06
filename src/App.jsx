@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ThreatProvider } from './context/ThreatProvider'
 import { Layout } from './components/Layout'
 import { isPublicDeployment } from './config/deployment'
@@ -33,6 +33,7 @@ const getInitialRoute = () => resolveRoute(window.location.href, isPublicDeploym
 
 function AppShell() {
   const [route, setRoute] = useState(getInitialRoute)
+  const reduceMotion = useReducedMotion()
   useEffect(() => {
     const handlePopState = () => {
       const nextRoute = getInitialRoute()
@@ -68,15 +69,15 @@ function AppShell() {
   return (
     <ThreatProvider pauseAutoRefresh={activePage === 'admin'}>
       <Layout activePage={activePage} onNavigate={handleNavigate}>
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={route.notFound ? 'notFound' : activePage === 'about' ? `${activePage}:${aboutSection}` : activePage}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
           >
-            <Suspense fallback={<div className="rounded-lg border border-slate-200 p-5 text-sm text-slate-500 dark:border-slate-800">Loading page...</div>}>
+            <Suspense fallback={<div role="status" aria-live="polite" className="min-h-40 py-5 text-sm text-slate-500 dark:text-slate-400">Loading page...</div>}>
               {route.notFound ? (
                 <div className="space-y-3 rounded-lg border border-slate-200 p-6 dark:border-slate-800">
                   <h1 className="text-xl font-semibold">Page not found</h1>
