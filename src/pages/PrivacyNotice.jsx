@@ -2,6 +2,8 @@ import {
   Database,
   ExternalLink,
   FileWarning,
+  Globe2,
+  HardDrive,
   LockKeyhole,
   MailCheck,
   SearchCheck,
@@ -11,39 +13,49 @@ import {
 
 const sections = [
   {
+    icon: Globe2,
+    title: 'Automatic website URL monitoring',
+    body: 'The browser extension automatically checks eligible top-level website navigation URLs. A URL sent for checking can include its host, path, and query parameters. URL scans are sent to the Tracking Threats backend for analysis and may be saved in this browser client’s Scan History. The service may also request a submitted public URL to inspect the page and its redirects. This monitoring does not wait for a separate confirmation on each visit. URLs that are locally allowed or otherwise excluded from scanning may not be sent.',
+  },
+  {
     icon: SearchCheck,
-    title: 'Google Search Results Monitoring',
-    body: 'Search-result monitoring stays off until you choose a mode in the browser search monitor. Saved monitoring sends eligible destination URLs from visible search results to the Tracking Threats backend to detect phishing and suspicious links, and saves the scan result and relevant URL information in Scan History for this browser client. Preview-only monitoring sends eligible URLs for scanning through the existing preview path and does not create Scan History records. Depending on service configuration, URL or domain indicators may be sent to the reputation providers listed in this notice. The feature does not collect search terms entered on the search page or unrelated page content; a destination URL may itself contain URL parameters. Saved scan records follow the service retention setting (30 days by default). You can review, change, or turn off monitoring from Search Monitor privacy settings. Turning it off stops future search-result scans but does not remove records already saved.',
-  },
-  {
-    icon: Database,
-    title: 'Extension downloads and usage',
-    body: 'We count extension ZIP download requests as an aggregate, including repeat requests. Authenticated clients record their latest server contact time. While enabled, the extension reports its random client ID, version, and activity timestamp about every five minutes while the browser is running. Administrators use these records to monitor recently active browser clients, not identify unique people or Google accounts. Usage timestamps are removed when the client is deleted; the anonymous aggregate download count remains.',
-  },
-  {
-    icon: Database,
-    title: 'Data processed',
-    body: 'The service processes the submitted URL, sender details, message text, or a limited file-text preview to perform the requested scan. It records a random client and scan ID, redacted target metadata, SHA-256 where available, verdict, score, evidence, timestamps, and methodology version.',
-  },
-  {
-    icon: LockKeyhole,
-    title: 'Storage and access',
-    body: 'Production is configured with STORE_SCAN_CONTENT=false, so raw email bodies, messages, and extracted file text are not retained after analysis. Results are stored in a private server-side scan repository. Each browser has a separate access credential; administrators can view redacted outcomes and operational logs, not raw submitted content.',
-  },
-  {
-    icon: ExternalLink,
-    title: 'External providers',
-    body: 'Depending on configuration, URLs, domains, IP addresses, or file hashes may be sent to VirusTotal, Google Safe Browsing, URLhaus, PhishTank, AbuseIPDB, and DNS services. Railway hosts the application and stored results. Processing may occur outside the Philippines.',
-  },
-  {
-    icon: Trash2,
-    title: 'Retention and deletion',
-    body: 'Scan records expire according to the configured retention setting (30 days by default). Security audit logs expire according to their configured retention setting (90 days by default). Clear History removes the current client scan records. Delete My Data also removes saved report-email settings and revokes the browser credential. Administrators may process verified deletion requests, with the action logged.',
+    title: 'Search-result monitoring',
+    body: 'Search-result monitoring stays off until you choose a mode in the browser search monitor. It supports Google, Bing, DuckDuckGo, Yahoo, Brave, Ecosia, Startpage, and Yandex. Saved monitoring sends eligible destination URLs from visible results to the backend and saves scan records in Scan History. Preview-only sends eligible URLs for analysis without creating Scan History records. Turning monitoring off stops future search-result scans; it does not delete existing records. This feature does not send search terms or unrelated search-page content, although a destination URL may itself contain query parameters. You can review or change this choice in Search Monitor privacy settings.',
   },
   {
     icon: MailCheck,
     title: 'Browser email consent',
-    body: 'The browser extension keeps webmail scanning off until the user accepts the confidentiality notice. When enabled, it may process the visible sender, subject, message text, links, and visible Gmail inbox previews. Consent can be withdrawn at any time from the webmail monitor.',
+    body: 'Email scanning is off until you accept the confidentiality notice. After consent, the extension can inspect opened messages on supported Gmail, Outlook, Yahoo Mail, Proton Mail, iCloud Mail, Zoho Mail, AOL Mail, and Mail.com pages. It sends the visible sender, subject, message text, and links to the backend for analysis. On Gmail, you can also scan visible inbox previews in batches; those previews include sender, subject, snippet, and the row link. Messages may contain personal, health, financial, or authentication information. Do not scan messages unless you are authorized to submit them. Use the monitor’s Turn off control to withdraw consent and stop future email scans. Withdrawing consent does not delete scan records already saved.',
+  },
+  {
+    icon: FileWarning,
+    title: 'User-triggered page inspection',
+    body: 'If you choose Inspect this page from the extension popup, the extension reads page text and inline script text in the active tab to calculate inspection signals. It sends the page URL, title, recent redirect URLs, password-field and form counts, external form-action and hidden-frame counts, and two indicators: whether page text contains credential-related wording and whether inline scripts match obfuscation patterns. The full page text, HTML, and script text are not included in that snapshot. The backend may also request the submitted public URL for its own page inspection.',
+  },
+  {
+    icon: Database,
+    title: 'Extension downloads and usage',
+    body: 'When a browser download starts, the extension sends its source URL for scanning and sends the file name, MIME type, and size for a separate file check. This extension feature does not upload the downloaded file’s bytes. The extension also reports its client ID, version, and browser name when it starts and about every five minutes while running; the server records its latest contact time. If you create or pair a device, the service receives the device name you enter (when creating one), browser name, and pairing code. Extension ZIP download requests are counted in aggregate, including repeat requests.',
+  },
+  {
+    icon: HardDrive,
+    title: 'Data processed and stored',
+    body: 'The backend processes submitted URLs, consented email sender/subject/body text, download metadata, and page-inspection signals to produce scan results. If you use the web app’s separate file scanner, the browser sends the file name, type, size, SHA-256 hash, and supported extracted text for analysis; it does not send the original file bytes. Saved records can include a client and scan ID, redacted target information, file hashes where available, verdicts, scores, evidence, timestamps, and methodology details. Search previews are not added to Scan History. Whether raw submitted scan content is saved depends on the server’s storage configuration. When content storage is disabled, raw email/message text and extracted uploaded-file text are not retained after analysis; when it is enabled, that content may be stored with the scan record. The current production setting has not been verified for this notice.',
+  },
+  {
+    icon: LockKeyhole,
+    title: 'Storage and access',
+    body: 'The extension stores its random client ID and access token, search and email consent choices, settings such as the Gmail batch size, current scan status (which may include the last URL), and blocked-host information in Chrome extension storage on your device. The token is sent to the Tracking Threats backend to authenticate extension requests. The backend receives network request metadata, including the connecting IP address, and uses request IP for rate limiting; this notice does not verify Railway’s infrastructure log retention. Server-side scan records are associated with the browser client and are available through that client’s access controls. Stored content and the information administrators can access depend on server configuration; this notice does not assume that raw-content storage is disabled in production.',
+  },
+  {
+    icon: ExternalLink,
+    title: 'External providers',
+    body: 'Depending on server configuration and scan type, reputation checks may share submitted URLs, extracted link URLs, domains, IP indicators, or file hashes with VirusTotal, Google Safe Browsing, URLhaus, PhishTank, AbuseIPDB, DNS services, MalwareBazaar, or MetaDefender. These integrations are conditional; this notice does not claim that any particular provider is currently active. If scan reports or history digests are enabled and configured, the report recipient and the configured SMTP service or Resend may receive report contents such as targets, results, timestamps, warnings, and recommendations. The application is hosted on Railway. External providers may process data under their own terms and in locations outside the Philippines.',
+  },
+  {
+    icon: Trash2,
+    title: 'Retention and deletion',
+    body: 'Scan records, security audit logs, and inactive client records expire according to configurable server retention settings. The server code defaults are 30 days for scan records, 90 days for audit logs, and 180 days without relevant client activity for client credentials; deployment settings can change these periods, and the current production values have not been verified here. Clear History removes the current client’s scan history. Delete My Data removes server-side scan records and related evidence, audit records, and saved report-email settings, and revokes the browser credential. This does not clear data stored locally by the extension. To remove local extension data, remove Tracking Threats Browser Monitor from Chrome’s extension settings; this also disables its monitoring. Removing the extension does not itself delete server-side records.',
   },
 ]
 
@@ -55,8 +67,9 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
           <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.10</p>
           <h1 className="mt-1 text-2xl font-semibold">How scan data is handled</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Tracking Threats processes submitted data to identify phishing and malware indicators,
-            explain the result, maintain security records, and deliver reports selected by the user.
+            Tracking Threats scans eligible website URLs, search-result links, consented email, and
+            download metadata for security threats. The information handled depends on the feature
+            you use and the choices you make.
           </p>
         </header>
       )}
@@ -66,8 +79,9 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
           <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.10</p>
           <h2 className="mt-1 text-xl font-semibold">How scan data is handled</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Tracking Threats processes submitted data to identify phishing and malware indicators,
-            explain the result, maintain security records, and deliver reports selected by the user.
+            Tracking Threats scans eligible website URLs, search-result links, consented email, and
+            download metadata for security threats. The information handled depends on the feature
+            you use and the choices you make.
           </p>
         </div>
       )}
@@ -87,9 +101,13 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
           <ShieldCheck size={20} className="text-teal-500" />
           <h2 className="mt-3 font-semibold">Your choices and rights</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            Do not submit an item you are not authorized to process. You may clear scan history,
-            remove notification recipients, request correction, object to processing, or delete
-            the client data available through this browser session.
+            Search and email monitoring choices can be changed in their respective extension
+            controls. You may clear scan history, remove notification recipients, or use Delete My
+            Data in Settings to remove the server-side data associated with this browser client.
+            The extension has no separate clear-all local-storage control; removing it in Chrome
+            clears its local extension data and disables monitoring. For a correction or objection,
+            contact the project team through the names shown in Settings. Do not submit content you
+            are not authorized to process.
           </p>
           <button type="button" onClick={() => onNavigate?.('settings')} className="mt-4 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white">Open data controls</button>
         </div>
