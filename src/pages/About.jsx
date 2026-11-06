@@ -24,6 +24,20 @@ export function About({ aboutSection = 'methodology', onNavigate }) {
         </p>
       </header>
 
+      <p className="text-sm text-slate-600 dark:text-slate-300">
+        Need a shareable copy?{' '}
+        <a
+          href="/privacy"
+          onClick={(event) => {
+            event.preventDefault()
+            onNavigate?.('privacy-policy')
+          }}
+          className="font-semibold text-teal-700 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300 dark:hover:text-teal-200"
+        >
+          View the Privacy Policy
+        </a>
+      </p>
+
       <div
         className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800"
         role="tablist"

@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ThreatProvider } from './context/ThreatProvider'
 import { Layout } from './components/Layout'
 import { isPublicDeployment } from './config/deployment'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })))
 const LiveMonitor = lazy(() => import('./pages/LiveMonitor').then((module) => ({ default: module.LiveMonitor })))
@@ -12,6 +12,7 @@ const Alerts = lazy(() => import('./pages/Alerts').then((module) => ({ default: 
 const Learn = lazy(() => import('./pages/Learn').then((module) => ({ default: module.Learn })))
 const Settings = lazy(() => import('./pages/Settings').then((module) => ({ default: module.Settings })))
 const About = lazy(() => import('./pages/About').then((module) => ({ default: module.About })))
+const PublicPrivacyPolicy = lazy(() => import('./pages/PublicPrivacyPolicy').then((module) => ({ default: module.PublicPrivacyPolicy })))
 const Admin = lazy(() => import('./pages/Admin').then((module) => ({ default: module.Admin })))
 
 const pages = {
@@ -22,6 +23,7 @@ const pages = {
   alerts: Alerts,
   learn: Learn,
   about: About,
+  privacyPolicy: PublicPrivacyPolicy,
   settings: Settings,
   admin: Admin,
 }
@@ -38,6 +40,9 @@ const publicPages = new Set([
 ])
 
 const getInitialRoute = () => {
+  if (window.location.pathname.replace(/\/$/, '') === '/privacy') {
+    return { page: 'privacyPolicy', aboutSection: 'methodology' }
+  }
   const params = new URLSearchParams(window.location.search)
   const requestedPage = params.get('page')
   const legacyAboutSection = ['methodology', 'privacy'].includes(requestedPage)
@@ -55,16 +60,27 @@ const getInitialRoute = () => {
 
 function AppShell() {
   const [route, setRoute] = useState(getInitialRoute)
+  useEffect(() => {
+    const handlePopState = () => setRoute(getInitialRoute())
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
   const { page: activePage, aboutSection } = route
   const ActivePage = pages[activePage]
 
   const handleNavigate = (page) => {
+    if (page === 'privacy-policy') {
+      setRoute({ page: 'privacyPolicy', aboutSection: 'methodology' })
+      window.history.pushState({}, '', '/privacy')
+      return
+    }
     const requestedAboutSection = ['methodology', 'privacy'].includes(page) ? page : null
     const nextPage = requestedAboutSection ? 'about' : page === 'email' ? 'manual' : page
     const safePage = isPublicDeployment && !publicPages.has(nextPage) ? 'manual' : nextPage
     const nextAboutSection = requestedAboutSection ?? (safePage === 'about' ? aboutSection : 'methodology')
     setRoute({ page: safePage, aboutSection: nextAboutSection })
     const url = new URL(window.location.href)
+    url.pathname = '/'
     url.searchParams.set('page', safePage)
     if (safePage === 'about') url.searchParams.set('section', nextAboutSection)
     else url.searchParams.delete('section')
@@ -72,7 +88,8 @@ function AppShell() {
     url.searchParams.delete('scan')
     url.searchParams.delete('preview')
     url.hash = ''
-    window.history.replaceState({}, '', url)
+    if (window.location.pathname !== '/') window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`)
+    else window.history.replaceState({}, '', url)
   }
 
   return (
