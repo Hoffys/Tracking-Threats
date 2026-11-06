@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { useThreats } from '../hooks/useThreats'
+import { getSystemStatusPresentation } from '../context/systemHealth'
 import { isPublicDeployment } from '../config/deployment'
 
 const formatTime = (date) =>
@@ -61,9 +62,11 @@ export function LiveMonitor({ onNavigate }) {
     liveFeed,
     liveScanCount,
     systemActive,
+    systemStatus,
     systemLogs,
     activitySyncError,
   } = useThreats()
+  const systemPresentation = getSystemStatusPresentation(systemStatus)
   const [showSystemLogs, setShowSystemLogs] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [pausedFeed, setPausedFeed] = useState([])
@@ -197,16 +200,16 @@ export function LiveMonitor({ onNavigate }) {
               : '0 0 0 rgba(16,185,129,0)',
           }}
           transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-          className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4"
+          className={`rounded-lg border p-4 ${systemPresentation.panel}`}
         >
-          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+          <div className={`flex items-center gap-2 text-sm font-semibold ${systemPresentation.text}`}>
             <span className="relative flex h-3 w-3 items-center justify-center">
               {systemActive && (
                 <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400 opacity-75" />
               )}
-              <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.95)]" />
+              <span className={`relative h-2.5 w-2.5 rounded-full ${systemPresentation.dot}`} />
             </span>
-            {systemActive ? 'System Active' : 'System Idle'}
+            System {systemPresentation.label}
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
             {isPublicDeployment

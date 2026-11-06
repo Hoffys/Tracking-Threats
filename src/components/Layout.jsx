@@ -19,6 +19,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
 import { isPublicDeployment } from '../config/deployment'
 import { useThreats } from '../hooks/useThreats'
+import { getSystemStatusPresentation } from '../context/systemHealth'
 import { AnnouncementCenter } from './AnnouncementCenter'
 import { GetExtension } from './GetExtension'
 
@@ -48,7 +49,9 @@ export function Layout({ activePage, children, onNavigate }) {
     setDarkMode,
     stats,
     systemActive,
+    systemStatus,
   } = useThreats()
+  const systemPresentation = getSystemStatusPresentation(systemStatus)
 
   const renderNavItem = (item, variant = 'sidebar') => {
     const Icon = item.icon
@@ -125,20 +128,15 @@ export function Layout({ activePage, children, onNavigate }) {
         </nav>
 
         <div className="space-y-3 border-t border-emerald-100 pt-4 dark:border-slate-800">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/70 dark:bg-emerald-950/25">
+          <div className={`rounded-lg border p-3 ${systemPresentation.panel}`}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-semibold">System</span>
-              <span className="relative flex h-3 w-3 items-center justify-center">
+              <span className="text-xs font-semibold">{systemPresentation.label}</span>
+              <span className="relative flex h-3 w-3 items-center justify-center" aria-label={`System ${systemPresentation.label}`}>
                 {systemActive && (
                   <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400 opacity-75" />
                 )}
-                <span
-                  className={`relative h-2.5 w-2.5 rounded-full ${
-                    systemActive
-                      ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.95)]'
-                      : 'bg-slate-400'
-                  }`}
-                />
+                <span className={`relative h-2.5 w-2.5 rounded-full ${systemPresentation.dot}`} />
               </span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-emerald-700 dark:text-emerald-300">
@@ -195,20 +193,14 @@ export function Layout({ activePage, children, onNavigate }) {
 
           <div className="flex items-center gap-2">
             <GetExtension />
-            <div className="hidden items-center gap-2 rounded-full border border-emerald-400 bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 md:flex">
+            <div className={`hidden items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium md:flex ${systemPresentation.badge}`}>
               <span className="relative flex h-3 w-3 items-center justify-center">
                 {systemActive && (
                   <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400 opacity-75" />
                 )}
-                <span
-                  className={`relative h-2.5 w-2.5 rounded-full ${
-                    systemActive
-                      ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.95)]'
-                      : 'bg-slate-400'
-                  }`}
-                />
+                <span className={`relative h-2.5 w-2.5 rounded-full ${systemPresentation.dot}`} />
               </span>
-              {systemActive ? 'System Active' : 'System Idle'}
+              System {systemPresentation.label}
             </div>
             <div className="status-glow hidden items-center gap-2 rounded-full border border-emerald-100 bg-white/70 px-3 py-2 text-sm text-emerald-800 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300 lg:flex">
               <Activity size={16} className="activity-glow text-emerald-500" />

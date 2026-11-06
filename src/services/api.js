@@ -137,7 +137,7 @@ const adminRequest = (path, token, options = {}) =>
 const clientQuery = (clientId) => (clientId ? `?clientId=${encodeURIComponent(clientId)}` : '')
 
 export const apiService = {
-  getHealth: () => request('/health'),
+  getHealth: (options = {}) => request('/health', { ...options, cache: 'no-store' }),
   getPublicAnnouncements: () => request('/public/announcements', { cache: 'no-store' }),
   getPublicActivity: (clientId) =>
     clientRequest(`/public/activity/${encodeURIComponent(clientId)}`, clientId),

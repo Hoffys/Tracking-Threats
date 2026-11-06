@@ -3,6 +3,7 @@ import { ThreatContext } from './ThreatContext'
 import { isPublicDeployment } from '../config/deployment'
 import { apiService, clearClientCredential, ensureClientCredential, readClientCredential } from '../services/api'
 import { coordinateRefresh, createRefreshPolling } from './refreshPolling'
+import { createSystemHealthPolling } from './systemHealth'
 
 const emptyStats = {
   blocked: 0,
@@ -219,7 +220,8 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
     isPublicDeployment ? initialPublicScans.length : 0,
   )
   const [systemLogs, setSystemLogs] = useState([])
-  const [systemActive, setSystemActive] = useState(false)
+  const [systemStatus, setSystemStatus] = useState('checking')
+  const systemActive = systemStatus === 'active'
   const [activitySyncError, setActivitySyncError] = useState('')
   const [stats, setStats] = useState(
     isPublicDeployment ? getPublicStats(initialPublicScans) : emptyStats,
@@ -236,7 +238,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
   const latestDangerousAlertId = useRef(null)
   const refreshInFlightRef = useRef(null)
 
-  const applyPublicScans = useCallback((nextScans, health = {}) => {
+  const applyPublicScans = useCallback((nextScans) => {
     const publicAlerts = nextScans
       .filter((scan) => scan.status === 'Dangerous' || scan.blocked)
       .map(toPublicAlert)
@@ -248,7 +250,6 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
     setLiveFeed(nextScans.map(toPublicLiveEvent))
     setSystemLogs([])
     setLiveScanCount(nextScans.length)
-    setSystemActive(Boolean(health.systemActive ?? true))
     setStats(getPublicStats(nextScans))
   }, [])
 
@@ -259,15 +260,12 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
         if (publicClientId) clearPublicClientStorage(publicClientId)
         setPublicClientId(clientId)
         setNotificationSettings(defaultNotificationSettings)
-        applyPublicScans([], { systemActive: true })
+        applyPublicScans([])
         return
       }
-      const [health, activity] = await Promise.all([
-        apiService.getHealth(),
-        publicClientId
-          ? apiService.getPublicActivity(publicClientId)
-          : Promise.resolve(null),
-      ])
+      const activity = publicClientId
+        ? await apiService.getPublicActivity(publicClientId)
+        : null
       const nextScans = activity?.scans
         ? filterVisiblePublicScans(
             mergePublicScans(activity.scans, readPublicScans(publicClientId)),
@@ -275,7 +273,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
           )
         : filterVisiblePublicScans(readPublicScans(publicClientId), publicClientId)
       writePublicScans(nextScans, publicClientId)
-      applyPublicScans(nextScans, health)
+      applyPublicScans(nextScans)
       setActivitySyncError('')
       return
     }
@@ -298,7 +296,6 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
     setLiveFeed(feed)
     setSystemLogs(logs)
     setLiveScanCount(nextStats.liveScanCount ?? nextStats.total ?? 0)
-    setSystemActive(Boolean(nextStats.systemActive))
     setStats({
       blocked: nextStats.blocked,
       clean: nextStats.clean,
@@ -360,6 +357,15 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
     return polling.start()
   }, [pauseAutoRefresh, refreshData])
 
+  useEffect(() => createSystemHealthPolling({
+    documentRef: document,
+    getHealth: apiService.getHealth,
+    onStatus: setSystemStatus,
+    intervalMs: 30_000,
+    setIntervalFn: window.setInterval.bind(window),
+    clearIntervalFn: window.clearInterval.bind(window),
+  }), [])
+
   const createScan = useCallback(
     async ({
       type,
@@ -383,7 +389,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
         if (publicClientId) clearPublicClientStorage(publicClientId)
         setPublicClientId(clientId)
         setNotificationSettings(defaultNotificationSettings)
-        applyPublicScans([], { systemActive: true })
+        applyPublicScans([])
       }
       const scan =
         type === 'URL' || type === 'Domain'
@@ -429,7 +435,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
           ),
         ].slice(0, 50)
         writePublicScans(nextScans, clientId)
-        applyPublicScans(nextScans, { systemActive: true })
+        applyPublicScans(nextScans)
       } else {
         refreshData().catch(console.error)
       }
@@ -453,7 +459,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
       const clientId = (await ensureClientCredential()).clientId
       await apiService.deletePublicHistory(clientId)
       clearPublicClientStorage(clientId)
-      applyPublicScans([], { systemActive: true })
+      applyPublicScans([])
       return
     }
 
@@ -471,7 +477,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
       setPublicClientId('')
       localStorage.removeItem('threattrack:notification-settings')
       setNotificationSettings(defaultNotificationSettings)
-      applyPublicScans([], { systemActive: true })
+      applyPublicScans([])
       ensureClientCredential()
         .then(({ clientId: nextClientId }) => setPublicClientId(nextClientId))
         .catch(console.error)
@@ -586,6 +592,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
       stats,
       systemLogs,
       systemActive,
+      systemStatus,
       reviewThreat,
       threatAuditLogs,
     }),
@@ -610,6 +617,7 @@ export function ThreatProvider({ children, pauseAutoRefresh = false }) {
       stats,
       systemLogs,
       systemActive,
+      systemStatus,
       alerts,
       reviewThreat,
       threatAuditLogs,

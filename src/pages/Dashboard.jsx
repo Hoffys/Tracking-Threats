@@ -16,6 +16,7 @@ import { Panel } from '../components/Panel'
 import { RiskBadge } from '../components/RiskBadge'
 import { StatCard } from '../components/StatCard'
 import { isPublicDeployment } from '../config/deployment'
+import { getSystemStatusPresentation } from '../context/systemHealth'
 
 const dayFormatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' })
 
@@ -57,7 +58,8 @@ const getLastSevenDays = (scans) => {
 }
 
 export function Dashboard({ onNavigate }) {
-  const { alerts, flaggedThreats, scanHistory, stats, threatAuditLogs } = useThreats()
+  const { alerts, flaggedThreats, scanHistory, stats, systemStatus, threatAuditLogs } = useThreats()
+  const systemPresentation = getSystemStatusPresentation(systemStatus)
   const tutorialSteps = isPublicDeployment
     ? [
         {
@@ -155,23 +157,25 @@ export function Dashboard({ onNavigate }) {
   return (
     <div className="space-y-5">
       <section className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
-        <div className="rounded-lg border border-emerald-300 bg-emerald-100/80 p-5 text-emerald-950 shadow-[0_16px_36px_rgba(5,150,105,0.12)] dark:border-emerald-700 dark:bg-emerald-950/35 dark:text-white">
+        <div className={`rounded-lg border p-5 ${systemPresentation.panel}`}>
           <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
             Automated threat detection
           </p>
           <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-4">
-              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-emerald-500 text-white shadow-[0_14px_28px_rgba(5,150,105,0.25)]">
+              <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-lg ${systemPresentation.icon}`}>
                 <ShieldAlert size={30} />
               </span>
               <div className="min-w-0">
                 <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-                  System Active & Monitoring
+                  System {systemPresentation.label}
                 </h1>
-                <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-200">
-                  {isPublicDeployment
-                    ? 'Personal scan tracking is active in this browser'
-                    : 'All protection modules operational'}
+                <p className={`mt-1 text-sm ${systemPresentation.text}`}>
+                  {systemStatus === 'active'
+                    ? 'The backend health check passed.'
+                    : systemStatus === 'unavailable'
+                      ? 'The backend health check failed. Scans may be unavailable.'
+                      : 'Checking backend health…'}
                 </p>
               </div>
             </div>
