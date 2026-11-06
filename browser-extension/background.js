@@ -12,6 +12,8 @@ const FAILURE_BACKOFF_BASE_MS = 5000
 const FAILURE_BACKOFF_MAX_MS = 5 * 60 * 1000
 const SAFE_HOST_SYNC_MS = 5000
 const MAX_TRACKED = 200
+const MAX_SEARCH_RESULT_SCAN_CACHE = 200
+const SEARCH_RESULT_SCAN_CACHE_TTL_MS = 10 * 60 * 1000
 const BLOCK_RULE_ID_BASE = 10000
 const MAX_BLOCK_RULES = 250
 const UNBLOCK_BYPASS_MS = 30000
@@ -49,6 +51,7 @@ const PASS_THROUGH_HOSTS = new Set([
 
 const recentScans = new Map()
 const inFlightScans = new Map()
+const searchResultScanCache = new Map()
 let blockedHosts = new Map()
 const bypassHosts = new Map()
 const notificationTargets = new Map()
@@ -1174,6 +1177,64 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
   return validateUrlScanResponse(await response.json())
 }
 
+async function scanSearchResultUrl(rawUrl, reason = 'search-result-preview') {
+  if (!isTrackableUrl(rawUrl)) return null
+  await syncSafeHosts()
+  const host = getHost(rawUrl)
+  if (isAllowedHost(host) || isMarkedSafeHost(host)) {
+    return {
+      type: 'URL',
+      target: rawUrl,
+      score: 100,
+      status: 'Safe',
+      coverage: { status: 'local-only', checkedProviders: 0, totalProviders: 0, limitations: ['Allowed by a local exception; reputation checks were not run.'] }, categories: [],
+      action: 'Allowed',
+      blocked: false,
+      warningSigns: [],
+      recommendations: ['This site is currently allowed in Tracking Threats.'],
+    }
+  }
+
+  const key = getScanCacheKey(rawUrl)
+  const cached = searchResultScanCache.get(key)
+  if (cached && (cached.pending || cached.expiresAt > Date.now())) {
+    searchResultScanCache.delete(key)
+    searchResultScanCache.set(key, cached)
+    return cached.promise
+  }
+  if (cached) searchResultScanCache.delete(key)
+
+  const entry = { pending: true, expiresAt: Infinity, promise: null }
+  entry.promise = (async () => {
+    try {
+      const response = await scanFetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: rawUrl,
+          source: 'browser-search-monitor',
+          reason,
+          preview: false,
+        }),
+      })
+      if (!response.ok) throw new Error(await getScannerError(response))
+      const scan = validateUrlScanResponse(await response.json())
+      return scan
+    } catch (error) {
+      return { ok: false, error: error?.message || 'URL scan failed.' }
+    } finally {
+      entry.pending = false
+      entry.expiresAt = Date.now() + SEARCH_RESULT_SCAN_CACHE_TTL_MS
+    }
+  })()
+  searchResultScanCache.set(key, entry)
+  while (searchResultScanCache.size > MAX_SEARCH_RESULT_SCAN_CACHE) {
+    const oldest = searchResultScanCache.keys().next().value
+    searchResultScanCache.delete(oldest)
+  }
+  return entry.promise
+}
+
 const blockedDetailsRequests = new Map()
 
 async function prepareBlockedDetails(rawUrl, scanId = '') {
@@ -1579,6 +1640,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message?.type === 'preview-candidate-url' && message.url) {
     previewUrl(message.url, message.reason ?? 'search-result-preview')
+      .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'scan-search-result-url' && message.url) {
+    scanSearchResultUrl(message.url, message.reason ?? 'search-result-preview')
       .then((scan) => sendResponse({ ok: true, scan }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true

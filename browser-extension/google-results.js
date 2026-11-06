@@ -68,6 +68,7 @@ function appendScanDetailsDisclosure(parent, scan, includeClassification = true,
 }
 
 const MAX_RESULTS_TO_SCAN = 50
+const MAX_RESULTS_PER_PAGE = MAX_RESULTS_TO_SCAN
 const GOOGLE_REDIRECT_PATHS = new Set(['/url', '/interstitial'])
 const SEARCH_ENGINE_HOSTS = [
   'google.com',
@@ -89,6 +90,11 @@ const SEARCH_RESULT_SELECTORS = [
   'a[href][data-testid*="result"]',
   'main a[href]',
 ]
+const ADVERTISEMENT_SELECTORS = [
+  '#tads', '#tadsb', '[data-text-ad]', '[data-ad-slot]', '[data-testid*="advert"]', '[data-testid*="sponsor"]',
+  '.uEierd', '.b_ad', '.result--ad',
+  '[aria-label*="Sponsored" i]', '[aria-label*="Advertisement" i]',
+].join(',')
 const RESULT_CONTAINER_SELECTORS = [
   'article',
   '.b_algo',
@@ -122,6 +128,10 @@ function isVisible(element) {
   return rect.width > 0 && rect.height > 0
 }
 
+function isAdvertisement(anchor) {
+  return Boolean(anchor.closest(ADVERTISEMENT_SELECTORS))
+}
+
 function normalizeCandidate(rawHref) {
   try {
     const url = new URL(rawHref, window.location.href)
@@ -144,7 +154,7 @@ function collectResultLinks() {
 
   document.querySelectorAll(SEARCH_RESULT_SELECTORS.join(',')).forEach((element) => {
     const anchor = element.matches('a[href]') ? element : element.closest('a[href]')
-    if (!anchor || !isVisible(anchor)) return
+    if (!anchor || !isVisible(anchor) || isAdvertisement(anchor)) return
     const href = anchor.getAttribute('href')
     const normalized = href ? normalizeCandidate(href) : null
     if (!normalized || seen.has(normalized)) return
@@ -749,11 +759,12 @@ function showClickPreview(url, scan, anchor) {
 function scanGoogleResults() {
   showSearchStatus()
   collectResultLinks().forEach((url) => {
+    if (scannedResults.size >= MAX_RESULTS_PER_PAGE) return
     if (scannedResults.has(url)) return
     scannedResults.set(url, null)
 
     sendRuntimeMessage({
-      type: 'preview-candidate-url',
+      type: 'scan-search-result-url',
       url,
       reason: 'search-result-preview',
     }, (response, lastError) => {
