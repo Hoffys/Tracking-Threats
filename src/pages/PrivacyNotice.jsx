@@ -4,11 +4,17 @@ import {
   FileWarning,
   LockKeyhole,
   MailCheck,
+  SearchCheck,
   ShieldCheck,
   Trash2,
 } from 'lucide-react'
 
 const sections = [
+  {
+    icon: SearchCheck,
+    title: 'Google Search Results Monitoring',
+    body: 'Search-result monitoring stays off until you choose a mode in the browser search monitor. Saved monitoring sends eligible destination URLs from visible search results to the Tracking Threats backend to detect phishing and suspicious links, and saves the scan result and relevant URL information in Scan History for this browser client. Preview-only monitoring sends eligible URLs for scanning through the existing preview path and does not create Scan History records. Depending on service configuration, URL or domain indicators may be sent to the reputation providers listed in this notice. The feature does not collect search terms entered on the search page or unrelated page content; a destination URL may itself contain URL parameters. Saved scan records follow the service retention setting (30 days by default). You can review, change, or turn off monitoring from Search Monitor privacy settings. Turning it off stops future search-result scans but does not remove records already saved.',
+  },
   {
     icon: Database,
     title: 'Extension downloads and usage',
@@ -32,7 +38,7 @@ const sections = [
   {
     icon: Trash2,
     title: 'Retention and deletion',
-    body: 'Scan records expire after 30 days by default. Security audit logs expire after 90 days. Clear History removes the current client scan records. Delete My Data also removes saved report-email settings and revokes the browser credential. Administrators may process verified deletion requests, with the action logged.',
+    body: 'Scan records expire according to the configured retention setting (30 days by default). Security audit logs expire according to their configured retention setting (90 days by default). Clear History removes the current client scan records. Delete My Data also removes saved report-email settings and revokes the browser credential. Administrators may process verified deletion requests, with the action logged.',
   },
   {
     icon: MailCheck,
@@ -46,7 +52,7 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
     <div className="space-y-6">
       {!embedded && (
         <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.09</p>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.10</p>
           <h1 className="mt-1 text-2xl font-semibold">How scan data is handled</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Tracking Threats processes submitted data to identify phishing and malware indicators,
@@ -57,7 +63,7 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
 
       {embedded && (
         <div>
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.09</p>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.10</p>
           <h2 className="mt-1 text-xl font-semibold">How scan data is handled</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Tracking Threats processes submitted data to identify phishing and malware indicators,

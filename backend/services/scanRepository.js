@@ -2,7 +2,7 @@ import { dbPromise, fromJson, toJson } from '../db/database.js'
 import { createHash } from 'node:crypto'
 
 export const methodologyVersion = '2026.10'
-export const privacyNoticeVersion = '2026.09'
+export const privacyNoticeVersion = '2026.10'
 
 const parsePositiveInteger = (value, fallback) => {
   const parsed = Number.parseInt(value, 10)

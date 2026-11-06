@@ -1,6 +1,6 @@
 # Tracking Threats Browser Extension
 
-Version 1.0.42 starts URL scans at navigation intent, deduplicates concurrent navigation scans, reuses recent verdicts without fragment-only duplicates, and avoids applying a late verdict to a tab that has moved to another URL. Backend navigation scans time out after 12 seconds and fail open with a warning in extension status. Startup reconciles persistent dynamic rules with remembered blocked hosts. The blocked page displays the current original URL and scan coverage details. MV3 still cannot pause the first request to an unknown URL until the backend verdict returns. No permissions were added.
+Version 1.0.43 adds an explicit privacy choice for Google Search Results Monitoring: users can save scan records, use non-persistent previews, or turn search scanning off. Persisted requests carry the accepted 2026.10 privacy notice version. Gmail consent remains separate at 2026.09. Version 1.0.42 starts URL scans at navigation intent, deduplicates concurrent navigation scans, reuses recent verdicts without fragment-only duplicates, and avoids applying a late verdict to a tab that has moved to another URL. Backend navigation scans time out after 12 seconds and fail open with a warning in extension status. Startup reconciles persistent dynamic rules with remembered blocked hosts. The blocked page displays the current original URL and scan coverage details. MV3 still cannot pause the first request to an unknown URL until the backend verdict returns. No new runtime permissions were added.
 
 The extension uses `activeTab` for user-requested rendered-page inspection instead
 of permanent access to every website. URL navigation and download monitoring remain
@@ -22,14 +22,14 @@ Before loading or packaging the extension for a hosted deployment:
 
 2. Edit `manifest.json`.
    - Replace `https://your-backend-domain.com/*` with your real hosted backend origin plus `/*`.
-   - Keep `http://localhost:4000/*` only if you still test the extension locally.
+   - Release packages must include only the hosted API origin; do not include localhost host permissions.
 
 3. Configure backend CORS.
    - If using the unpacked browser extension with hosted backend, set `CORS_ALLOW_CHROME_EXTENSIONS=true`.
    - Keep public deployment privacy settings enabled:
      `PUBLIC_DEPLOYMENT=true`, `STORE_SCAN_CONTENT=false`, and `SMTP_ENABLED=false`.
 
-The extension scans visited HTTP/HTTPS pages, supported search results, supported webmail pages, and new browser downloads. Dangerous downloads are canceled when the source URL or file indicators are marked high risk. It also includes a lightweight static ad and malvertising ruleset in `rules/adblock-rules.json` to block common ad delivery, popup, and tracking domains before they load. Do not publish it without clear user consent and privacy wording.
+The extension scans visited HTTP/HTTPS pages, supported search results, supported webmail pages, and new browser downloads. Google Search Results Monitoring stays off until the user chooses saved monitoring, preview-only monitoring, or off. Saved monitoring sends eligible destination URLs to the backend and records scans in Scan History; preview-only uses the non-persistent preview path. Search-page query text and unrelated page content are not collected by this feature. Users can review or change the preference from the search monitor. Email scanning requires separate consent. Dangerous downloads are canceled when the source URL or file indicators are marked high risk. It also includes a lightweight static ad and malvertising ruleset in `rules/adblock-rules.json` to block common ad delivery, popup, and tracking domains before they load.
 
 Version 1.0.22 registers a new protected client identity. Reload the unpacked
 extension after updating the backend. Older extension versions cannot save new

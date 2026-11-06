@@ -22,6 +22,8 @@ const CLIENT_ID_KEY = 'threattrackClientId'
 const CLIENT_TOKEN_KEY = 'threattrackClientToken'
 const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
 const EMAIL_CONSENT_VERSION = '2026.09'
+const SEARCH_MONITOR_CONSENT_KEY = 'trackingThreatsSearchConsent'
+const SEARCH_MONITOR_CONSENT_VERSION = '2026.10'
 const BYPASS_HOSTS_KEY = 'bypassHosts'
 const ALLOWED_HOSTS_KEY = 'allowedHosts'
 const NOTIFICATION_PREFIX = 'threattrack-scan:'
@@ -357,6 +359,34 @@ async function hasEmailScanConsent() {
   const stored = await chrome.storage.local.get(EMAIL_CONSENT_KEY)
   const consent = stored[EMAIL_CONSENT_KEY]
   return Boolean(consent?.accepted && consent?.noticeVersion === EMAIL_CONSENT_VERSION)
+}
+
+async function readSearchMonitorConsent() {
+  const stored = await chrome.storage.local.get(SEARCH_MONITOR_CONSENT_KEY)
+  const consent = stored[SEARCH_MONITOR_CONSENT_KEY]
+  if (consent?.noticeVersion !== SEARCH_MONITOR_CONSENT_VERSION) return 'missing'
+  if (consent.mode === 'saved' && consent.accepted === true) return 'accepted'
+  if (consent.mode === 'preview-only' && consent.accepted === false) return 'preview-only'
+  if (consent.mode === 'disabled' && consent.accepted === false) return 'disabled'
+  return 'missing'
+}
+
+async function saveSearchMonitorConsent(mode) {
+  if (!['saved', 'preview-only', 'disabled'].includes(mode)) throw new Error('Invalid search-monitor preference')
+  const accepted = mode === 'saved'
+  await chrome.storage.local.set({
+    [SEARCH_MONITOR_CONSENT_KEY]: {
+      accepted,
+      mode,
+      noticeVersion: SEARCH_MONITOR_CONSENT_VERSION,
+      updatedAt: new Date().toISOString(),
+    },
+  })
+  if (!accepted) {
+    for (const entry of searchResultScanCache.values()) entry.controller?.abort()
+    searchResultScanCache.clear()
+  }
+  return mode === 'saved' ? 'accepted' : mode
 }
 
 function getLinkedAppUrl(clientId, currentUrl = APP_URL) {
@@ -1177,7 +1207,17 @@ async function previewUrl(rawUrl, reason = 'search-result-preview') {
   return validateUrlScanResponse(await response.json())
 }
 
+async function previewSearchResultUrl(rawUrl, reason = 'search-result-preview') {
+  if (await readSearchMonitorConsent() !== 'preview-only') {
+    return { ok: false, consentRequired: true, error: 'Search-result preview scanning is not enabled.' }
+  }
+  return previewUrl(rawUrl, reason)
+}
+
 async function scanSearchResultUrl(rawUrl, reason = 'search-result-preview') {
+  if (await readSearchMonitorConsent() !== 'accepted') {
+    return { ok: false, consentRequired: true, error: 'Google Search Results Monitoring is not enabled.' }
+  }
   if (!isTrackableUrl(rawUrl)) return null
   await syncSafeHosts()
   const host = getHost(rawUrl)
@@ -1204,7 +1244,8 @@ async function scanSearchResultUrl(rawUrl, reason = 'search-result-preview') {
   }
   if (cached) searchResultScanCache.delete(key)
 
-  const entry = { pending: true, expiresAt: Infinity, promise: null }
+  const controller = new AbortController()
+  const entry = { pending: true, expiresAt: Infinity, promise: null, controller }
   entry.promise = (async () => {
     try {
       const response = await scanFetch(API_URL, {
@@ -1215,7 +1256,10 @@ async function scanSearchResultUrl(rawUrl, reason = 'search-result-preview') {
           source: 'browser-search-monitor',
           reason,
           preview: false,
+          privacyAccepted: true,
+          privacyNoticeVersion: SEARCH_MONITOR_CONSENT_VERSION,
         }),
+        signal: controller.signal,
       })
       if (!response.ok) throw new Error(await getScannerError(response))
       const scan = validateUrlScanResponse(await response.json())
@@ -1639,7 +1683,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === 'preview-candidate-url' && message.url) {
-    previewUrl(message.url, message.reason ?? 'search-result-preview')
+    previewSearchResultUrl(message.url, message.reason ?? 'search-result-preview')
       .then((scan) => sendResponse({ ok: true, scan }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
@@ -1648,6 +1692,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'scan-search-result-url' && message.url) {
     scanSearchResultUrl(message.url, message.reason ?? 'search-result-preview')
       .then((scan) => sendResponse({ ok: true, scan }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'get-search-monitor-consent') {
+    readSearchMonitorConsent()
+      .then((decision) => sendResponse({ ok: true, decision, noticeVersion: SEARCH_MONITOR_CONSENT_VERSION }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }))
+    return true
+  }
+
+  if (message?.type === 'set-search-monitor-consent' && typeof message.decision === 'string') {
+    saveSearchMonitorConsent(message.decision === 'accepted' ? 'saved' : message.decision)
+      .then((decision) => sendResponse({ ok: true, decision, noticeVersion: SEARCH_MONITOR_CONSENT_VERSION }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))
     return true
   }

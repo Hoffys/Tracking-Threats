@@ -367,7 +367,7 @@ export function ThreatProvider({ children }) {
       subject,
       body,
       privacyAccepted = false,
-      privacyNoticeVersion = '2026.09',
+      privacyNoticeVersion = '2026.10',
     }) => {
       const privacyMetadata = { privacyAccepted, privacyNoticeVersion }
       const clientId = isPublicDeployment

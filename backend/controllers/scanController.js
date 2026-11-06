@@ -629,14 +629,15 @@ const getPrivacyContext = (body = {}, source = 'api') => ({
 })
 
 const validatePrivacyAcknowledgment = (req, source) => {
+  const searchConsentCurrent = source !== 'browser-search-monitor' || req.body.privacyNoticeVersion === privacyNoticeVersion
   if (
     isPublicDeployment() &&
-    ['public-web-scan', 'browser-email-monitor'].includes(source) &&
-    req.body.privacyAccepted !== true
+    ['public-web-scan', 'browser-email-monitor', 'browser-search-monitor'].includes(source) &&
+    (req.body.privacyAccepted !== true || !searchConsentCurrent)
   ) {
-    return source === 'browser-email-monitor'
-      ? 'Enable email scanning and accept the confidentiality notice first'
-      : 'Accept the privacy notice before submitting a public scan'
+    if (source === 'browser-email-monitor') return 'Enable email scanning and accept the confidentiality notice first'
+    if (source === 'browser-search-monitor') return 'Accept the current search-monitor privacy notice before submitting a search-result scan'
+    return 'Accept the privacy notice before submitting a public scan'
   }
   return ''
 }

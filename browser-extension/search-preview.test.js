@@ -153,6 +153,7 @@ test('missing and failed preview replies produce an amber unavailable message', 
   const elements = new Map()
   const element = () => ({
     children: [], style: {}, textContent: '', setAttribute() {},
+    addEventListener() {},
     append(...items) { this.children.push(...items) },
     appendChild(item) { this.children.push(item); if (item.id) elements.set(item.id, item) },
   })
@@ -164,7 +165,7 @@ test('missing and failed preview replies produce an amber unavailable message', 
     chrome: { runtime: { sendMessage: (_message, callback) => callbacks.push(callback) } },
   }
   vm.runInNewContext(source.slice(0, source.lastIndexOf('document.addEventListener(')), sandbox)
-  vm.runInNewContext(`collectResultLinks = () => ['https://one.example/', 'https://two.example/']; scanGoogleResults()`, sandbox)
+  vm.runInNewContext(`searchConsentDecision = 'accepted'; collectResultLinks = () => ['https://one.example/', 'https://two.example/']; scanGoogleResults()`, sandbox)
   assert.doesNotThrow(() => callbacks[0](undefined))
   callbacks[1]({ ok: false, error: 'Scanner offline' })
   const banner = elements.get('threattrack-search-status')
@@ -213,5 +214,5 @@ test('synchronous context invalidation falls back, while unrelated runtime error
 
 test('all Google result runtime messages use the guarded callback wrapper', () => {
   assert.equal((source.match(/chrome\.runtime\.sendMessage\(/g) ?? []).length, 1)
-  assert.equal((source.match(/sendRuntimeMessage\(/g) ?? []).length, 4) // definition and three call sites
+  assert.equal((source.match(/sendRuntimeMessage\(/g) ?? []).length, 6) // definition and five call sites
 })

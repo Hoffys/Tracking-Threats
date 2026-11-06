@@ -66,6 +66,30 @@ test('browser-search-monitor URL requests persist with their source; preview req
     const registration = await call('/public/clients', { method: 'POST' })
     assert.equal(registration.status, 201, JSON.stringify(registration.body))
     const headers = { 'X-Client-Token': registration.body.token }
+    const noConsent = await call('/scan/url', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        url: 'https://no-consent.example/path',
+        source: 'browser-search-monitor',
+        preview: false,
+        clientId: registration.body.clientId,
+      }),
+    })
+    assert.equal(noConsent.status, 400)
+
+    const staleConsent = await call('/scan/url', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        url: 'https://stale-consent.example/path',
+        source: 'browser-search-monitor',
+        preview: false,
+        clientId: registration.body.clientId,
+        privacyAccepted: true,
+        privacyNoticeVersion: '2026.09',
+      }),
+    })
+    assert.equal(staleConsent.status, 400)
+
     const persisted = await call('/scan/url', {
       method: 'POST', headers,
       body: JSON.stringify({
@@ -74,6 +98,8 @@ test('browser-search-monitor URL requests persist with their source; preview req
         reason: 'search-result-preview',
         preview: false,
         clientId: registration.body.clientId,
+        privacyAccepted: true,
+        privacyNoticeVersion: '2026.10',
       }),
     })
     assert.equal(persisted.status, 201, JSON.stringify(persisted.body))

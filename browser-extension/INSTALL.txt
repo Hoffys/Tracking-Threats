@@ -18,5 +18,5 @@ Usage monitoring: while enabled, the extension sends its random client ID,
 version and a heartbeat about every 5 minutes while the browser is running.
 Admins see aggregate download requests and recently active clients; these
 are not verified counts of unique people. No Google login is required.
-Email scanning needs separate consent. Privacy details:
+Google Search Results Monitoring and email scanning each require separate consent. For search monitoring, choose saved scans in Scan History, preview-only scanning without a history record, or turn search scans off. Eligible result URLs are sent for scanning only after choosing a mode; search-page query text and unrelated page content are not collected by this feature. You can review or change the preference from its settings banner on supported search pages. Privacy details:
 https://tracking-threats-production.up.railway.app/?page=about&section=privacy

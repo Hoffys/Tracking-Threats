@@ -103,7 +103,7 @@ export function ManualScan({ onNavigate }) {
               content,
               sha256,
               privacyAccepted: true,
-              privacyNoticeVersion: '2026.09',
+              privacyNoticeVersion: '2026.10',
             })
           }),
         )
@@ -122,7 +122,7 @@ export function ManualScan({ onNavigate }) {
             envelopeFrom,
             content: `${emailSubject}\n${emailBody}`.trim(),
             privacyAccepted: true,
-            privacyNoticeVersion: '2026.09',
+            privacyNoticeVersion: '2026.10',
           }),
         )
       } else {
@@ -132,7 +132,7 @@ export function ManualScan({ onNavigate }) {
             target: scanTarget,
             content: message,
             privacyAccepted: true,
-            privacyNoticeVersion: '2026.09',
+            privacyNoticeVersion: '2026.10',
           }),
         )
       }

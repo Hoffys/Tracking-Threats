@@ -69,6 +69,7 @@ function appendScanDetailsDisclosure(parent, scan, includeClassification = true,
 
 const MAX_RESULTS_TO_SCAN = 50
 const MAX_RESULTS_PER_PAGE = MAX_RESULTS_TO_SCAN
+const SEARCH_MONITOR_CONSENT_VERSION = '2026.10'
 const GOOGLE_REDIRECT_PATHS = new Set(['/url', '/interstitial'])
 const SEARCH_ENGINE_HOSTS = [
   'google.com',
@@ -118,6 +119,8 @@ const scanStats = {
   content: 0,
 }
 let scanTimer = null
+let searchConsentDecision = 'checking'
+let searchConsentGeneration = 0
 
 function isSearchEngineHost(hostname) {
   return SEARCH_ENGINE_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`))
@@ -420,8 +423,15 @@ function showSearchStatus() {
       : hasRisk || hasContentWarnings || hasGaps
         ? 'rgba(245,158,11,.45)'
         : 'rgba(16,185,129,.45)'
-  const statusText =
-    scanStats.checked === 0 && scanStats.failed === 0
+  const statusText = searchConsentDecision === 'disabled'
+    ? 'Search-result monitoring is off. Result URLs are not being sent for scanning.'
+    : searchConsentDecision === 'preview-only'
+      ? 'Search results are checked without saving scans to Scan History.'
+    : searchConsentDecision === 'checking' || searchConsentDecision === 'missing'
+      ? 'Choose whether to enable search-result monitoring.'
+      : searchConsentDecision === 'unavailable'
+        ? 'Privacy settings could not be checked. Search-result monitoring remains off.'
+        : scanStats.checked === 0 && scanStats.failed === 0
       ? 'Scanning visible search results...'
       : scanStats.checked === 0
         ? 'Could not assess these results. Try scanning again.'
@@ -463,8 +473,158 @@ function showSearchStatus() {
   counts.textContent = `${scanStats.checked} checked - ${scanStats.safe + scanStats.incomplete} appear safe (${scanStats.incomplete} with limited verification) - ${scanStats.content} content warning - ${scanStats.failed} unavailable - ${scanStats.caution} caution - ${scanStats.dangerous} risk`
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
-  banner.append(title, body, counts)
+  const preferenceButton = document.createElement('button')
+  preferenceButton.type = 'button'
+  preferenceButton.textContent = ['accepted', 'preview-only', 'disabled'].includes(searchConsentDecision) ? 'Privacy settings' : 'Review privacy choices'
+  preferenceButton.setAttribute('aria-label', 'Review or change Google Search monitoring privacy choices')
+  preferenceButton.style.cssText = 'margin:8px 8px 0 0;border:1px solid #94a3b8;border-radius:6px;background:#1e293b;color:#f8fafc;padding:6px 9px;font:700 11px Arial,sans-serif;cursor:pointer'
+  preferenceButton.addEventListener('click', () => showSearchConsentDialog(['accepted', 'preview-only', 'disabled'].includes(searchConsentDecision)))
+
+  const privacyLink = document.createElement('a')
+  privacyLink.href = getPrivacyNoticeUrl()
+  privacyLink.target = '_blank'
+  privacyLink.rel = 'noreferrer'
+  privacyLink.textContent = 'Privacy notice'
+  privacyLink.style.cssText = 'color:#99f6e4;font-weight:700'
+
+  banner.append(title, body, counts, preferenceButton, privacyLink)
   if (!existing) document.body.appendChild(banner)
+}
+
+function getPrivacyNoticeUrl() {
+  const url = new URL(APP_URL)
+  url.searchParams.set('page', 'about')
+  url.searchParams.set('section', 'privacy')
+  return url.toString()
+}
+
+function showSearchConsentDialog(settingsMode = false) {
+  if (document.getElementById('threattrack-search-consent')) return
+  const overlay = document.createElement('div')
+  overlay.id = 'threattrack-search-consent'
+  overlay.setAttribute('role', 'dialog')
+  overlay.setAttribute('aria-modal', 'true')
+  overlay.setAttribute('aria-labelledby', 'threattrack-search-consent-title')
+  overlay.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647;box-sizing:border-box;display:grid;place-items:center;background:rgba(2,6,23,.72);font-family:Arial,sans-serif;padding:16px'
+
+  const panel = document.createElement('section')
+  panel.style.cssText = 'box-sizing:border-box;width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;border:1px solid #334155;border-radius:10px;background:#0f172a;box-shadow:0 28px 80px rgba(0,0,0,.5);color:#f8fafc;padding:22px'
+  const eyebrow = document.createElement('p')
+  eyebrow.textContent = 'PRIVACY AND CONSENT'
+  eyebrow.style.cssText = 'margin:0;color:#5eead4;font:700 11px/1.4 Arial,sans-serif'
+  const heading = document.createElement('h2')
+  heading.id = 'threattrack-search-consent-title'
+  heading.textContent = settingsMode ? 'Google Search monitoring settings' : 'Enable Google Search Results Monitoring?'
+  heading.style.cssText = 'margin:7px 0 0;color:#fff;font:700 20px/1.3 Arial,sans-serif'
+  const explanation = document.createElement('p')
+  explanation.textContent = 'Tracking Threats checks eligible destination URLs from visible search results to detect phishing and suspicious links.'
+  explanation.style.cssText = 'margin:10px 0 0;color:#cbd5e1;font:14px/1.55 Arial,sans-serif'
+  const list = document.createElement('ul')
+  list.style.cssText = 'margin:12px 0 0;padding-left:20px;color:#e2e8f0;font:13px/1.6 Arial,sans-serif'
+  ;[
+    'Saved monitoring sends eligible result URLs to the Tracking Threats backend to detect phishing and suspicious links. It saves the scan result and relevant URL information in Scan History under the service retention setting (30 days by default).',
+    'Preview-only monitoring also sends eligible result URLs to the backend and may check URL or domain indicators with configured providers, but uses the existing non-persistent preview scan and does not create a Scan History record. See the Privacy Notice for service processing details.',
+    'This feature does not collect the search terms on the search page or unrelated page content. A destination URL may itself contain query parameters.',
+    'Choose saved monitoring, preview-only monitoring, or turn search-result monitoring off. You can change this preference later. Turning it off stops future search-result scans; it does not erase records already saved.',
+  ].forEach((text) => {
+    const item = document.createElement('li')
+    item.textContent = text
+    item.style.cssText = 'margin:6px 0'
+    list.appendChild(item)
+  })
+  const privacyLink = document.createElement('a')
+  privacyLink.href = getPrivacyNoticeUrl()
+  privacyLink.target = '_blank'
+  privacyLink.rel = 'noreferrer'
+  privacyLink.textContent = 'Read the full Privacy Notice'
+  privacyLink.style.cssText = 'display:inline-block;margin-top:10px;color:#5eead4;font:700 13px/1.4 Arial,sans-serif;text-decoration:underline'
+  const actions = document.createElement('div')
+  actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;margin-top:16px'
+  let initialFocus = null
+  const button = (text, primary, action) => {
+    const control = document.createElement('button')
+    control.type = 'button'
+    control.textContent = text
+    control.style.cssText = `border:1px solid ${primary ? '#0f766e' : '#64748b'};border-radius:7px;background:${primary ? '#0f766e' : 'transparent'};color:#f8fafc;padding:9px 13px;font:700 12px Arial,sans-serif;cursor:pointer`
+    control.addEventListener('click', action)
+    return control
+  }
+
+  if (settingsMode) {
+    const keep = button('Keep current choice', true, () => overlay.remove())
+    const save = button('Save scans to history', false, () => saveSearchMonitoringConsent('accepted', overlay))
+    const preview = button('Scan without saving history', false, () => saveSearchMonitoringConsent('preview-only', overlay))
+    const turnOff = button('Turn off all search scans', false, () => saveSearchMonitoringConsent('disabled', overlay))
+    actions.append(keep, save, preview, turnOff)
+    initialFocus = keep
+  } else {
+    const agreement = document.createElement('input')
+    agreement.type = 'checkbox'
+    agreement.id = 'threattrack-search-consent-agreement'
+    const agreementLabel = document.createElement('label')
+    agreementLabel.htmlFor = agreement.id
+    agreementLabel.style.cssText = 'display:flex;align-items:flex-start;gap:9px;margin-top:14px;color:#e2e8f0;font:13px/1.5 Arial,sans-serif'
+    const agreementText = document.createElement('span')
+    agreementText.textContent = 'I agree to send eligible search-result URLs to Tracking Threats for scanning and to save scan records in Scan History under the stated retention policy.'
+    agreementLabel.append(agreement, agreementText)
+    const enable = button('Enable search monitoring', true, () => {
+      if (agreement.checked) saveSearchMonitoringConsent('accepted', overlay)
+    })
+    enable.disabled = true
+    agreement.addEventListener('change', () => { enable.disabled = !agreement.checked })
+    const previewOnly = button('Scan without saving history', false, () => saveSearchMonitoringConsent('preview-only', overlay))
+    const turnOff = button('Turn off all search scans', false, () => saveSearchMonitoringConsent('disabled', overlay))
+    actions.append(agreementLabel, enable, previewOnly, turnOff)
+    initialFocus = agreement
+  }
+
+  panel.append(eyebrow, heading, explanation, list, privacyLink, actions)
+  overlay.appendChild(panel)
+  document.body.appendChild(overlay)
+  initialFocus?.focus()
+}
+
+function saveSearchMonitoringConsent(decision, overlay) {
+  sendRuntimeMessage({ type: 'set-search-monitor-consent', decision }, (response, lastError) => {
+    if (lastError || !response?.ok) {
+      searchConsentDecision = 'unavailable'
+      overlay.remove()
+      showSearchStatus()
+      return
+    }
+    overlay.remove()
+    applySearchConsentDecision(response.decision, response.noticeVersion)
+  })
+}
+
+function applySearchConsentDecision(decision, noticeVersion) {
+  const previous = searchConsentDecision
+  searchConsentDecision = noticeVersion === SEARCH_MONITOR_CONSENT_VERSION && ['accepted', 'preview-only', 'disabled'].includes(decision)
+    ? decision
+    : 'missing'
+  if (previous !== searchConsentDecision) {
+    searchConsentGeneration += 1
+    window.clearTimeout(scanTimer)
+    scannedResults.clear()
+    latestResults.clear()
+    riskyResults.clear()
+    for (const key of Object.keys(scanStats)) scanStats[key] = 0
+    document.getElementById('threattrack-search-consent')?.remove()
+  }
+  showSearchStatus()
+  if (['accepted', 'preview-only'].includes(searchConsentDecision) && previous !== searchConsentDecision) scanGoogleResults()
+  else if (searchConsentDecision === 'missing') showSearchConsentDialog()
+}
+
+function initializeSearchMonitoring() {
+  sendRuntimeMessage({ type: 'get-search-monitor-consent' }, (response, lastError) => {
+    if (lastError || !response?.ok) {
+      searchConsentDecision = 'unavailable'
+      showSearchStatus()
+      return
+    }
+    applySearchConsentDecision(response.decision, response.noticeVersion)
+  })
 }
 
 function showResultPopup(url, scan) {
@@ -758,16 +918,22 @@ function showClickPreview(url, scan, anchor) {
 
 function scanGoogleResults() {
   showSearchStatus()
+  if (!['accepted', 'preview-only'].includes(searchConsentDecision)) {
+    if (searchConsentDecision === 'missing') showSearchConsentDialog()
+    return
+  }
+  const generation = searchConsentGeneration
   collectResultLinks().forEach((url) => {
     if (scannedResults.size >= MAX_RESULTS_PER_PAGE) return
     if (scannedResults.has(url)) return
     scannedResults.set(url, null)
 
     sendRuntimeMessage({
-      type: 'scan-search-result-url',
+      type: searchConsentDecision === 'accepted' ? 'scan-search-result-url' : 'preview-candidate-url',
       url,
       reason: 'search-result-preview',
     }, (response, lastError) => {
+      if (generation !== searchConsentGeneration || !['accepted', 'preview-only'].includes(searchConsentDecision)) return
       scannedResults.set(url, response?.scan ?? null)
       if (lastError || !response?.ok || !response.scan || response.scan.ok === false) {
         scanStats.failed += 1
@@ -808,7 +974,25 @@ document.addEventListener(
   true,
 )
 
-scanGoogleResults()
+showSearchStatus()
+initializeSearchMonitoring()
 
 const observer = new MutationObserver(scheduleScan)
 observer.observe(document.body, { childList: true, subtree: true })
+
+try {
+  chrome.storage?.onChanged?.addListener((changes, areaName) => {
+    if (areaName !== 'local' || !changes.trackingThreatsSearchConsent) return
+    const consent = changes.trackingThreatsSearchConsent.newValue
+    const decision = consent?.mode === 'saved' && consent.accepted === true
+      ? 'accepted'
+      : consent?.mode === 'preview-only' && consent.accepted === false
+        ? 'preview-only'
+        : consent?.mode === 'disabled' && consent.accepted === false
+          ? 'disabled'
+          : 'missing'
+    applySearchConsentDecision(decision, consent?.noticeVersion)
+  })
+} catch (error) {
+  if (!isExtensionContextInvalidated(error)) throw error
+}
