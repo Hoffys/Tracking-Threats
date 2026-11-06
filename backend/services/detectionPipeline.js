@@ -10,6 +10,13 @@ import { enrichContentLinks } from './linkReputation.js'
 import { enrichEmailAuthentication } from './emailAuthentication.js'
 import { attachThreatClassification } from './threatClassification.js'
 
+// Evaluation-only controlled path. It deliberately skips reputation providers
+// and live page inspection; the supplied structured snapshot is the only page evidence.
+export async function detectUrlOfflineSnapshot(target, pageSnapshot) {
+  const analysis = await enrichPageSnapshot(pageSnapshot, scanUrl(target))
+  return attachThreatClassification('URL', analysis)
+}
+
 export async function detectUrl(target, { pageSnapshot = null, preview = false } = {}) {
   const reputation = await enrichUrlAnalysis(target, scanUrl(target))
   const analysis = preview

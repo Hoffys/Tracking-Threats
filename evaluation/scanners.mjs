@@ -6,7 +6,7 @@ import { sha256, EvaluationError } from './dataset.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const require = createRequire(import.meta.url)
-export function scannerGraph(scanner, production = false) {
+export function scannerGraph(scanner, production = false, controlledSnapshots = false) {
   const directory = scanner === 'baseline' ? resolve(root, 'evaluation/baseline/scanners') : resolve(root, 'backend/services')
   const files = new Map()
   function visit(path) {
@@ -34,7 +34,7 @@ export function scannerGraph(scanner, production = false) {
     }
   }
   for (const name of ['urlScanner.js', 'messageScanner.js', 'emailAnalyzer.js']) visit(resolve(directory, name))
-  if (production) visit(resolve(directory, 'detectionPipeline.js'))
+  if (production || controlledSnapshots) visit(resolve(directory, 'detectionPipeline.js'))
   return { directory, files: [...files].map(([path, hash]) => ({ path: relative(root, path).replaceAll('\\', '/'), sha256: hash })).sort((a, b) => a.path.localeCompare(b.path)) }
 }
 export function verifyFrozenSources() {
@@ -45,11 +45,12 @@ export function verifyFrozenSources() {
   }
   return manifest
 }
-export async function loadScanners(scanner) {
+export async function loadScanners(scanner, controlledSnapshots = false) {
   if (scanner === 'baseline') verifyFrozenSources()
-  const graph = scannerGraph(scanner)
+  const graph = scannerGraph(scanner, false, controlledSnapshots)
   const [url, message, email] = await Promise.all(['urlScanner.js', 'messageScanner.js', 'emailAnalyzer.js'].map((name) => import(pathToFileURL(resolve(graph.directory, name)).href)))
-  return { functions: { url: url.scanUrl, message: message.scanMessage, email: email.analyzeEmail }, source: { files: graph.files }, verifyUnchanged() {
-    if (JSON.stringify(graph.files) !== JSON.stringify(scannerGraph(scanner).files)) throw new EvaluationError('Scanner files changed during evaluation; rerun after edits settle')
+  const fixtureUrl = controlledSnapshots ? (await import(pathToFileURL(resolve(root, 'backend/services/detectionPipeline.js')).href)).detectUrlOfflineSnapshot : null
+  return { functions: { url: url.scanUrl, message: message.scanMessage, email: email.analyzeEmail }, fixtureUrl, source: { files: graph.files }, verifyUnchanged() {
+    if (JSON.stringify(graph.files) !== JSON.stringify(scannerGraph(scanner, false, controlledSnapshots).files)) throw new EvaluationError('Scanner files changed during evaluation; rerun after edits settle')
   } }
 }

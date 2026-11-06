@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { validateRows, loadDatasets, datasetHash, domainGroup, observedDomains } from './dataset.mjs'
 import { decisions, confusion, latency, summarize, compareReports } from './metrics.mjs'
@@ -12,6 +13,45 @@ import { fixturePaths } from './run.mjs'
 import { verifyFrozenSources } from './scanners.mjs'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
+const HISTORICAL_HASH_MANIFEST_SHA256 = '038bd8a8f5c42941331477b6540da84c7aab5a08d1eb0444ab903b80bf2b954f'
+const HISTORICAL_FILE_INVENTORY = [
+  'evaluation/baseline/predictions.json',
+  'evaluation/baseline/report.json',
+  'evaluation/baseline/report.md',
+  'evaluation/baseline/source-manifest.json',
+  'evaluation/results/2026-09-30-phiusiil-model-held-out.json',
+  'evaluation/results/2026-09-30-phiusiil-model-held-out.md',
+  'evaluation/results/2026-09-30-phiusiil-model-tuning.json',
+  'evaluation/results/2026-09-30-phiusiil-model-tuning.md',
+  'evaluation/results/2026-09-30-phiusiil-pre-model.json',
+  'evaluation/results/2026-09-30-phiusiil-pre-model.md',
+  'evaluation/results/2026-09-30.json',
+  'evaluation/results/2026-09-30.md',
+  'evaluation/results/audit-after-phiusiil.json',
+  'evaluation/results/audit-after-phiusiil.json.md',
+  'evaluation/results/audit-after-synthetic.json',
+  'evaluation/results/audit-after-synthetic.json.md',
+  'evaluation/results/audit-before-phiusiil.json',
+  'evaluation/results/audit-before-phiusiil.md',
+  'evaluation/results/audit-before-synthetic.json',
+  'evaluation/results/audit-before-synthetic.md',
+  'evaluation/results/audit-production-health.json',
+  'evaluation/results/audit-production-phiusiil.json',
+  'evaluation/results/audit-production-phiusiil.json.md',
+  'evaluation/results/audit-production-synthetic.json',
+  'evaluation/results/audit-production-synthetic.json.md',
+  'evaluation/results/deployment-2026-10-01-verified.json',
+].sort()
+const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex')
+function assertHistoricalInventory(manifest) {
+  assert.deepEqual(Object.keys(manifest).sort(), HISTORICAL_FILE_INVENTORY)
+}
+function assertHistoricalArtifacts(manifestBytes, readArtifact) {
+  assert.equal(sha256(manifestBytes), HISTORICAL_HASH_MANIFEST_SHA256, 'historical hash manifest digest changed')
+  const manifest = JSON.parse(manifestBytes.toString('utf8'))
+  assertHistoricalInventory(manifest)
+  for (const [path, expected] of Object.entries(manifest)) assert.equal(sha256(readArtifact(path)), expected, `${path} changed`)
+}
 const row = (overrides = {}) => ({
   id: 'X-1', split: 'tuning', kind: 'url', label: 'legitimate', scenario: 'ordinary-information',
   domains: ['reference.test'], input: 'https://reference.test/catalogue',
@@ -37,6 +77,26 @@ test('hand-calculated confusion counts, denominators and separate policies', () 
   assert.deepEqual(confusion(rows, 'warning'), { tp: 2, fp: 2, tn: 1, fn: 1, accuracy: 0.5, precision: 0.5, recall: 2 / 3, f1: 4 / 7, fpr: 2 / 3, falsePositiveIds: ['n1', 'n2'], falseNegativeIds: ['p3'] })
   assert.deepEqual(confusion(rows, 'block'), { tp: 1, fp: 1, tn: 2, fn: 2, accuracy: 0.5, precision: 0.5, recall: 1 / 3, f1: 2 / 5, fpr: 1 / 3, falsePositiveIds: ['n1'], falseNegativeIds: ['p2', 'p3'] })
   assert.equal(summarize(rows).overall.count, 6)
+})
+
+test('diagnostic-only ambiguous labels stay reportable but are excluded from every metric denominator', () => {
+  const rows = [
+    prediction('p-included', 'phishing', 20),
+    prediction('n-included', 'legitimate', 100),
+    prediction('p-ambiguous', 'phishing', 100),
+    prediction('n-ambiguous', 'legitimate', 20),
+  ].map((item) => item.id.endsWith('ambiguous') ? { ...item, metricEligible: false } : item)
+  const metrics = summarize(rows)
+  assert.equal(metrics.overall.count, 2)
+  assert.deepEqual([metrics.overall.warning.tp, metrics.overall.warning.fp, metrics.overall.warning.tn, metrics.overall.warning.fn], [1, 0, 1, 0])
+  assert.equal(metrics.overall.warning.accuracy, 1)
+  assert.equal(metrics.overall.latency.count, 2)
+  assert.equal(confusion(rows, 'warning').falseNegativeIds.length, 0)
+  const reportRows = rows.map((item) => row({ id: item.id, label: item.label, ...(item.metricEligible === false ? { metricEligible: false, reviewNote: 'Input does not expose the scenario context.' } : {}) }))
+  const report = makeReport(reportRows, rows.map((item) => prediction(item.id, item.label, item.score)))
+  assert.equal(report.metrics.overall.count, 2)
+  assert.equal(report.metricEligibility.excluded.length, 2)
+  assert.deepEqual(report.predictions.filter((item) => item.metricEligible === false).map((item) => item.id), ['p-ambiguous', 'n-ambiguous'])
 })
 
 test('undefined ratios stay null for empty, no-positive and no-negative groups', () => {
@@ -67,6 +127,15 @@ test('fixtures have 60 valid balanced cases, disjoint scenarios and domain group
   assert.equal(rows.length, 60)
   for (const split of ['tuning', 'held-out']) for (const kind of ['url', 'message', 'email']) for (const label of ['legitimate', 'phishing']) assert.equal(rows.filter((r) => r.split === split && r.kind === kind && r.label === label).length, 5)
   assert.ok(rows.every((r) => r.provenance.type === 'synthetic'))
+})
+
+test('reviewed v2 preserves original case IDs and identifies its diagnostic-only cases and snapshots', () => {
+  const rows = loadDatasets([new URL('./fixtures/reviewed-v2.jsonl', import.meta.url)])
+  const original = loadDatasets(fixturePaths)
+  assert.equal(rows.length, 60)
+  assert.deepEqual(rows.map((item) => item.id).sort(), original.map((item) => item.id).sort())
+  assert.deepEqual(rows.filter((item) => item.metricEligible === false).map((item) => item.id).sort(), ['H-email-09', 'H-email-10', 'H-message-10', 'H-url-10', 'T-email-08', 'T-url-10'].sort())
+  assert.deepEqual(rows.filter((item) => item.pageSnapshot).map((item) => item.id).sort(), ['H-url-09', 'T-url-01'])
 })
 
 test('reject invalid rows, labels, provenance and duplicate IDs', () => {
@@ -137,6 +206,34 @@ test('frozen source and fixtures match recorded baseline; baseline is preserved'
   const result = cli(['--scanner', 'baseline', '--split', 'all', '--baseline', 'evaluation/baseline/report.json'])
   assert.equal(result.status, 0, result.stderr)
   assert.ok(result.stdout.includes('0 cases changed score or status'))
+})
+
+test('historical hash manifest is pinned, complete, and all 26 original artifacts are unchanged', () => {
+  const manifestBytes = readFileSync(new URL('./historical-report-hashes.json', import.meta.url))
+  const manifest = JSON.parse(manifestBytes.toString('utf8'))
+  assertHistoricalInventory(manifest)
+  assertHistoricalArtifacts(manifestBytes, (path) => readFileSync(join(root, path)))
+})
+
+test('changing the hash manifest alone fails its independent digest pin', () => {
+  const bytes = readFileSync(new URL('./historical-report-hashes.json', import.meta.url))
+  const changed = Buffer.concat([bytes, Buffer.from(' ')])
+  assert.throws(() => assertHistoricalArtifacts(changed, (path) => readFileSync(join(root, path))), /manifest digest changed/)
+})
+
+test('changing an artifact and updating only its manifest entry still fails the independent digest pin', () => {
+  const bytes = readFileSync(new URL('./historical-report-hashes.json', import.meta.url))
+  const manifest = JSON.parse(bytes.toString('utf8'))
+  manifest[HISTORICAL_FILE_INVENTORY[0]] = sha256(Buffer.from('modified historical artifact'))
+  assert.throws(() => assertHistoricalArtifacts(Buffer.from(JSON.stringify(manifest)), () => Buffer.from('modified historical artifact')), /manifest digest changed/)
+})
+
+test('historical artifact inventory rejects omitted and unexpected paths', () => {
+  const manifest = JSON.parse(readFileSync(new URL('./historical-report-hashes.json', import.meta.url), 'utf8'))
+  const omitted = { ...manifest }
+  delete omitted[HISTORICAL_FILE_INVENTORY[0]]
+  assert.throws(() => assertHistoricalInventory(omitted))
+  assert.throws(() => assertHistoricalInventory({ ...manifest, 'evaluation/results/unreviewed.json': '0'.repeat(64) }))
 })
 
 test('CLI defaults to tuning, validates combined splits before filtering, and never overwrites outputs', () => {

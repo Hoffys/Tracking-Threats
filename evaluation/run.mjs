@@ -42,14 +42,18 @@ export async function main(args = process.argv.slice(2)) {
   if (new Set(outputs).size !== outputs.length || outputs.some(existsSync)) throw new EvaluationError('Output already exists or output paths collide; use new paths')
   const selected = rows.filter((row) => settings.split === 'all' || row.split === settings.split)
   if (!selected.length) throw new EvaluationError('Selected split has no cases')
+  if (settings.scanner === 'baseline' && selected.some((row) => row.pageSnapshot)) throw new EvaluationError('Controlled page snapshots require the current scanner')
   disableNetwork()
-  const scanners = await loadScanners(settings.scanner)
+  const hasSnapshots = selected.some((row) => row.pageSnapshot)
+  const scanners = await loadScanners(settings.scanner, hasSnapshots)
   const predictions = []
   for (const row of selected) {
     let result, latencyMs
     try {
       const start = performance.now()
-      result = scanners.functions[row.kind](row.input)
+      result = row.pageSnapshot
+        ? await scanners.fixtureUrl(row.input, structuredClone(row.pageSnapshot))
+        : scanners.functions[row.kind](structuredClone(row.input))
       if (result && typeof result.then === 'function') result = await result
       latencyMs = performance.now() - start
     } catch { throw new EvaluationError(`Scanner failed for case ${row.id}; raw error suppressed`) }

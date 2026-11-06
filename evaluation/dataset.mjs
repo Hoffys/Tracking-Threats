@@ -56,13 +56,25 @@ export function validateRows(rows) {
   const inputs = new Map()
   const result = rows.map((row, index) => {
     const location = `row ${index + 1}` // Never echo invalid/private input, IDs or parser messages.
-    if (!object(row) || !exactKeys(row, ['id', 'split', 'kind', 'label', 'scenario', 'domains', 'input', 'provenance'])) invalid(location, 'invalid row fields')
+    if (!object(row) || !exactKeys(row, ['id', 'split', 'kind', 'label', 'scenario', 'domains', 'input', 'provenance', 'metricEligible', 'reviewNote', 'pageSnapshot'])) invalid(location, 'invalid row fields')
     if (typeof row.id !== 'string' || !token.test(row.id)) invalid(location, 'id must be an opaque alphanumeric/hyphen/underscore token')
     if (ids.has(row.id)) invalid(location, 'duplicate ID')
     ids.add(row.id)
     if (!['tuning', 'held-out'].includes(row.split)) invalid(location, 'split must be tuning or held-out')
     if (!['url', 'message', 'email'].includes(row.kind)) invalid(location, 'unsupported kind')
     if (!['legitimate', 'phishing'].includes(row.label)) invalid(location, 'unsupported label')
+    if (row.metricEligible !== undefined && typeof row.metricEligible !== 'boolean') invalid(location, 'metricEligible must be boolean')
+    if (row.metricEligible === false && (typeof row.reviewNote !== 'string' || !nonempty(row.reviewNote) || row.reviewNote.length > 300 || /https?:\/\/|[\w.+-]+@[\w.-]+/i.test(row.reviewNote))) invalid(location, 'diagnostic-only rows require a bounded review note without URLs or email addresses')
+    if (row.reviewNote !== undefined && (typeof row.reviewNote !== 'string' || row.reviewNote.length > 300)) invalid(location, 'invalid review note')
+    if (row.pageSnapshot !== undefined) {
+      const snapshot = row.pageSnapshot
+      const numeric = ['passwordFields', 'formCount', 'externalFormActions', 'hiddenFrames']
+      const flags = ['credentialLanguage', 'obfuscatedScripts']
+      if (row.kind !== 'url' || row.provenance?.type !== 'synthetic' || !object(snapshot) || !exactKeys(snapshot, ['title', ...numeric, ...flags]) ||
+        typeof snapshot.title !== 'string' || snapshot.title.length > 120 || /[<>\r\n]|https?:\/\//i.test(snapshot.title) ||
+        numeric.some((key) => !Number.isInteger(snapshot[key]) || snapshot[key] < 0 || snapshot[key] > 100) ||
+        flags.some((key) => typeof snapshot[key] !== 'boolean')) invalid(location, 'invalid sanitized page snapshot')
+    }
     if (typeof row.scenario !== 'string' || !token.test(row.scenario)) invalid(location, 'scenario must be an opaque group token')
     if (scenarios.has(row.scenario) && scenarios.get(row.scenario) !== row.split) invalid(location, 'scenario overlaps splits')
     scenarios.set(row.scenario, row.split)

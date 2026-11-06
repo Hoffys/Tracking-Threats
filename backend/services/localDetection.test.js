@@ -3,6 +3,8 @@ import test from 'node:test'
 import { scanUrl, MAX_LINKS, MAX_TEXT_LENGTH, MAX_URL_LENGTH, piracySiteIndicators } from './urlScanner.js'
 import { scanMessage, extractLinks } from './messageScanner.js'
 import { analyzeEmail } from './emailAnalyzer.js'
+import { attachThreatClassification } from './threatClassification.js'
+import { combineUrlReputation } from './threatIntel.js'
 
 test('ordinary login, support, generic words, HTTP and suffixes do not block', () => {
   for (const url of [
@@ -41,6 +43,112 @@ test('brand domain, subdomain and private-hosting tricks require ownership', () 
     assert(result.details.findings.some((item) => item.code === 'brand-impersonation'))
   }
   assert.equal(scanUrl('https://myproject.github.io/login').status, 'Safe')
+})
+
+test('brand names in query parameters remain informational without corroborating URL evidence', () => {
+  for (const url of [
+    'https://shop.example/search?brand=shopee',
+    'https://shopee.ph/?brand=shopee',
+    'https://example.com/campaign?brand=paypal',
+    'https://paypal.com/login?brand=paypal',
+    'https://example.com/campaign?source=spring&brand=paypal&medium=email',
+    'https://example.com/login?utm_campaign=paypal',
+    'https://example.com/login?redirect=paypal',
+    'https://example.com/campaign?redirect=paypal',
+    'https://example.com/login?brand=shopee',
+    'https://example.com/search?brand=shopee',
+    'https://example.com/login?brand=paypal&brand=shopee',
+    'https://paypol.example/campaign?brand=paypal&next=login',
+    'https://example.com/campaign?redirect=%50ayPal',
+    'https://example.com/campaign?redirect=%ZZpaypal',
+    'https://example.com/campaign?campaign=paypal%ZZ',
+    'https://example.com/login',
+  ]) {
+    const result = scanUrl(url)
+    assert.equal(result.status, 'Safe', url)
+    assert.equal(result.score, 100, url)
+    assert.ok(!result.details.findings.some((item) => item.code === 'brand-query-impersonation'), url)
+  }
+
+  const diagnostic = scanUrl('https://example.com/campaign?brand=paypal')
+  assert.ok(diagnostic.details.findings.some((item) => item.code === 'query-brand-mention' && item.deduction === 0))
+  assert.equal(diagnostic.score, 100)
+  assert.deepEqual(diagnostic.warningSigns, [])
+  assert.match(diagnostic.summary, /^No strong local URL phishing indicators/)
+  assert.deepEqual(diagnostic.details.categories, [])
+  assert.ok(diagnostic.details.findings.some((item) => item.code === 'query-brand-mention'))
+  const combined = combineUrlReputation(diagnostic, [])
+  assert.equal(combined.score, 100)
+  assert.deepEqual(combined.warningSigns, [])
+  assert.ok(combined.summary.startsWith('No strong local URL phishing indicators'))
+  assert.ok(combined.details.findings.some((item) => item.code === 'query-brand-mention'))
+  const classification = attachThreatClassification('URL', diagnostic).details.threatClassification
+  assert.equal(classification.threatName, 'No threat identified')
+  assert.equal(classification.confidence, 'No threat detected')
+  assert.ok(!classification.whyDetected.some((item) => /paypal|query/i.test(item)))
+})
+
+test('brand query findings need independent host or URL-structure evidence', () => {
+  for (const url of [
+    'https://unrelated.example/login?brand=paypal',
+    'https://unrelated.example/account/verify?source=mail&BRAND=%50aYPal',
+    'https://unrelated.example/account/recovery?brand=shopee&brand=paypal&brand=paypal',
+  ]) {
+    const result = scanUrl(url)
+    assert.equal(result.score, 100, url)
+    assert.equal(result.status, 'Safe', url)
+    assert.ok(result.details.findings.some((item) => item.code === 'query-brand-mention' && item.deduction === 0), url)
+    assert.ok(!result.details.findings.some((item) => item.code === 'brand-query-impersonation'), url)
+  }
+
+  const independentCases = [
+    ['https://192.0.2.1/campaign?brand=paypal', 65, 'Suspicious', 'Low', 'Suspicious URL with a brand reference'],
+    ['https://person@unrelated.example/campaign?brand=paypal', 45, 'Dangerous', 'Medium', 'Suspected credential phishing page'],
+    ['https://paypa1.example/campaign?brand=shopee', 45, 'Dangerous', 'Medium', 'Suspected credential phishing page'],
+  ]
+  for (const [url, score, status, confidence, threatName] of independentCases) {
+    const result = scanUrl(url)
+    assert.equal(result.score, score, url)
+    assert.equal(result.status, status, url)
+    const finding = result.details.findings.find((item) => item.code === 'brand-query-impersonation')
+    assert.equal(finding?.deduction, 25, url)
+    assert.ok(finding.evidence.corroboration.length > 0, url)
+    const classification = attachThreatClassification('URL', result).details.threatClassification
+    assert.equal(classification.confidence, confidence, url)
+    assert.equal(classification.threatName, threatName, url)
+  }
+
+  const repeated = scanUrl('https://person@unrelated.example/campaign?src=mail&brand=shopee&brand=paypal&brand=paypal')
+  const queryFinding = repeated.details.findings.find((item) => item.code === 'brand-query-impersonation')
+  assert.deepEqual(queryFinding.evidence.brands, ['shopee', 'paypal'])
+  assert.equal(repeated.details.findings.filter((item) => item.code === 'brand-query-impersonation').length, 1)
+
+  const userinfo = scanUrl('https://paypal.com@unrelated.example/?brand=paypal')
+  assert.ok(userinfo.details.findings.some((item) => item.code === 'url-userinfo'))
+  assert.ok(!userinfo.details.findings.some((item) => item.code === 'brand-query-impersonation'))
+})
+
+test('query brand evidence is not counted again when hostname impersonation already matches it', () => {
+  for (const url of [
+    'https://paypal-login.example/login?brand=paypal',
+    'https://paypal-facebook-login.example/login?brand=paypal',
+  ]) {
+    const result = scanUrl(url)
+    assert.equal(result.status, 'Dangerous')
+    assert.ok(result.details.findings.some((item) => item.code === 'brand-impersonation'))
+    assert.ok(!result.details.findings.some((item) => item.code === 'brand-query-impersonation'))
+    assert.ok(result.details.findings.some((item) => item.code === 'query-brand-mention' && item.deduction === 0))
+  }
+})
+
+test('query brand parsing respects its parameter and value bounds', () => {
+  const tooManyParameters = `https://unrelated.example/login?${Array.from({ length: 32 }, (_, index) => `p${index}=x`).join('&')}&brand=paypal`
+  const longValue = `https://unrelated.example/login?campaign=${'x'.repeat(256)}paypal`
+  for (const url of [tooManyParameters, longValue]) {
+    const result = scanUrl(url)
+    assert.equal(result.status, 'Safe', url)
+    assert.ok(!result.details.findings.some((item) => item.code.startsWith('query-brand-') || item.code === 'brand-query-impersonation'), url)
+  }
 })
 
 test('bounded lookalikes use long brands, substitutions and credential context', () => {
@@ -124,6 +232,96 @@ test('sensitive information and account pressure combine; prize mentions alone d
   assert.equal(scanMessage('Send your credit card number now or your account will be suspended.').status, 'Dangerous')
   assert.equal(scanMessage('Pay a processing fee to receive your prize.').status, 'Dangerous')
   assert.equal(scanMessage('The lottery prize and jackpot were discussed in the news.').score, 100)
+})
+
+test('contextual parcel, card-photo, prize and account requests produce bounded explainable risk', () => {
+  const cases = [
+    ['parcel card entry', 'Your parcel is held. Enter your credit card at this unfamiliar link https://parcel-payment.test/release to release it.', 'payment-card or payment details', 'parcel or delivery payment context'],
+    ['redelivery card photos', 'A redelivery fee is due. Upload front and back photos of your payment card at https://redelivery-fee.test/pay.', 'payment-card photo or image', 'parcel or delivery payment context'],
+    ['employment card photos', 'Congratulations on the remote job. Send photos of the front and back of your debit card to finish salary setup.', 'payment-card photo or image', 'employment lure with an excessive card-photo request'],
+    ['prize card information', 'You won a reward. Send your credit card information to claim it.', 'payment-card or payment details', 'prize or reward claim'],
+    ['account verification card details', 'Verify your account. Provide your payment card information at this unfamiliar link https://account-check.test/verify.', 'payment-card or payment details', 'account-verification lure with a payment-data link'],
+  ]
+  for (const [name, input, requestedData, context] of cases) {
+    const scan = scanMessage(input)
+    const detection = scan.details.findings.find((item) => item.code === 'sensitive-data-context')
+    const requestFinding = scan.details.findings.find((item) => item.code === 'sensitive-data-request')
+    const result = attachThreatClassification('Message', scan)
+    assert.equal(detection?.deduction, 12, name)
+    assert.equal(requestFinding?.deduction, 12, name)
+    assert.equal(requestFinding.evidence.requestedData, requestedData, name)
+    assert.ok(detection.evidence.contexts.includes(context), name)
+    assert.equal(scan.score, 76, name)
+    assert.equal(scan.status, 'Suspicious', name)
+    assert.equal(result.details.threatClassification.threatName, 'Suspected phishing message', name)
+    assert.equal(result.details.threatClassification.confidence, 'Medium', name)
+    assert.ok(result.details.threatClassification.whyDetected.some((item) => item.includes(context)), name)
+  }
+})
+
+test('sensitive-data requests without context stay informational or low-confidence without double-counting', () => {
+  for (const input of [
+    'Please upload a photo of both sides of your payment card.',
+    'Please send a photo of your passport.',
+    "Please upload your driver's license for the file.",
+  ]) {
+    const scan = scanMessage(input)
+    assert.equal(scan.status, 'Safe', input)
+    assert.equal(scan.score, 100, input)
+    assert.ok(scan.details.findings.some((item) => item.code === 'sensitive-data-request' && item.deduction === 0), input)
+    assert.equal(attachThreatClassification('Message', scan).details.threatClassification.threatName, 'No threat identified', input)
+  }
+
+  const explicitNumberRequest = scanMessage('Please send your credit card number.')
+  const classification = attachThreatClassification('Message', explicitNumberRequest).details.threatClassification
+  assert.equal(explicitNumberRequest.score, 70)
+  assert.equal(explicitNumberRequest.status, 'Suspicious')
+  assert.equal(classification.threatName, 'Sensitive financial-information request')
+  assert.equal(classification.confidence, 'Low')
+  assert.ok(!classification.threatName.toLowerCase().includes('phishing'))
+
+  const contextualExistingRule = scanMessage('Provide your credit card details at this unfamiliar link https://parcel-payment.test/release for your parcel.')
+  assert.equal(contextualExistingRule.score, 70)
+  assert.deepEqual(contextualExistingRule.details.findings.filter((item) => ['financial-request', 'contextual-sensitive-data-request'].includes(item.code)).map((item) => item.deduction), [30, 0])
+
+  const unrelatedContext = scanMessage('Your parcel arrives tomorrow. The team meeting is Friday. Please upload front and back photos of your payment card.')
+  assert.equal(unrelatedContext.score, 100)
+  assert.equal(unrelatedContext.status, 'Safe')
+  assert.ok(!unrelatedContext.details.findings.some((item) => item.code === 'sensitive-data-context'))
+})
+
+test('benign delivery, verified-app, employer, discussion and warning messages stay safe', () => {
+  const cases = [
+    'Use the official carrier app to check your parcel tracking status.',
+    'Your customs fee can be paid in the official carrier app.',
+    'Open the verified BDO bank app to upload your passport for identity verification.',
+    'As part of established employee onboarding, upload a photo of your government-issued ID through the verified HR portal.',
+    'Our team compared credit card rewards and discussed card photos for the training presentation.',
+    'Never share your credit card information. Scammers may ask you to upload photos of both sides of your card.',
+    'Security training explains that phishing messages may say “send your card details to claim a prize.”',
+    'Your parcel is delayed. Check your tracking status in the carrier app.',
+  ]
+  for (const input of cases) {
+    const scan = scanMessage(input)
+    assert.equal(scan.status, 'Safe', input)
+    assert.ok(scan.score >= 80, input)
+    assert.ok(!scan.details.findings.some((item) => item.code === 'sensitive-data-context' && item.deduction > 0), input)
+  }
+})
+
+test('negated, quoted and educational sensitive-data requests do not become active requests', () => {
+  const cases = [
+    'Do not upload a passport photo or card details to an unfamiliar link.',
+    'Never send photos of both sides of your credit card to anyone.',
+    'The forwarded message says "Send your credit card number now to claim a prize." Do not comply.',
+    'Scammers ask people to upload identity documents and card photos; security training says never comply.',
+  ]
+  for (const input of cases) {
+    const scan = scanMessage(input)
+    assert.equal(scan.status, 'Safe', input)
+    assert.equal(scan.score, 100, input)
+    assert.ok(!scan.details.findings.some((item) => ['sensitive-data-request', 'contextual-sensitive-data-request', 'financial-request', 'advance-fee'].includes(item.code)), input)
+  }
 })
 
 test('extraction excludes emails, normalizes duplicates and strips punctuation', () => {

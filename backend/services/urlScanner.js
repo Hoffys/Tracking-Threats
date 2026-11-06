@@ -7,6 +7,8 @@ import { lexicalProbability } from './urlLexicalFeatures.js'
 export const MAX_URL_LENGTH = 8192
 export const MAX_TEXT_LENGTH = 100000
 export const MAX_LINKS = 100
+const MAX_QUERY_PARAMETERS = 32
+const MAX_QUERY_VALUE_LENGTH = 256
 const pslOptions = { allowPrivateDomains: true }
 
 export const piracySiteIndicators = [
@@ -81,6 +83,21 @@ const parseUrl = (input) => {
   } catch { return null }
 }
 
+function queryBrandMentions(url) {
+  if (!url) return []
+  const brands = new Set(Object.keys(officialDomains))
+  const mentions = new Set()
+  let checked = 0
+  for (const [, rawValue] of url.searchParams) {
+    if (checked++ >= MAX_QUERY_PARAMETERS) break
+    const value = rawValue.slice(0, MAX_QUERY_VALUE_LENGTH).toLowerCase()
+    for (const brand of brands) {
+      if (new RegExp(`(?:^|[^a-z0-9])${escapeRegExp(brand)}(?:$|[^a-z0-9])`, 'i').test(value)) mentions.add(brand)
+    }
+  }
+  return [...mentions]
+}
+
 export function localCoverage(limitations = []) {
   return {
     status: 'local-only', checkedProviders: 0, totalProviders: 0,
@@ -105,6 +122,7 @@ export function contentCategories(text) {
 
 export function localResult(findings, details, kind, score = scoreWarnings(findings)) {
   const risk = getRiskFromScore(score)
+  const warningFindings = findings.filter((item) => !(item.code === 'query-brand-mention' && Number(item.deduction) === 0))
   const categoryWarnings = details.categoryWarnings ?? []
   const categories = [...new Set([
     ...(findings.some((item) => item.deduction > 0) ? ['phishing-indicators'] : []),
@@ -113,8 +131,8 @@ export function localResult(findings, details, kind, score = scoreWarnings(findi
   const recommendations = recommendationsFor(risk.status, categories)
   return {
     ...risk, score,
-    summary: findings.length ? `Found ${findings.length} local ${kind} warning sign${findings.length === 1 ? '' : 's'}.` : `No strong local ${kind} phishing indicators were found. Reputation was not checked.`,
-    warningSigns: [...new Set(findings.map((item) => item.label))],
+    summary: warningFindings.length ? `Found ${warningFindings.length} local ${kind} warning sign${warningFindings.length === 1 ? '' : 's'}.` : `No strong local ${kind} phishing indicators were found. Reputation was not checked.`,
+    warningSigns: [...new Set(warningFindings.map((item) => item.label))],
     recommendations, recommendation: recommendations.join(' '),
     details: {
       ...details, findings, categoryWarnings,
@@ -138,7 +156,12 @@ export function scanUrl(urlInput) {
   const name = parsed.domainWithoutSuffix ?? ''
   let decoded = `${url?.pathname ?? ''}${url?.search ?? ''}`
   try { decoded = decodeURIComponent(decoded) } catch { /* Keep malformed escapes as evidence. */ }
+  let decodedPath = url?.pathname ?? ''
+  try { decodedPath = decodeURIComponent(decodedPath) } catch { /* Keep malformed escapes as evidence. */ }
   const credentialContext = credentialWords.test(`${host} ${decoded}`)
+  const hostnameCredentialContext = credentialWords.test(`${host} ${decodedPath}`)
+  const parsedQueryBrands = queryBrandMentions(url)
+  const brandCredentialContext = parsedQueryBrands.length ? hostnameCredentialContext : credentialContext
   const findings = []
   const limitations = ['Page content, redirects, and domain registration were not checked.']
   if (raw.length > MAX_URL_LENGTH) limitations.push(`URL exceeds the ${MAX_URL_LENGTH}-character local limit and was not parsed.`)
@@ -151,13 +174,20 @@ export function scanUrl(urlInput) {
   const tokens = unicodeName.split(/[-_]/)
   const candidates = [unicodeName, ...tokens].filter((token) => token.length <= 64)
   let brandFinding = null
+  const hostnameBrandMatches = new Set()
+  const independentHostnameBrandMatches = new Set()
   for (const [brand, owners] of Object.entries(officialDomains)) {
     if (owners.includes(domain)) continue
     const exact = name === brand || labels.includes(brand)
-    const compound = (credentialContext || lureWords.test(name)) && (tokens.includes(brand) || name === `${brand}secure` || name === `${brand}login`)
+    const compound = (brandCredentialContext || lureWords.test(name)) && (tokens.includes(brand) || name === `${brand}secure` || name === `${brand}login`)
     const lookalike = brand.length >= 5 && candidates.some((candidate) =>
-      candidate !== brand && (normalizeLookalikes(candidate) === brand || (credentialContext && oneEditApart(candidate, brand))))
+      candidate !== brand && (normalizeLookalikes(candidate) === brand || (brandCredentialContext && oneEditApart(candidate, brand))))
     if (!exact && !compound && !lookalike) continue
+    hostnameBrandMatches.add(brand)
+    const independentCompound = (hostnameCredentialContext || lureWords.test(name)) && (tokens.includes(brand) || name === `${brand}secure` || name === `${brand}login`)
+    const independentLookalike = brand.length >= 5 && candidates.some((candidate) =>
+      candidate !== brand && (normalizeLookalikes(candidate) === brand || (hostnameCredentialContext && oneEditApart(candidate, brand))))
+    if (exact || independentCompound || independentLookalike) independentHostnameBrandMatches.add(brand)
     const deduction = exact || compound ? 40 : 30
     if (!brandFinding || deduction > brandFinding.deduction) {
       brandFinding = finding('brand-impersonation', `Possible ${brand} impersonation on an unrelated registrable domain`, deduction, {
@@ -205,6 +235,49 @@ export function scanUrl(urlInput) {
       deduction,
       { model: 'phiusiil-url-lexical-v1', phishingLikelihood: Number(probability.toFixed(4)), structuralSignals, calibration: 'uncalibrated' },
     ))
+  }
+  if (url && (domain || parsed.isIp)) {
+    const queryBrands = parsedQueryBrands
+    if (queryBrands.length) {
+      const corroboratingSignals = [
+        ...(independentHostnameBrandMatches.size ? ['hostname-brand-match'] : []),
+        ...(url.username || url.password ? ['userinfo-structure'] : []),
+        ...(parsed.isIp ? ['ip-destination'] : []),
+        ...(host.split('.').some((label) => label.startsWith('xn--')) && hostnameCredentialContext ? ['contextual-idn'] : []),
+      ]
+      // Corroborate only with hostname/path or URL-structure rules. Do not use
+      // query-derived credential context or a model score that includes query text.
+      let username = url.username.toLowerCase()
+      try { username = decodeURIComponent(username) } catch { /* Retain the parser's encoded username. */ }
+      const eligibleBrands = queryBrands.filter((brand) =>
+        !hostnameBrandMatches.has(brand) && !officialDomains[brand].includes(domain) && !username.includes(brand))
+      const riskBrands = corroboratingSignals.length ? eligibleBrands : []
+      const diagnosticBrands = queryBrands.filter((brand) => !riskBrands.includes(brand))
+      const evidence = (brands) => ({
+        brands,
+        hostname: host,
+        registrableDomain: domain,
+        matchedBy: 'query-parameter-value',
+        parameterLimit: MAX_QUERY_PARAMETERS,
+        valueLengthLimit: MAX_QUERY_VALUE_LENGTH,
+      })
+      if (riskBrands.length) {
+        findings.push(finding(
+          'brand-query-impersonation',
+          `Known ${riskBrands.join(', ')} brand in a URL query accompanies suspicious context on an unrelated host`,
+          25,
+          { ...evidence(riskBrands), corroboration: corroboratingSignals },
+        ))
+      }
+      if (diagnosticBrands.length) {
+        findings.push(finding(
+          'query-brand-mention',
+          `Known brand ${diagnosticBrands.join(', ')} appears in a URL query; no separate risk contribution was added`,
+          0,
+          evidence(diagnosticBrands),
+        ))
+      }
+    }
   }
   return localResult(findings, {
     domain: host, registrableDomain: domain, publicSuffix: parsed.publicSuffix,

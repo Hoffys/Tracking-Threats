@@ -76,11 +76,12 @@ export function EvaluationPanel({ token }) {
         </label>
         <button className="rounded bg-emerald-700 px-4 py-2 text-white disabled:opacity-50" disabled={busy || run?.status === 'running' || catalog.history.some((item) => item.status === 'running')}>Run evaluation</button>
       </form>
-      <p className="text-xs text-slate-500">Production runs contact configured reputation services and inspect reachable HTTPS pages. Missing providers remain unavailable. Local runs omit these checks. PhiUSIIL is available when its existing JSONL dataset is installed on the server.</p>
+      <p className="text-xs text-slate-500">Production runs contact configured reputation services and inspect reachable HTTPS pages. Controlled snapshots in reviewed synthetic v2 always bypass those network checks and use sanitized fixture evidence. Local runs omit online checks. PhiUSIIL is available when its existing JSONL dataset is installed on the server.</p>
       {error && <p role="alert" className="text-rose-600">{error}</p>}
       {run && <p role="status">Run: {run.status} · {run.processed ?? 0}/{run.total} processed {run.error && `· ${run.error}`}</p>}
       {report && <div className="space-y-4">
-        <p>{report.sample.evaluated} evaluated: {report.sample.phishing} phishing, {report.sample.legitimate} legitimate. {report.sample.failed} failed; {report.sample.notSelected} eligible samples not selected.</p>
+        <p>{report.sample.evaluated} evaluated: {report.sample.metricEligible ?? report.sample.evaluated} included in metrics, {report.sample.diagnosticOnly ?? 0} diagnostic-only, {report.sample.failed} failed; {report.sample.notSelected} eligible samples not selected.</p>
+        {report.metricEligibility?.excluded?.length > 0 && <details><summary className="cursor-pointer font-semibold">Diagnostic-only cases excluded from confusion-matrix metrics ({report.metricEligibility.excluded.length})</summary><ul className="list-disc py-2 pl-5 text-sm">{report.metricEligibility.excluded.map((item) => <li key={item.id}><strong>{item.id}:</strong> {item.reason}</li>)}</ul></details>}
         <p className="text-sm">{report.execution}</p>
         <label className="grid max-w-md gap-1 text-sm">Binary policy
           <select className={field} value={policy} onChange={(event) => setPolicy(event.target.value)}>

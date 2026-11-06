@@ -15,7 +15,7 @@ export function confusion(rows, policy, thresholds = DEFAULT_THRESHOLDS) {
   validateThresholds(thresholds)
   let tp = 0, fp = 0, tn = 0, fn = 0
   const falsePositiveIds = [], falseNegativeIds = []
-  for (const row of rows) {
+  for (const row of rows.filter((item) => item.metricEligible !== false)) {
     if (!['phishing', 'legitimate'].includes(row.label)) throw new EvaluationError('Invalid prediction label')
     const predicted = decisions(row.score, thresholds)[policy]
     if (row.label === 'phishing') {
@@ -37,7 +37,10 @@ export function latency(rows) {
   return { count: samples.length, meanMs: samples.length ? samples.reduce((a, b) => a + b, 0) / samples.length : null, p50Ms: percentile(0.5), p95Ms: percentile(0.95), maxMs: samples.at(-1) ?? null }
 }
 export function summarize(rows, thresholds = DEFAULT_THRESHOLDS) {
-  const group = (items) => ({ count: items.length, warning: confusion(items, 'warning', thresholds), block: confusion(items, 'block', thresholds), latency: latency(items) })
+  const group = (items) => {
+    const included = items.filter((item) => item.metricEligible !== false)
+    return { count: included.length, warning: confusion(included, 'warning', thresholds), block: confusion(included, 'block', thresholds), latency: latency(included) }
+  }
   return {
     overall: group(rows),
     bySplit: Object.fromEntries(['tuning', 'held-out'].map((split) => [split, group(rows.filter((row) => row.split === split))])),

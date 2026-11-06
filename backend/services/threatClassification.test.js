@@ -4,6 +4,7 @@ import test from 'node:test'
 import { buildThreatClassification } from './threatClassification.js'
 import { combineUrlReputation, parseUrlhausHostResponse } from './threatIntel.js'
 import { scanUrl } from './urlScanner.js'
+import { scanMessage } from './messageScanner.js'
 
 test('classifies local phishing evidence as suspected rather than confirmed', () => {
   const classification = buildThreatClassification('URL', {
@@ -85,6 +86,20 @@ test('returns a qualified no-threat result for a safe scan', () => {
   assert.equal(classification.threatName, 'No threat identified')
   assert.equal(classification.threatType, 'None detected')
   assert.equal(classification.confidence, 'No threat detected')
+})
+
+test('standalone financial requests receive low-confidence wording; contextual requests are suspected phishing', () => {
+  const standalone = buildThreatClassification('Message', scanMessage('Please send your credit card number.'))
+  assert.equal(standalone.threatName, 'Sensitive financial-information request')
+  assert.equal(standalone.threatType, 'Financial information disclosure')
+  assert.equal(standalone.confidence, 'Low')
+  assert.ok(standalone.whyDetected.some((item) => /no separate suspicious lure, coercive context, or deceptive submission link/i.test(item)))
+
+  const contextual = buildThreatClassification('Message', scanMessage('Your parcel is held. Enter your credit card at this unfamiliar link https://parcel-payment.test/release to receive it.'))
+  assert.equal(contextual.threatName, 'Suspected phishing message')
+  assert.equal(contextual.threatType, 'Phishing / credential theft')
+  assert.equal(contextual.confidence, 'Medium')
+  assert.ok(contextual.whyDetected.some((item) => /parcel or delivery payment context/i.test(item)))
 })
 
 test('historical example.com URLhaus evidence is informational and does not change the verdict', () => {

@@ -153,9 +153,35 @@ export function buildThreatClassification(type, analysis = {}) {
     return result({ threatName: 'Suspected advance-fee scam', threatType: 'Financial fraud / social engineering', confidence: 'Medium', whyDetected, evidenceSources })
   }
 
-  const phishingCodes = ['secret-request', 'secret-entry', 'financial-request', 'account-request-link', 'brand-impersonation', 'sender-brand-claim', 'credential-lure', 'url-userinfo', 'deceptive-userinfo']
+  const queryBrandFinding = findings.find((item) => item.code === 'brand-query-impersonation' && Number(item.deduction ?? 0) > 0)
+  const queryBrandCorroboration = Array.isArray(queryBrandFinding?.evidence?.corroboration)
+    ? queryBrandFinding.evidence.corroboration
+    : []
+  if (type === 'URL' && queryBrandFinding && queryBrandCorroboration.length > 0 && queryBrandCorroboration.every((signal) => signal === 'ip-destination') && !['brand-impersonation', 'url-userinfo', 'deceptive-userinfo', 'credential-lure'].some((code) => findingCodes.has(code))) {
+    return result({
+      threatName: 'Suspicious URL with a brand reference',
+      threatType: 'URL / destination risk',
+      confidence: 'Low',
+      whyDetected,
+      evidenceSources: ['URL structure rules'],
+    })
+  }
+
+  const hasContextualSensitiveRequest = findings.some((item) => item.code === 'sensitive-data-context' || item.code === 'contextual-sensitive-data-request')
+  const hasIndependentMessageThreat = findings.some((item) => ['secret-request', 'secret-entry', 'account-request-link', 'brand-impersonation', 'sender-brand-claim'].includes(item.code) && Number(item.deduction ?? 0) > 0)
+  if (type === 'Message' && analysis.status === 'Suspicious' && findingCodes.has('financial-request') && !hasContextualSensitiveRequest && !hasIndependentMessageThreat) {
+    return result({
+      threatName: 'Sensitive financial-information request',
+      threatType: 'Financial information disclosure',
+      confidence: 'Low',
+      whyDetected: [...whyDetected, 'No separate suspicious lure, coercive context, or deceptive submission link was established.'],
+      evidenceSources: ['Message content rules'],
+    })
+  }
+
+  const phishingCodes = ['secret-request', 'secret-entry', 'financial-request', 'account-request-link', 'brand-impersonation', 'brand-query-impersonation', 'sender-brand-claim', 'credential-lure', 'url-userinfo', 'deceptive-userinfo']
   const phishingLanguage = /phish|credential|password|secret|trusted brand|impersonat|login|account action|different host|authentication failed/.test(warningText)
-  if (phishingCodes.some((code) => findingCodes.has(code)) || phishingLanguage) {
+  if (phishingCodes.some((code) => findingCodes.has(code)) || hasContextualSensitiveRequest || phishingLanguage) {
     const threatNames = {
       URL: 'Suspected credential phishing page',
       Email: 'Suspected phishing email',

@@ -9,7 +9,7 @@ export function makeReport(rows, predictions, metadata = {}, thresholds = DEFAUL
     if (!row || ['kind', 'label', 'split'].some((key) => row[key] !== prediction[key])) throw new EvaluationError('Prediction identity does not match dataset row')
     if (!['Safe', 'Suspicious', 'Dangerous', 'Blocked'].includes(prediction.status)) throw new EvaluationError('Scanner returned unsupported status')
     // Strict allowlist: never serialize scanner details, recommendations or URLs.
-    return { id: row.id, split: row.split, kind: row.kind, label: row.label, score: prediction.score, status: prediction.status, ...decisions(prediction.score, thresholds), latencyMs: prediction.latencyMs }
+    return { id: row.id, split: row.split, kind: row.kind, label: row.label, ...(row.metricEligible === false ? { metricEligible: false, reviewNote: row.reviewNote } : {}), score: prediction.score, status: prediction.status, ...decisions(prediction.score, thresholds), latencyMs: prediction.latencyMs }
   })
   const synthetic = rows.filter((row) => row.provenance.type === 'synthetic').length
   return {
@@ -20,6 +20,11 @@ export function makeReport(rows, predictions, metadata = {}, thresholds = DEFAUL
     source: metadata.source ?? null,
     datasetHash: metadata.datasetHash ?? datasetHash(rows),
     selectedSplit: metadata.selectedSplit ?? 'all',
+    metricEligibility: {
+      included: rows.filter((row) => row.metricEligible !== false).length,
+      excluded: rows.filter((row) => row.metricEligible === false).map((row) => ({ id: row.id, reason: row.reviewNote })),
+      policy: 'Diagnostic-only rows retain predictions and labels but are excluded from all confusion-matrix and metric denominators.',
+    },
     evidence: {
       syntheticRows: synthetic, externallyLabeledRows: rows.length - synthetic,
       statement: synthetic === rows.length
@@ -39,9 +44,16 @@ export function renderMarkdown(report) {
     '# Detection evaluation', '', report.evidence.statement, '',
     `Captured: ${report.capturedAt}. Scanner: ${report.scanner}. Selected split: ${report.selectedSplit}.`, '',
     `Dataset fingerprint: \`${report.datasetHash}\`.`, '', report.policy, '',
+    `Metric-eligible cases: ${report.metricEligibility.included}. Diagnostic-only cases excluded from metric denominators: ${report.metricEligibility.excluded.length}.`,
+  ]
+  if (report.metricEligibility.excluded.length) {
+    rows.push('', '| Diagnostic-only case | Exclusion reason |', '| --- | --- |')
+    for (const item of report.metricEligibility.excluded) rows.push(`| ${item.id} | ${item.reason.replaceAll('|', '\\|')} |`)
+  }
+  rows.push('',
     '| Split | Policy | TP | FP | TN | FN | Accuracy | Precision | Recall | F1 | FPR |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
-  ]
+  )
   for (const [split, metrics] of Object.entries(report.metrics.bySplit)) {
     if (!metrics.count) continue
     for (const policy of ['warning', 'block']) {
