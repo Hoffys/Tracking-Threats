@@ -1,6 +1,11 @@
 import { Download, Megaphone, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiService, extensionDownloadUrl } from '../services/api'
+import {
+  createAnnouncementPolling,
+  createAnnouncementRefresh,
+  mergeReadAnnouncementIds,
+} from './announcementPolling'
 
 const readAnnouncementKey = 'threattrack:read-announcements'
 
@@ -43,52 +48,56 @@ export function AnnouncementCenter() {
   const [latestVersion, setLatestVersion] = useState(null)
   const [readIds, setReadIds] = useState(readStoredIds)
   const openRef = useRef(false)
+  const mountedRef = useRef(false)
+  const loadAnnouncementsRef = useRef(null)
 
   const markAnnouncementsRead = useCallback((items) => {
     if (items.length === 0) return
     setReadIds((current) => {
-      const next = Array.from(new Set([
-        ...current,
-        ...items.map((announcement) => String(announcement.id)),
-      ])).slice(-100)
+      const next = mergeReadAnnouncementIds(current, items)
       saveStoredIds(next)
       return next
     })
   }, [])
 
-  const loadAnnouncements = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const payload = await apiService.getPublicAnnouncements()
-      const nextAnnouncements = Array.isArray(payload?.announcements) ? payload.announcements : []
-      setAnnouncements(nextAnnouncements)
-      setLatestVersion(payload?.latestVersion || null)
-      if (openRef.current) markAnnouncementsRead(nextAnnouncements)
-    } catch {
-      setError('Announcements are temporarily unavailable.')
-    } finally {
-      setLoading(false)
-    }
-  }, [markAnnouncementsRead])
+  const loadAnnouncements = useCallback(
+    () => loadAnnouncementsRef.current?.() ?? Promise.resolve(null),
+    [],
+  )
 
   useEffect(() => {
-    let active = true
-    apiService.getPublicAnnouncements()
-      .then((payload) => {
-        if (!active) return
-        const nextAnnouncements = Array.isArray(payload?.announcements) ? payload.announcements : []
+    mountedRef.current = true
+    const refresh = createAnnouncementRefresh({
+      fetchAnnouncements: apiService.getPublicAnnouncements,
+      onStart: () => {
+        if (!mountedRef.current) return
+        setLoading(true)
+        setError('')
+      },
+      onSuccess: (payload, nextAnnouncements) => {
+        if (!mountedRef.current) return
         setAnnouncements(nextAnnouncements)
         setLatestVersion(payload?.latestVersion || null)
         if (openRef.current) markAnnouncementsRead(nextAnnouncements)
-      })
-      .catch(() => {
-        if (active) setError('Announcements are temporarily unavailable.')
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => { active = false }
+      },
+      onError: () => {
+        if (mountedRef.current) setError('Announcements are temporarily unavailable.')
+      },
+      onSettled: () => {
+        if (mountedRef.current) setLoading(false)
+      },
+    })
+    loadAnnouncementsRef.current = refresh
+    const polling = createAnnouncementPolling({
+      refresh,
+      documentRef: document,
+    })
+    polling.start()
+    return () => {
+      mountedRef.current = false
+      polling.stop()
+      if (loadAnnouncementsRef.current === refresh) loadAnnouncementsRef.current = null
+    }
   }, [markAnnouncementsRead])
 
   useEffect(() => {
@@ -116,7 +125,10 @@ export function AnnouncementCenter() {
     const nextOpen = !open
     openRef.current = nextOpen
     setOpen(nextOpen)
-    if (nextOpen) markAnnouncementsRead(announcements)
+    if (nextOpen) {
+      markAnnouncementsRead(announcements)
+      loadAnnouncements()
+    }
   }
 
   const closeAnnouncements = () => {
@@ -156,7 +168,7 @@ export function AnnouncementCenter() {
         </div>
       )}
 
-      {loading && <p className="py-6 text-center text-sm text-slate-500">Checking for announcements...</p>}
+      {loading && announcements.length === 0 && <p className="py-6 text-center text-sm text-slate-500">Checking for announcements...</p>}
 
       {!loading && error && (
         <div className="py-5 text-center">
@@ -177,7 +189,7 @@ export function AnnouncementCenter() {
         </p>
       )}
 
-      {!loading && !error && announcements.length > 0 && (
+      {announcements.length > 0 && (
         <div className="mt-3 space-y-3">
           {announcements.map((announcement) => (
             <article
