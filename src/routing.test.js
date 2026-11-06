@@ -65,3 +65,10 @@ test('About tab URLs and dedicated policy URL are stable', () => {
   assert.equal(getPageUrl('about', 'privacy'), '/?page=about&section=privacy')
   assert.equal(getPageUrl('privacyPolicy'), '/privacy')
 })
+
+test('Admin has a dedicated route and keeps the legacy query URL', () => {
+  assert.equal(getPageUrl('admin'), '/admin')
+  assert.equal(resolveRoute('http://localhost/admin').page, 'admin')
+  assert.equal(resolveRoute('http://localhost/admin/').page, 'admin')
+  assert.equal(resolveRoute('http://localhost/?page=admin').page, 'admin')
+})

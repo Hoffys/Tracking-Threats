@@ -66,36 +66,34 @@ function AppShell() {
   }
 
   return (
-    <Layout activePage={activePage} onNavigate={handleNavigate}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={route.notFound ? 'notFound' : activePage === 'about' ? `${activePage}:${aboutSection}` : activePage}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.22, ease: 'easeOut' }}
-        >
-          <Suspense fallback={<div className="rounded-lg border border-slate-200 p-5 text-sm text-slate-500 dark:border-slate-800">Loading page...</div>}>
-            {route.notFound ? (
-              <div className="space-y-3 rounded-lg border border-slate-200 p-6 dark:border-slate-800">
-                <h1 className="text-xl font-semibold">Page not found</h1>
-                <p className="text-sm text-slate-600 dark:text-slate-300">This address does not match an available page.</p>
-                <button type="button" onClick={() => handleNavigate('dashboard')} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Go to Dashboard</button>
-              </div>
-            ) : (
-              <ActivePage aboutSection={aboutSection} onNavigate={handleNavigate} />
-            )}
-          </Suspense>
-        </motion.div>
-      </AnimatePresence>
-    </Layout>
+    <ThreatProvider pauseAutoRefresh={activePage === 'admin'}>
+      <Layout activePage={activePage} onNavigate={handleNavigate}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={route.notFound ? 'notFound' : activePage === 'about' ? `${activePage}:${aboutSection}` : activePage}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <Suspense fallback={<div className="rounded-lg border border-slate-200 p-5 text-sm text-slate-500 dark:border-slate-800">Loading page...</div>}>
+              {route.notFound ? (
+                <div className="space-y-3 rounded-lg border border-slate-200 p-6 dark:border-slate-800">
+                  <h1 className="text-xl font-semibold">Page not found</h1>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">This address does not match an available page.</p>
+                  <button type="button" onClick={() => handleNavigate('dashboard')} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Go to Dashboard</button>
+                </div>
+              ) : (
+                <ActivePage aboutSection={aboutSection} onNavigate={handleNavigate} />
+              )}
+            </Suspense>
+          </motion.div>
+        </AnimatePresence>
+      </Layout>
+    </ThreatProvider>
   )
 }
 
 export default function App() {
-  return (
-    <ThreatProvider>
-      <AppShell />
-    </ThreatProvider>
-  )
+  return <AppShell />
 }

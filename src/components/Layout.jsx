@@ -12,7 +12,6 @@ import {
   Radar,
   ScanLine,
   Settings,
-  ShieldCheck,
   ShieldX,
   Sun,
 } from 'lucide-react'
@@ -32,11 +31,10 @@ const allNavItems = [
   { id: 'history', label: 'History', icon: History },
   { id: 'alerts', label: 'Alerts', icon: Bell },
   { id: 'settings', label: 'Settings', icon: Settings },
-  { id: 'admin', label: 'Admin', icon: ShieldCheck },
 ]
 
 const publicNavItems = allNavItems.filter((item) =>
-  ['dashboard', 'learn', 'about', 'monitor', 'manual', 'history', 'settings', 'admin'].includes(item.id),
+  ['dashboard', 'learn', 'about', 'monitor', 'manual', 'history', 'settings'].includes(item.id),
 )
 const navItems = isPublicDeployment ? publicNavItems : allNavItems
 

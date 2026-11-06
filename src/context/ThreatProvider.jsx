@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ThreatContext } from './ThreatContext'
 import { isPublicDeployment } from '../config/deployment'
 import { apiService, clearClientCredential, ensureClientCredential, readClientCredential } from '../services/api'
+import { coordinateRefresh, createRefreshPolling } from './refreshPolling'
 
 const emptyStats = {
   blocked: 0,
@@ -195,7 +196,7 @@ const readNotificationSettings = () => {
   }
 }
 
-export function ThreatProvider({ children }) {
+export function ThreatProvider({ children, pauseAutoRefresh = false }) {
   const [publicClientId, setPublicClientId] = useState(() => (isPublicDeployment ? readPublicClientId() : ''))
   const initialPublicScans = isPublicDeployment
     ? filterVisiblePublicScans(readPublicScans(publicClientId), publicClientId)
@@ -233,6 +234,7 @@ export function ThreatProvider({ children }) {
     }
   })
   const latestDangerousAlertId = useRef(null)
+  const refreshInFlightRef = useRef(null)
 
   const applyPublicScans = useCallback((nextScans, health = {}) => {
     const publicAlerts = nextScans
@@ -250,7 +252,7 @@ export function ThreatProvider({ children }) {
     setStats(getPublicStats(nextScans))
   }, [])
 
-  const refreshData = useCallback(async () => {
+  const performRefreshData = useCallback(async () => {
     if (isPublicDeployment) {
       const { clientId } = await ensureClientCredential()
       if (clientId !== publicClientId) {
@@ -313,6 +315,11 @@ export function ThreatProvider({ children }) {
     }
   }, [applyPublicScans, publicClientId])
 
+  const refreshData = useCallback(
+    () => coordinateRefresh(performRefreshData, refreshInFlightRef),
+    [performRefreshData],
+  )
+
   useEffect(() => {
     localStorage.setItem('threattrack:dark-mode', JSON.stringify(darkMode))
     document.documentElement.classList.toggle('dark', darkMode)
@@ -341,18 +348,17 @@ export function ThreatProvider({ children }) {
   }, [notificationSettings])
 
   useEffect(() => {
-    const refreshTimeoutId = window.setTimeout(() => {
-      refreshData().catch((error) => setActivitySyncError(error.message))
-    }, 0)
-    const intervalId = window.setInterval(() => {
-      refreshData().catch((error) => setActivitySyncError(error.message))
-    }, 2000)
-
-    return () => {
-      window.clearTimeout(refreshTimeoutId)
-      window.clearInterval(intervalId)
-    }
-  }, [refreshData])
+    const polling = createRefreshPolling({
+      documentRef: document,
+      refresh: refreshData,
+      onError: (error) => setActivitySyncError(error.message),
+      initiallyPaused: pauseAutoRefresh,
+      intervalMs: 30_000,
+      setIntervalFn: window.setInterval.bind(window),
+      clearIntervalFn: window.clearInterval.bind(window),
+    })
+    return polling.start()
+  }, [pauseAutoRefresh, refreshData])
 
   const createScan = useCallback(
     async ({

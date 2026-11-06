@@ -11,6 +11,9 @@ export function resolveRoute(href, publicDeployment = false) {
   if (url.pathname.replace(/\/$/, '') === '/privacy') {
     return { page: 'privacyPolicy', aboutSection: 'methodology' }
   }
+  if (url.pathname.replace(/\/$/, '') === '/admin') {
+    return { page: 'admin', aboutSection: 'methodology' }
+  }
   if (url.pathname !== '/' && url.pathname !== '') {
     return { page: null, aboutSection: 'methodology', notFound: true }
   }
@@ -36,6 +39,7 @@ export function resolveRoute(href, publicDeployment = false) {
 
 export function getPageUrl(page, aboutSection = 'methodology') {
   if (page === 'privacyPolicy') return '/privacy'
+  if (page === 'admin') return '/admin'
   const url = new URL('/', 'http://localhost')
   url.searchParams.set('page', page)
   if (page === 'about') url.searchParams.set('section', aboutSection)
