@@ -25,7 +25,7 @@ const sections = [
   {
     icon: MailCheck,
     title: 'Browser email consent',
-    body: 'Email scanning is off until you accept the confidentiality notice. After consent, the extension can inspect opened messages on supported Gmail, Outlook, Yahoo Mail, Proton Mail, iCloud Mail, Zoho Mail, AOL Mail, and Mail.com pages. It sends the visible sender, subject, message text, and links to the backend for analysis. On Gmail, you can also scan visible inbox previews in batches; those previews include sender, subject, snippet, and the row link. Messages may contain personal, health, financial, or authentication information. Do not scan messages unless you are authorized to submit them. Use the monitor’s Turn off control to withdraw consent and stop future email scans. Withdrawing consent does not delete scan records already saved.',
+    body: 'Email scanning is off until you accept the confidentiality notice. After consent, the extension can inspect opened messages on supported Gmail, Outlook, Yahoo Mail, Proton Mail, iCloud Mail, Zoho Mail, AOL Mail, and Mail.com pages. It sends the visible sender, subject, message text, and links to the backend for analysis. Gmail supports batch scanning of rendered previews in the currently selected mail view. Outlook Cloud supports an explicit Scan Folder action that opens conversations in the selected Inbox or Sent Items view and scans individually identified messages visible in the reading pane. Opening messages may change their read status according to your Outlook settings. Outlook conversations may contain collapsed or unloaded messages; those conversations are reported as incomplete when the extension cannot verify all messages. The extension does not navigate to other folders or automatically scroll the list. Batch sizes are 10, 20, 30, 40, or 50 messages. Messages may contain personal, health, financial, or authentication information. Do not scan messages unless you are authorized to submit them. Use the monitor’s Turn off control to withdraw consent and stop future email scans. Withdrawing consent does not delete scan records already saved.',
   },
   {
     icon: FileWarning,
@@ -64,7 +64,7 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
     <div className="space-y-6">
       {!embedded && (
         <header className="border-b border-slate-200 pb-5 dark:border-slate-800">
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.10</p>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.12</p>
           <h1 className="mt-1 text-2xl font-semibold">How scan data is handled</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Tracking Threats scans eligible website URLs, search-result links, consented email, and
@@ -76,7 +76,7 @@ export function PrivacyNotice({ embedded = false, onNavigate }) {
 
       {embedded && (
         <div>
-          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.10</p>
+          <p className="text-sm font-medium text-teal-700 dark:text-teal-300">Privacy Notice 2026.12</p>
           <h2 className="mt-1 text-xl font-semibold">How scan data is handled</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
             Tracking Threats scans eligible website URLs, search-result links, consented email, and

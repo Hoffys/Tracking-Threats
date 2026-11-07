@@ -287,8 +287,8 @@ test('search scans are blocked while disabled, and Gmail consent remains indepen
   assert.equal(blocked.consentRequired, true)
   assert.equal(calls, 0)
   assert.match(background, /const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'/)
-  assert.match(background, /const EMAIL_CONSENT_VERSION = '2026\.09'/)
-  assert.match(readFileSync(new URL('./email-monitor.js', import.meta.url), 'utf8'), /const EMAIL_CONSENT_VERSION = '2026\.09'/)
+  assert.match(background, /const EMAIL_CONSENT_VERSION = '2026\.12'/)
+  assert.match(readFileSync(new URL('./email-monitor.js', import.meta.url), 'utf8'), /const EMAIL_CONSENT_VERSION = '2026\.12'/)
 })
 
 test('preview-only consent uses the existing non-persistent preview path; disabled consent sends no requests', () => {

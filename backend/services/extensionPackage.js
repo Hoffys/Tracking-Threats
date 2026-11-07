@@ -4,7 +4,7 @@ import { deflateRawSync } from 'node:zlib'
 // Explicit release files: never package local metadata, credentials, or test fixtures.
 const files = [
   'manifest.json', 'config.js', 'background.js', 'app-bridge.js',
-  'google-results.js', 'email-monitor.js', 'popup.html', 'popup.js',
+  'google-results.js', 'email-batch.js', 'outlook-cloud-batch.js', 'email-monitor.js', 'popup.html', 'popup.js',
   'blocked.html', 'blocked.js', 'INSTALL.txt',
   'icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png',
   'rules/adblock-rules.json',
