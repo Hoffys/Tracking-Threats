@@ -22,23 +22,62 @@ function getCategoryText(scan) {
 }
 
 function appendScanContext(parent, scan) {
-  if (scan?.threatName && scan?.threatType) {
+  const classification = scan?.threatClassification ?? scan?.details?.threatClassification ?? scan ?? {}
+  const threatName = scan?.threatName ?? classification.threatName
+  const threatType = scan?.threatType ?? classification.threatType
+  const confidence = scan?.confidence ?? classification.confidence
+  const reasons = [scan?.whyDetected, classification.whyDetected, scan?.warningSigns]
+    .find((value) => Array.isArray(value) && value.length > 0) ?? []
+  const evidenceSources = [scan?.evidenceSources, classification.evidenceSources]
+    .find((value) => Array.isArray(value) && value.length > 0) ?? []
+  const safeWithoutThreat = scan?.status === 'Safe' &&
+    ((!threatName && !threatType) || threatName === 'No threat identified' || threatType === 'None detected')
+  const hasClassification = threatName || threatType || confidence || reasons.length || evidenceSources.length || safeWithoutThreat
+
+  if (hasClassification) {
     const classification = document.createElement('div')
     classification.style.cssText = 'margin:10px 0 0;border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:10px;color:#e2e8f0'
-    const heading = document.createElement('strong')
-    heading.textContent = `Threat name: ${scan.threatName}`
-    heading.style.cssText = 'display:block;color:#f8fafc'
-    const type = document.createElement('p')
-    type.textContent = `Threat type: ${scan.threatType}${scan.confidence ? ` - Confidence: ${scan.confidence}` : ''}`
-    type.style.cssText = 'margin:4px 0 0'
-    const reason = document.createElement('p')
-    reason.textContent = `Why: ${scan.whyDetected?.[0] || scan.warningSigns?.[0] || scan.summary || 'Review the scan evidence.'}`
-    reason.style.cssText = 'margin:4px 0 0;color:#cbd5e1'
-    classification.append(heading, type, reason)
+    const addField = (label, value, tag = 'p') => {
+      if (!value) return
+      const field = document.createElement(tag)
+      field.textContent = `${label}: ${value}`
+      field.style.cssText = 'margin:4px 0 0;color:#e2e8f0'
+      classification.appendChild(field)
+    }
+    addField('Threat name', threatName, 'strong')
+    addField('Threat type', threatType)
+    addField('Confidence', confidence)
+
+    const reasonList = Array.isArray(reasons) ? reasons.filter((item) => typeof item === 'string' && item.trim()).slice(0, 5) : []
+    const reasonLabel = safeWithoutThreat ? 'Result explanation' : 'Why detected'
+    if (reasonList.length > 0) {
+      const reasonHeading = document.createElement('strong')
+      reasonHeading.textContent = `${reasonLabel}:`
+      reasonHeading.style.cssText = 'display:block;margin-top:8px;color:#e2e8f0'
+      const reasonItems = document.createElement('ul')
+      reasonItems.style.cssText = 'margin:4px 0 0;padding-left:18px;color:#cbd5e1'
+      reasonList.forEach((reason) => {
+        const item = document.createElement('li')
+        item.textContent = reason
+        reasonItems.appendChild(item)
+      })
+      classification.append(reasonHeading, reasonItems)
+    } else if (safeWithoutThreat) {
+      addField('Result explanation', 'No specific threat indicators were returned by the available checks.')
+    }
+
+    const sourceList = Array.isArray(evidenceSources) ? evidenceSources.filter((item) => typeof item === 'string' && item.trim()).slice(0, 8) : []
+    if (sourceList.length > 0) {
+      const source = document.createElement('p')
+      source.textContent = `${safeWithoutThreat ? 'Sources checked' : 'Evidence sources'}: ${sourceList.join(', ')}`
+      source.style.cssText = 'margin:8px 0 0;color:#cbd5e1'
+      classification.appendChild(source)
+    }
     parent.appendChild(classification)
   }
   const detail = document.createElement('p')
-  detail.textContent = [getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
+  const scanStatus = scan?.status ? `Scan result: ${getStatusLabel(scan.status, scan.coverage, scan.categories)}${Number.isFinite(scan.score) ? ` (${scan.score}/100)` : ''}.` : ''
+  detail.textContent = [scanStatus, getCoverageText(scan), getCategoryText(scan), 'Rule-based score; not a calibrated probability.'].filter(Boolean).join(' ')
   detail.style.cssText = `margin:10px 0 0;color:${hasIncompleteChecks(scan) ? '#fde68a' : '#cbd5e1'}`
   parent.appendChild(detail)
 }
@@ -63,13 +102,27 @@ const MAX_INBOX_SCANS_IN_FLIGHT = 4
 const APP_URL = TRACKING_THREATS_CONFIG.APP_URL
 const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
 const EMAIL_BATCH_SIZE_KEY = 'trackingThreatsEmailBatchSize'
-const EMAIL_CONSENT_VERSION = '2026.09'
+const EMAIL_CONSENT_VERSION = '2026.12'
 
 let scanTimer = null
 let inboxScanTimer = null
 let lastScanKey = ''
 let emailConsentGranted = false
 let emailObserver = null
+let emailConsentCheckPromise = null
+let emailConsentRevision = 0
+let consentRecoveryObserver = null
+let consentRecoveryTimer = null
+let gmailInboxBatchEngine = null
+let gmailInboxViewId = null
+let outlookCloudBatchAdapter = null
+let outlookCloudBatchActive = false
+let outlookCloudFolderId = null
+let outlookCloudProgress = { conversationsInspected: 0, conversationsIncomplete: 0, conversationsSkipped: 0, folderTraversalLimited: true }
+let outlookCloudRouteMonitorTimer = null
+let lastOutlookCloudRouteKey = null
+let openedScanGeneration = 0
+const openedScanInFlightKeys = new Set()
 let inboxBatchNumber = 1
 let inboxBatchStart = 0
 let inboxBatchSize = DEFAULT_INBOX_BATCH_SIZE
@@ -78,8 +131,6 @@ let inboxAttempts = 0
 let inboxPending = 0
 let inboxPaused = false
 let inboxWaitingForRows = false
-let inboxGeneration = 0
-const inboxScanKeys = new Set()
 const inboxResults = []
 const inboxStats = {
   checked: 0,
@@ -127,9 +178,8 @@ async function readInboxBatchSize() {
 
 function setInboxBatchSize(value, persist = true) {
   inboxBatchSize = normalizeInboxBatchSize(value)
-  if (inboxPaused || inboxAttempts === inboxBatchStart) {
-    inboxBatchLimit = inboxBatchStart + inboxBatchSize
-  }
+  gmailInboxBatchEngine?.setBatchSize(inboxBatchSize)
+  outlookCloudBatchAdapter?.engine.setBatchSize(inboxBatchSize)
   if (persist) {
     chrome.storage.local.set({ [EMAIL_BATCH_SIZE_KEY]: inboxBatchSize }).catch(() => {})
   }
@@ -158,6 +208,7 @@ function clearEmailMonitorUi() {
   document.getElementById('threattrack-email-consent')?.remove()
   document.getElementById('threattrack-email-consent-disabled')?.remove()
   document.getElementById('threattrack-email-warning')?.remove()
+  document.getElementById('threattrack-email-scan-failure')?.remove()
   document.getElementById('threattrack-inbox-status')?.remove()
   document.getElementById('threattrack-inbox-review')?.remove()
   document.querySelectorAll('.threattrack-inbox-label').forEach((label) => label.remove())
@@ -171,32 +222,52 @@ function clearEmailMonitorUi() {
   })
 }
 
+function stopConsentRecoveryObserver() {
+  window.clearTimeout(consentRecoveryTimer)
+  consentRecoveryTimer = null
+  consentRecoveryObserver?.disconnect()
+  consentRecoveryObserver = null
+}
+
+function startConsentRecoveryObserver() {
+  if (consentRecoveryObserver || !document.documentElement) return
+  consentRecoveryObserver = new MutationObserver(() => {
+    if (emailConsentGranted || document.getElementById('threattrack-email-consent') || consentRecoveryTimer !== null) return
+    consentRecoveryTimer = window.setTimeout(() => {
+      consentRecoveryTimer = null
+      if (!emailConsentGranted && !document.getElementById('threattrack-email-consent')) {
+        refreshEmailConsentUi().catch(() => {})
+      }
+    }, 120)
+  })
+  consentRecoveryObserver.observe(document.documentElement, { childList: true, subtree: true })
+}
+
 function stopEmailMonitoring() {
   emailConsentGranted = false
-  inboxGeneration += 1
+  openedScanGeneration += 1
+  openedScanInFlightKeys.clear()
   window.clearTimeout(scanTimer)
   window.clearTimeout(inboxScanTimer)
+  if (outlookCloudRouteMonitorTimer !== null) {
+    window.clearInterval(outlookCloudRouteMonitorTimer)
+    outlookCloudRouteMonitorTimer = null
+  }
+  lastOutlookCloudRouteKey = null
+  window.removeEventListener('popstate', scheduleEmailChecks)
+  window.removeEventListener('hashchange', scheduleEmailChecks)
   emailObserver?.disconnect()
   emailObserver = null
   lastScanKey = ''
-  inboxScanKeys.clear()
-  inboxResults.length = 0
-  inboxBatchNumber = 1
-  inboxBatchStart = 0
-  inboxBatchLimit = inboxBatchSize
-  inboxAttempts = 0
-  inboxPending = 0
-  inboxPaused = false
-  inboxWaitingForRows = false
-  Object.keys(inboxStats).forEach((key) => {
-    inboxStats[key] = 0
-  })
+  outlookCloudBatchAdapter?.cancel()
+  outlookCloudBatchActive = false
+  gmailInboxBatchEngine?.cancel()
   clearEmailMonitorUi()
 }
 
 async function disableEmailMonitoring() {
-  await saveEmailConsent(false)
   stopEmailMonitoring()
+  await saveEmailConsent(false)
   showEmailScanningDisabled()
 }
 
@@ -272,6 +343,8 @@ function showEmailScanningDisabled() {
 
 function showEmailConsentDialog() {
   if (document.getElementById('threattrack-email-consent')) return
+  if (!document.body) return
+  startConsentRecoveryObserver()
   document.getElementById('threattrack-email-consent-disabled')?.remove()
 
   const overlay = document.createElement('div')
@@ -323,10 +396,11 @@ function showEmailConsentDialog() {
   const list = document.createElement('ul')
   list.style.cssText = 'margin:14px 0 0;padding-left:20px;color:#e2e8f0;font:13px/1.6 Arial,sans-serif'
   ;[
-    'The extension checks the visible sender, subject, message text, links, and Gmail inbox previews. You choose 10, 20, 30, 40, or 50 messages per batch.',
-    'This information is sent securely to the Tracking Threats backend for automated phishing analysis.',
-    'Production does not retain raw email bodies. Redacted results and evidence are retained for up to 30 days.',
-    'Consent applies to supported webmail opened in this browser. You can turn scanning off at any time.',
+    'For an identified opened message, the extension processes the visible sender, subject, message text, and links. Gmail can scan previews in the currently selected mail view. Outlook Cloud can open conversations in the selected folder after you choose Scan Folder, then scan individually identified visible messages. Opening messages may change their read status according to Outlook settings. Batch sizes are 10, 20, 30, 40, or 50. The extension does not switch folders.',
+    'Outlook Cloud conversations can contain collapsed or unloaded messages. The extension reports conversations as incomplete when it cannot verify every message, and it does not treat conversation previews as complete emails.',
+    'The extracted sender, subject, message text, and visible links are sent securely to the Tracking Threats backend for phishing analysis. Recipient information is not collected.',
+    'The backend may retain submitted scan content according to its STORE_SCAN_CONTENT setting. The extension cannot verify the current production setting; review the Privacy Notice or ask the service administrator.',
+    'Consent applies to supported webmail in this browser. Turning scanning off stops future scans; a request already sent may finish processing.',
   ].forEach((text) => {
     const item = document.createElement('li')
     item.textContent = text
@@ -408,6 +482,9 @@ function showEmailConsentDialog() {
     accept.style.cursor = agreement.checked ? 'pointer' : 'not-allowed'
   })
   decline.addEventListener('click', () => {
+    emailConsentRevision += 1
+    stopConsentRecoveryObserver()
+    stopEmailMonitoring()
     saveEmailConsent(false)
       .catch(() => {})
       .finally(() => {
@@ -417,6 +494,7 @@ function showEmailConsentDialog() {
   })
   accept.addEventListener('click', () => {
     if (!agreement.checked) return
+    emailConsentRevision += 1
     saveEmailConsent(true)
       .then(() => {
         overlay.remove()
@@ -455,9 +533,9 @@ function getVisibleAttribute(selector, attribute) {
   return cleanText(element?.getAttribute(attribute) ?? '')
 }
 
-function getVisibleElements(selectors) {
+function getVisibleElements(selectors, scope = document) {
   return selectors.flatMap((selector) =>
-    Array.from(document.querySelectorAll(selector)).filter((element) => {
+    Array.from(scope.querySelectorAll(selector)).filter((element) => {
       return isVisible(element) && cleanText(element.textContent).length > 0
     }),
   )
@@ -474,52 +552,54 @@ function getVisibleLinks(elements) {
   ]
 }
 
-function getTextWithLinks(element) {
-  if (!element) return ''
-  const text = cleanText(element.textContent ?? '')
+function getVisibleTextWithin(scope, selectors) {
+  for (const selector of selectors) {
+    const element = Array.from(scope.querySelectorAll(selector)).filter(isVisible).at(-1)
+    if (!element) continue
+    const text = cleanText(element.textContent ?? '')
+    if (text) return text
+    const accessibleLabel = cleanText(element.getAttribute('aria-label') || element.getAttribute('title') || '')
+      .replace(/^(?:from|sender|subject)\s*:?\s*/i, '')
+    if (accessibleLabel) return accessibleLabel
+  }
+  return ''
+}
+
+function getBodyFromSelectors(selectors, scope = document) {
+  const element = getVisibleElements(selectors, scope).at(-1)
+  if (!element) return { body: '', links: [] }
+  const body = cleanText(element.textContent ?? '')
   const links = getVisibleLinks([element])
-  if (links.length === 0) return text
-  return `${text}\n\nVisible links:\n${links.join('\n')}`
+  return {
+    body: links.length ? `${body}\n\nVisible links:\n${links.join('\n')}` : body,
+    links,
+  }
 }
 
-function getBodyFromSelectors(selectors) {
-  const elements = getVisibleElements(selectors)
-  if (elements.length > 0) return getTextWithLinks(elements.at(-1))
-  return getTextWithLinks(getLargestVisibleElement(selectors))
-}
-
-function getLargestVisibleElement(selectors) {
-  return selectors
-    .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
-    .map((element) => {
-      const rect = element.getBoundingClientRect()
-      return {
-        element,
-        text: cleanText(element.textContent ?? ''),
-        area: rect.width * rect.height,
-        visible: isVisible(element),
-      }
-    })
-    .filter((item) => item.visible && item.text.length > 0)
-    .sort((left, right) => right.text.length + right.area - (left.text.length + left.area))[0]
-    ?.element
+function createOpenedEmail(sender, subject, bodyData) {
+  const normalized = {
+    sender: cleanText(sender),
+    subject: cleanText(subject),
+    body: String(bodyData?.body ?? '').trim(),
+    links: Array.isArray(bodyData?.links) ? bodyData.links : [],
+  }
+  return normalized.body ? normalized : null
 }
 
 function getGmailEmail() {
-  return {
-    sender:
-      getVisibleAttribute('.gD[email]', 'email') ||
-      getVisibleText('.gD') ||
-      getVisibleText('.go'),
-    subject: getVisibleText('h2.hP') || getVisibleText('[data-thread-perm-id] h2'),
-    body: getBodyFromSelectors([
+  const sender =
+    getVisibleAttribute('.gD[email]', 'email') ||
+    getVisibleText('.gD') ||
+    getVisibleText('.go')
+  const subject = getVisibleText('h2.hP') || getVisibleText('[data-thread-perm-id] h2')
+  const body = getBodyFromSelectors([
       '.a3s.aiL',
       '.adn.ads .a3s',
       'div[role="listitem"] .a3s',
       '.ii.gt',
       '[role="main"] .a3s',
-    ]),
-  }
+    ])
+  return createOpenedEmail(sender, subject, body)
 }
 
 function getGmailInboxRows() {
@@ -531,10 +611,32 @@ function getGmailInboxRows() {
     })
 }
 
-function getGmailInboxRowKey(row, email) {
+function getGmailInboxRowKey(row) {
   const threadId = row.getAttribute('data-legacy-thread-id') ||
     row.getAttribute('data-thread-id') || row.getAttribute('data-thread-perm-id') || row.id
-  return threadId ? `thread:${threadId}` : `preview:${getScanKey(email)}`
+  return threadId ? `thread:${threadId}` : ''
+}
+
+function getGmailBatchViewId() {
+  const route = String(window.location.hash ?? '').replace(/^#/, '')
+  if (!route) return null
+  const fixedFolder = route.match(/^(inbox|sent|all|starred|snoozed|important|drafts|spam|trash)(?:\/[^/]*)?$/i)
+  if (fixedFolder) return fixedFolder[1].toLowerCase()
+
+  const namedView = route.match(/^(label|category)\/([^/]+)(?:\/[^/]*)?$/i)
+  if (namedView) {
+    let name = namedView[2]
+    try { name = decodeURIComponent(name) } catch { return null }
+    return `${namedView[1].toLowerCase()}:${name}`
+  }
+
+  const searchView = route.match(/^search\/(.+)$/i)
+  if (searchView) {
+    const parts = searchView[1].split('/')
+    if (parts.length > 1 && /^[a-f\d]{8,}$/i.test(parts.at(-1))) parts.pop()
+    return parts.length ? `search:${parts.join('/')}` : null
+  }
+  return null
 }
 
 function getRowText(row, selector) {
@@ -652,7 +754,8 @@ function markGmailInboxRow(row, scan) {
 }
 
 function showInboxStatus() {
-  if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
+  const isOutlookCloud = window.location.hostname === 'outlook.cloud.microsoft'
+  if (!emailConsentGranted || (window.location.hostname !== 'mail.google.com' && !isOutlookCloud)) return
 
   const existing = document.getElementById('threattrack-inbox-status')
   const banner = existing ?? document.createElement('aside')
@@ -668,11 +771,22 @@ function showInboxStatus() {
       : hasRisk || hasContentWarnings || hasGaps
         ? 'rgba(245,158,11,.45)'
         : 'rgba(16,185,129,.45)'
-  let statusText = 'Scanning visible Gmail messages...'
-  if (inboxPaused) {
-    statusText = `Batch ${inboxBatchNumber} finished. Inbox scanning is paused.`
-  } else if (inboxWaitingForRows) {
-    statusText = 'No new visible messages. Open another Gmail page to continue.'
+  const outlookAvailability = isOutlookCloud ? getOutlookCloudBatchAvailability() : null
+  let statusText = isOutlookCloud ? 'Choose a supported Outlook folder, then select Scan Folder.' : 'Scanning visible Gmail messages...'
+  if (isOutlookCloud && !outlookAvailability.enabled) {
+    statusText = outlookAvailability.message
+  } else if (isOutlookCloud && inboxPaused) {
+    statusText = `Batch ${inboxBatchNumber} paused. ${outlookCloudProgress.conversationsIncomplete} conversation(s) are marked incomplete.`
+  } else if (isOutlookCloud && outlookCloudBatchActive) {
+    statusText = `Scanning the selected Outlook folder. ${outlookCloudProgress.conversationsInspected} conversation(s) inspected; ${outlookCloudProgress.conversationsIncomplete} incomplete. Scroll the message list to load more conversations.`
+  } else if (isOutlookCloud && outlookCloudProgress.conversationsInspected > 0) {
+    statusText = `Folder scan stopped. ${outlookCloudProgress.conversationsInspected} conversation(s) inspected; ${outlookCloudProgress.conversationsIncomplete} incomplete, ${outlookCloudProgress.conversationsSkipped} skipped.`
+  } else if (!isOutlookCloud && !gmailInboxViewId && getGmailBatchViewId() === null) {
+    statusText = 'Batch scanning is unavailable for this Gmail view.'
+  } else if (!isOutlookCloud && inboxPaused) {
+    statusText = `Batch ${inboxBatchNumber} finished. Scanning this Gmail view is paused.`
+  } else if (!isOutlookCloud && inboxWaitingForRows) {
+    statusText = 'Waiting for more messages in this view. Scroll or load more messages to continue.'
   } else if (inboxPending === 0 && hasRisk) {
     statusText = `${riskyCount} risky email${riskyCount === 1 ? '' : 's'} found`
   } else if (inboxPending === 0 && hasContentWarnings) {
@@ -706,7 +820,7 @@ function showInboxStatus() {
   banner.innerHTML = ''
 
   const title = document.createElement('strong')
-  title.textContent = 'Tracking Threats Gmail Monitor'
+  title.textContent = isOutlookCloud ? 'Tracking Threats Outlook Monitor' : 'Tracking Threats Gmail Monitor'
   title.style.cssText = `display:block;font-size:14px;color:${accentColor}`
 
   const body = document.createElement('p')
@@ -718,7 +832,7 @@ function showInboxStatus() {
   counts.style.cssText = 'margin:8px 0 0;color:#e2e8f0;font-weight:700'
 
   const totals = document.createElement('p')
-  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe + inboxStats.incomplete} appear safe (${inboxStats.incomplete} with limited verification) - ${inboxStats.content} content warning - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed`
+  totals.textContent = `${inboxStats.checked} checked - ${inboxStats.safe + inboxStats.incomplete} appear safe (${inboxStats.incomplete} with limited verification) - ${inboxStats.content} content warning - ${inboxStats.caution} caution - ${inboxStats.dangerous} risk - ${inboxStats.failed} failed${isOutlookCloud ? ` - ${outlookCloudProgress.conversationsIncomplete} conversation(s) incomplete - ${outlookCloudProgress.conversationsSkipped} skipped` : ''}`
   totals.style.cssText = 'margin:3px 0 0;color:#cbd5e1;font-size:11px'
 
   const batchControls = document.createElement('div')
@@ -734,6 +848,21 @@ function showInboxStatus() {
   header.append(title, createTurnOffButton())
 
   banner.append(header, body, counts, totals, batchControls)
+  if (isOutlookCloud) {
+    const folderAction = document.createElement('button')
+    folderAction.type = 'button'
+    folderAction.style.cssText = 'margin-top:10px;border:0;border-radius:6px;background:#0d9488;color:#fff;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
+    if (outlookCloudBatchActive) {
+      folderAction.textContent = 'Cancel folder scan'
+      folderAction.addEventListener('click', cancelOutlookCloudBatch)
+    } else {
+      folderAction.textContent = 'Scan Folder'
+      folderAction.disabled = !outlookAvailability.enabled
+      if (folderAction.disabled) folderAction.style.opacity = '.55'
+      folderAction.addEventListener('click', startOutlookCloudBatch)
+    }
+    banner.appendChild(folderAction)
+  }
   if (inboxResults.length > 0) {
     const actions = document.createElement('div')
     actions.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'
@@ -751,24 +880,41 @@ function showInboxStatus() {
       next.addEventListener('click', continueInboxBatch)
       actions.appendChild(next)
     }
+    if (inboxStats.failed > 0) {
+      const retry = document.createElement('button')
+      retry.type = 'button'
+      retry.textContent = 'Retry failed'
+      retry.style.cssText = 'border:1px solid #fca5a5;border-radius:6px;background:transparent;color:#fecaca;cursor:pointer;font:700 11px Arial,sans-serif;padding:7px 9px'
+      retry.addEventListener('click', retryFailedInboxBatch)
+      actions.appendChild(retry)
+    }
     banner.appendChild(actions)
   }
   if (!existing) document.body.appendChild(banner)
 }
 
 function continueInboxBatch() {
-  if (!emailConsentGranted || !inboxPaused) return
-  inboxBatchNumber += 1
-  inboxBatchStart = inboxAttempts
-  inboxBatchLimit = inboxBatchStart + inboxBatchSize
-  inboxPaused = false
-  inboxWaitingForRows = false
+  if (!emailConsentGranted) return
   document.getElementById('threattrack-inbox-review')?.remove()
-  scanGmailInbox()
+  if (window.location.hostname === 'outlook.cloud.microsoft') {
+    outlookCloudBatchAdapter?.continueBatch()
+    return
+  }
+  ensureGmailBatchEngine()?.continueBatch()
+}
+
+function retryFailedInboxBatch() {
+  if (!emailConsentGranted) return
+  if (window.location.hostname === 'outlook.cloud.microsoft') {
+    outlookCloudBatchAdapter?.retryFailed()
+    return
+  }
+  ensureGmailBatchEngine()?.retryFailed()
 }
 
 function showInboxReview(selectedBatch = inboxBatchNumber) {
-  if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
+  const isOutlookCloud = window.location.hostname === 'outlook.cloud.microsoft'
+  if (!emailConsentGranted || (window.location.hostname !== 'mail.google.com' && !isOutlookCloud)) return
   document.getElementById('threattrack-inbox-review')?.remove()
 
   const overlay = document.createElement('div')
@@ -799,7 +945,7 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
   heading.style.cssText = 'min-width:0'
 
   const eyebrow = document.createElement('p')
-  eyebrow.textContent = `GMAIL INBOX  •  BATCH ${selectedBatch}`
+  eyebrow.textContent = `${isOutlookCloud ? 'OUTLOOK FOLDER' : 'GMAIL MAIL VIEW'}  •  BATCH ${selectedBatch}`
   eyebrow.style.cssText = 'margin:0 0 5px;color:#5eead4;font:700 11px/1.4 Arial,sans-serif;letter-spacing:.08em'
 
   const title = document.createElement('h2')
@@ -932,10 +1078,8 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
       const detailsToggle = document.createElement('summary')
       detailsToggle.textContent = 'View scan details'
       detailsToggle.style.cssText = 'color:#99f6e4;cursor:pointer;font:700 11px/1.4 Arial,sans-serif'
-      const context = document.createElement('p')
-      context.textContent = [getCoverageText(result), getCategoryText(result)].filter(Boolean).join(' ')
-      context.style.cssText = 'margin:8px 0 1px;color:#cbd5e1;font:12px/1.5 Arial,sans-serif'
-      details.append(detailsToggle, context)
+      details.appendChild(detailsToggle)
+      appendScanContext(details, result)
       item.appendChild(details)
     }
     list.appendChild(item)
@@ -946,9 +1090,11 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
   const footer = document.createElement('footer')
   footer.style.cssText = 'flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #263449;background:#0c1424;padding:14px 22px;flex-wrap:wrap'
   const scope = document.createElement('p')
-  scope.textContent = inboxPaused
-    ? 'Inbox preview scanning is paused. Opened emails are still covered by your consent.'
-    : 'Scanning continues while this Gmail tab remains open.'
+  scope.textContent = isOutlookCloud
+    ? `${outlookCloudProgress.conversationsIncomplete} conversation(s) are incomplete because collapsed or unloaded messages cannot be verified. Opening conversations may change their read status according to Outlook settings.`
+    : inboxPaused
+      ? 'Scanning this Gmail view is paused. Opened emails are still covered by your consent.'
+      : 'Scanning continues while this Gmail tab remains open.'
   scope.style.cssText = 'flex:1;min-width:220px;margin:0;color:#94a3b8;font:11px/1.45 Arial,sans-serif'
 
   const actions = document.createElement('div')
@@ -981,121 +1127,190 @@ function showInboxReview(selectedBatch = inboxBatchNumber) {
 }
 
 function getOutlookEmail() {
-  return {
-    sender:
-      getVisibleText('[data-testid="message-header"] [title*="@"]') ||
-      getVisibleText('[aria-label*="From"]') ||
-      getVisibleText('[role="heading"]'),
-    subject: getVisibleText('[role="heading"][aria-level="1"]') || getVisibleText('h1'),
-    body: getBodyFromSelectors([
+  if (window.location.hostname === 'outlook.cloud.microsoft') {
+    const readingPane = getVisibleElements(['[aria-label="Reading Pane"]']).at(-1)
+    if (!readingPane) return null
+
+    const message = getVisibleElements(['[aria-label="Email message"]'], readingPane).at(-1)
+    if (!message) return null
+
+    const sender = getVisibleTextWithin(message, [
+      '[aria-label^="From" i]',
+      '[data-testid*="sender"]',
+      '[data-testid*="from"]',
+      '[data-test-id*="sender"]',
+      '[data-test-id*="from"]',
+    ])
+    const subject = getVisibleTextWithin(message, [
+      '[aria-label^="Subject" i]',
+      '[data-testid*="subject"]',
+      '[data-test-id*="subject"]',
+      '[role="heading"]',
+      'h1, h2, h3',
+    ])
+    const body = getBodyFromSelectors([
+      '[data-test-id="mailMessageBodyContainer"]',
       '[aria-label="Message body"]',
-      '[role="document"]',
       '[data-testid="messageBodyContent"]',
       '[data-testid*="message-body"]',
-      'main',
-    ]),
+    ], message)
+    return createOpenedEmail(sender, subject, body)
   }
+
+  const sender = getVisibleText('[data-testid="message-header"] [title*="@"]')
+  const subject = getVisibleText('[role="heading"][aria-level="1"]')
+  const body = getBodyFromSelectors([
+      '[data-test-id="mailMessageBodyContainer"]',
+      '[aria-label="Message body"]',
+      '[data-testid="messageBodyContent"]',
+      '[data-testid*="message-body"]',
+    ])
+  return createOpenedEmail(sender, subject, body)
+}
+
+function getOutlookCloudFolderId() {
+  if (window.location.hostname !== 'outlook.cloud.microsoft') return null
+  const match = String(window.location.pathname ?? '').match(/^\/mail\/(inbox|sentitems)\/id\/[^/]+(?:\/|$)/i)
+  if (match) return match[1].toLowerCase()
+
+  const selectedFolders = Array.from(document.querySelectorAll('[role="treeitem"][aria-selected="true"][data-folder-name]'))
+  if (selectedFolders.length !== 1 || !hasOutlookCloudMessageList()) return null
+  const folderName = String(selectedFolders[0].getAttribute('data-folder-name') ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+  if (folderName === 'inbox') return 'inbox'
+  if (folderName === 'sentitems') return 'sentitems'
+  return null
+}
+
+function hasOutlookCloudMessageList() {
+  return Array.from(document.querySelectorAll('[role="listbox"]'))
+    .some((list) => /^Message list\b/i.test(list.getAttribute('aria-label') ?? ''))
+}
+
+function getOutlookCloudBatchAvailability() {
+  const enabled = Boolean(getOutlookCloudFolderId())
+  return {
+    enabled,
+    message: enabled ? '' : 'Batch scanning is available only for the verified Inbox and Sent Items folders.',
+  }
+}
+
+function getOutlookCloudRouteKey() {
+  if (window.location.hostname !== 'outlook.cloud.microsoft') return null
+  return JSON.stringify([
+    String(window.location.pathname ?? ''),
+    getOutlookCloudFolderId(),
+  ])
+}
+
+function refreshOutlookCloudRouteIfChanged() {
+  const routeKey = getOutlookCloudRouteKey()
+  if (routeKey === null || routeKey === lastOutlookCloudRouteKey) return false
+  lastOutlookCloudRouteKey = routeKey
+  outlookCloudBatchAdapter?.syncFolder()
+  showInboxStatus()
+  return true
+}
+
+function startOutlookCloudRouteMonitor() {
+  if (window.location.hostname !== 'outlook.cloud.microsoft' || outlookCloudRouteMonitorTimer !== null) return
+  lastOutlookCloudRouteKey = getOutlookCloudRouteKey()
+  // Content scripts run in an isolated world, so poll the URL instead of patching page-world history methods.
+  outlookCloudRouteMonitorTimer = window.setInterval(refreshOutlookCloudRouteIfChanged, 500)
+}
+
+function extractOutlookCloudBatchMessage(message) {
+  if (!message) return null
+  const sender = getVisibleTextWithin(message, [
+    '[aria-label^="From" i]',
+    '[data-testid*="sender"]',
+    '[data-testid*="from"]',
+    '[data-test-id*="sender"]',
+    '[data-test-id*="from"]',
+  ])
+  const subject = getVisibleTextWithin(message, [
+    '[aria-label^="Subject" i]',
+    '[data-testid*="subject"]',
+    '[data-test-id*="subject"]',
+    '[role="heading"]',
+    'h1, h2, h3',
+  ])
+  const body = getBodyFromSelectors([
+    '[data-test-id="mailMessageBodyContainer"]',
+    '[aria-label="Message body"]',
+    '[data-testid="messageBodyContent"]',
+    '[data-testid*="message-body"]',
+  ], message)
+  return createOpenedEmail(sender, subject, body)
+}
+
+function getCurrentOutlookCloudMessageId() {
+  const pane = getVisibleElements(['[aria-label="Reading Pane"]']).at(-1)
+  const message = pane && getVisibleElements(['[aria-label="Email message"]'], pane).at(-1)
+  return outlookCloudBatchAdapter?.getItempartId(message) ?? ''
 }
 
 function getYahooEmail() {
-  return {
-    sender:
-      getVisibleText('[data-test-id="message-view-from"]') ||
-      getVisibleText('[data-test-id="message-from"]'),
-    subject:
-      getVisibleText('[data-test-id="message-view-subject"]') ||
-      getVisibleText('[data-test-id="message-subject"]') ||
-      getVisibleText('h1'),
-    body: getBodyFromSelectors([
+  const sender = getVisibleText('[data-test-id="message-view-from"]')
+  const subject = getVisibleText('[data-test-id="message-view-subject"]')
+  const body = getBodyFromSelectors([
       '[data-test-id="message-view-body"]',
       '[data-test-id="message-body"]',
-      '[role="document"]',
-      'main',
-    ]),
-  }
+    ])
+  return createOpenedEmail(sender, subject, body)
 }
 
 function getProtonEmail() {
-  return {
-    sender:
-      getVisibleText('[data-testid*="sender"]') ||
-      getVisibleText('[class*="sender"]') ||
-      getVisibleText('[title*="@"]'),
-    subject:
-      getVisibleText('[data-testid*="subject"]') ||
-      getVisibleText('[class*="subject"]') ||
-      getVisibleText('h1'),
-    body: getBodyFromSelectors([
+  const sender = getVisibleText('[data-testid*="sender"]')
+  const subject = getVisibleText('[data-testid*="subject"]')
+  const body = getBodyFromSelectors([
       '[data-testid*="message-content"]',
-      '[class*="message-content"]',
-      '[role="document"]',
-      'article',
-    ]),
-  }
+    ])
+  return createOpenedEmail(sender, subject, body)
 }
 
 function getIcloudEmail() {
-  return {
-    sender:
-      getVisibleText('[aria-label*="From"]') ||
-      getVisibleText('[class*="sender"]') ||
-      getVisibleText('[title*="@"]'),
-    subject:
-      getVisibleText('[aria-label*="Subject"]') ||
-      getVisibleText('[class*="subject"]') ||
-      getVisibleText('h1'),
-    body: getBodyFromSelectors([
+  const sender = getVisibleText('[aria-label*="From"]')
+  const subject = getVisibleText('[aria-label*="Subject"]')
+  const body = getBodyFromSelectors([
       '[aria-label="Message body"]',
-      '[class*="message-body"]',
-      '[role="document"]',
-      'article',
-    ]),
-  }
+    ])
+  return createOpenedEmail(sender, subject, body)
 }
 
 function getGenericWebmailEmail() {
-  return {
-    sender:
-      getVisibleText('[aria-label*="From"]') ||
-      getVisibleText('[data-testid*="sender"]') ||
-      getVisibleText('[data-test-id*="sender"]') ||
-      getVisibleText('[class*="sender"]') ||
-      getVisibleText('[title*="@"]'),
-    subject:
-      getVisibleText('[aria-label*="Subject"]') ||
-      getVisibleText('[data-testid*="subject"]') ||
-      getVisibleText('[data-test-id*="subject"]') ||
-      getVisibleText('[class*="subject"]') ||
-      getVisibleText('h1, h2'),
-    body: getBodyFromSelectors([
+  const sender =
+    getVisibleText('[aria-label*="From"]') ||
+    getVisibleText('[data-testid*="sender"]') ||
+    getVisibleText('[data-test-id*="sender"]')
+  const subject =
+    getVisibleText('[aria-label*="Subject"]') ||
+    getVisibleText('[data-testid*="subject"]') ||
+    getVisibleText('[data-test-id*="subject"]')
+  const body = getBodyFromSelectors([
       '[aria-label="Message body"]',
       '[data-testid*="message-body"]',
       '[data-test-id*="message-body"]',
       '[data-testid*="message-content"]',
-      '[class*="message-body"]',
-      '[class*="message-content"]',
-      '[role="document"]',
-      'article',
-    ]),
-  }
+    ])
+  return createOpenedEmail(sender, subject, body)
 }
 
 function getOpenedEmail() {
   const host = window.location.hostname
+  if (!isSupportedEmailHost(host)) return null
   if (host === 'mail.google.com') return getGmailEmail()
-  if (host.includes('outlook.')) return getOutlookEmail()
-  if (host.includes('mail.yahoo.')) return getYahooEmail()
-  if (host.includes('proton.')) return getProtonEmail()
-  if (host.includes('icloud.com')) return getIcloudEmail()
-  if (host.includes('zoho.') || host.includes('mail.com') || host.includes('aol.com')) {
+  if (['outlook.cloud.microsoft', 'outlook.live.com', 'outlook.office.com', 'outlook.office365.com'].includes(host)) return getOutlookEmail()
+  if (host === 'mail.yahoo.com') return getYahooEmail()
+  if (['mail.proton.me', 'app.proton.me'].includes(host)) return getProtonEmail()
+  if (host === 'www.icloud.com') return getIcloudEmail()
+  if (['mail.zoho.com', 'mail.aol.com', 'mail.com'].includes(host) || host.endsWith('.mail.com')) {
     return getGenericWebmailEmail()
   }
 
-  return {
-    sender: '',
-    subject: getVisibleText('h1, [role="heading"]'),
-    body: getBodyFromSelectors(['main, article, [role="main"]']),
-  }
+  return null
 }
 
 function getScanKey(email) {
@@ -1281,6 +1496,37 @@ function showEmailWarning(scan, email) {
   if (!existing) document.body.appendChild(banner)
 }
 
+function showEmailScanFailure(email) {
+  const existing = document.getElementById('threattrack-email-scan-failure')
+  const banner = existing ?? document.createElement('aside')
+  banner.id = 'threattrack-email-scan-failure'
+  banner.setAttribute('role', 'status')
+  banner.setAttribute('aria-live', 'polite')
+  banner.style.cssText = 'position:fixed;right:20px;top:92px;z-index:2147483647;box-sizing:border-box;width:min(380px,calc(100vw - 32px));border:1px solid rgba(245,158,11,.55);border-radius:8px;background:#111827;color:#f8fafc;box-shadow:0 18px 50px rgba(0,0,0,.42);font:13px/1.45 Arial,sans-serif;padding:14px'
+  banner.replaceChildren()
+
+  const text = document.createElement('p')
+  text.textContent = `Could not assess ${email.sender || email.subject || 'this opened email'}. Check the connection and retry.`
+  text.style.cssText = 'margin:0;color:#fde68a'
+  const retry = document.createElement('button')
+  retry.type = 'button'
+  retry.textContent = 'Retry scan'
+  retry.style.cssText = 'margin-top:10px;border:1px solid #475569;border-radius:6px;background:transparent;color:#f8fafc;cursor:pointer;font:700 12px Arial,sans-serif;padding:7px 10px'
+  retry.addEventListener('click', () => {
+    banner.remove()
+    const currentEmail = getOpenedEmail()
+    if (currentEmail && getScanKey(currentEmail) === getScanKey(email)) scanOpenedEmail()
+  })
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.textContent = 'Dismiss'
+  close.setAttribute('aria-label', 'Dismiss email scan failure')
+  close.style.cssText = 'margin-left:8px;border:0;background:transparent;color:#cbd5e1;cursor:pointer;font:12px Arial,sans-serif;padding:7px 10px'
+  close.addEventListener('click', () => banner.remove())
+  banner.append(text, retry, close)
+  if (!existing) document.body.appendChild(banner)
+}
+
 function showInboxRiskWarning(scan, email) {
   showEmailWarning(scan, {
     sender: email.sender,
@@ -1289,100 +1535,137 @@ function showInboxRiskWarning(scan, email) {
   })
 }
 
-function scanGmailInboxRow(row) {
-  if (!emailConsentGranted || inboxPaused || inboxAttempts >= inboxBatchLimit) return false
-  const email = getGmailInboxEmail(row)
-  const content = `${email.subject}\n${email.body}`.trim()
-  if (
-    (!email.sender && !email.subject) ||
-    isTrackingThreatsReport(email) ||
-    content.length < 12
-  ) {
-    return false
+function syncGmailBatchState(state) {
+  const wasPaused = inboxPaused
+  const previousView = gmailInboxViewId
+  gmailInboxViewId = state.viewId
+  inboxBatchNumber = state.batchNumber
+  inboxBatchStart = state.batchStart
+  inboxBatchSize = state.batchSize
+  inboxBatchLimit = state.batchLimit
+  inboxAttempts = state.attempts
+  inboxPending = state.pending
+  inboxPaused = state.paused
+  inboxWaitingForRows = state.waitingForRows
+  inboxResults.splice(0, inboxResults.length, ...state.results)
+  Object.assign(inboxStats, state.stats)
+  if (previousView !== state.viewId) {
+    document.getElementById('threattrack-inbox-review')?.remove()
+    document.querySelectorAll('.threattrack-inbox-label').forEach((label) => label.remove())
+    document.querySelectorAll('[data-threattrack-risk]').forEach((row) => {
+      row.style.boxShadow = row.dataset.threattrackOriginalBoxShadow ?? ''
+      row.style.backgroundColor = row.dataset.threattrackOriginalBackground ?? ''
+      delete row.dataset.threattrackRisk
+      delete row.dataset.threattrackLevel
+      delete row.dataset.threattrackOriginalBoxShadow
+      delete row.dataset.threattrackOriginalBackground
+    })
   }
+  showInboxStatus()
+  if (!wasPaused && inboxPaused && inboxResults.length) showInboxReview()
+}
 
-  const scanKey = getGmailInboxRowKey(row, email)
-  if (inboxScanKeys.has(scanKey)) return false
-  inboxScanKeys.add(scanKey)
-  inboxAttempts += 1
-  inboxPending += 1
-  inboxWaitingForRows = false
-  const generation = inboxGeneration
-  const result = {
-    batch: inboxBatchNumber,
-    sender: email.sender,
-    subject: email.subject,
-    pending: true,
+function syncOutlookCloudBatchState(state) {
+  outlookCloudBatchActive = state.adapter?.active === true
+  outlookCloudFolderId = state.adapter?.folderId ?? null
+  outlookCloudProgress = {
+    conversationsInspected: state.adapter?.conversationsInspected ?? outlookCloudProgress.conversationsInspected,
+    conversationsIncomplete: state.adapter?.conversationsIncomplete ?? outlookCloudProgress.conversationsIncomplete,
+    conversationsSkipped: state.adapter?.conversationsSkipped ?? outlookCloudProgress.conversationsSkipped,
+    folderTraversalLimited: state.adapter?.folderTraversalLimited !== false,
   }
-  inboxResults.push(result)
+  syncGmailBatchState(state)
+}
 
-  chrome.runtime.sendMessage(
-    {
-      type: 'scan-email-content',
-      email,
+function ensureOutlookCloudBatchAdapter() {
+  if (outlookCloudBatchAdapter || typeof globalThis.createOutlookCloudBatchAdapter !== 'function') return outlookCloudBatchAdapter
+  outlookCloudBatchAdapter = globalThis.createOutlookCloudBatchAdapter({
+    getFolderId: getOutlookCloudFolderId,
+    extractMessage: extractOutlookCloudBatchMessage,
+    isEnabled: () => emailConsentGranted,
+    isEligible: (email) => Boolean(email?.sender && email?.subject && email?.body?.trim().length >= 12 &&
+      !isTrackingThreatsReport(email)),
+    canScanMessage: (_id, email) => {
+      const scanKey = getScanKey(email)
+      return scanKey !== lastScanKey && !openedScanInFlightKeys.has(scanKey)
     },
-    (response) => {
-      if (!emailConsentGranted || generation !== inboxGeneration) return
-      inboxPending -= 1
-      result.pending = false
-      if (chrome.runtime.lastError || !response?.ok || !response.scan) {
-        result.failed = true
-        inboxStats.failed += 1
-      } else {
-        inboxStats.checked += 1
-        const nextLevel = getScanLevel(response.scan)
-        inboxStats[nextLevel] += 1
-        result.level = nextLevel
-        result.status = response.scan.status
-        result.score = response.scan.score
-        result.coverage = response.scan.coverage
-        result.categories = response.scan.categories
-        result.categoryWarnings = response.scan.categoryWarnings
-        row.dataset.threattrackLevel = nextLevel
-        markGmailInboxRow(row, response.scan)
-        if (isRiskyScan(response.scan)) showInboxRiskWarning(response.scan, email)
-      }
-      showInboxStatus()
-      scanGmailInbox()
+    submit: (email, callback) => {
+      chrome.runtime.sendMessage({ type: 'scan-email-content', email }, (response) => {
+        if (chrome.runtime.lastError) return callback(new Error('Email scan request failed'))
+        if (!response?.ok || !response.scan) return callback(new Error(response?.error || 'Email scan failed'))
+        callback(null, response.scan)
+      })
     },
-  )
-  return true
+    getLevel: getScanLevel,
+    onState: syncOutlookCloudBatchState,
+    onConversation: () => {},
+  })
+  outlookCloudBatchAdapter.engine.setBatchSize(inboxBatchSize)
+  return outlookCloudBatchAdapter
+}
+
+function startOutlookCloudBatch() {
+  if (!emailConsentGranted || window.location.hostname !== 'outlook.cloud.microsoft') return
+  ensureOutlookCloudBatchAdapter()?.start()
+}
+
+function cancelOutlookCloudBatch() {
+  outlookCloudBatchAdapter?.cancel()
+}
+
+function ensureGmailBatchEngine() {
+  if (gmailInboxBatchEngine || typeof globalThis.createEmailBatchEngine !== 'function') return gmailInboxBatchEngine
+  gmailInboxBatchEngine = globalThis.createEmailBatchEngine({
+    providerId: 'gmail',
+    getViewId: getGmailBatchViewId,
+    getRows: getGmailInboxRows,
+    extractRow: (row) => ({ id: getGmailInboxRowKey(row), email: getGmailInboxEmail(row) }),
+    isEligible: (email) => Boolean((email.sender || email.subject) && !isTrackingThreatsReport(email) &&
+      `${email.subject}\n${email.body}`.trim().length >= 12),
+    submit: (email, callback) => {
+      chrome.runtime.sendMessage({ type: 'scan-email-content', email }, (response) => {
+        if (chrome.runtime.lastError) return callback(new Error('Email scan request failed'))
+        if (!response?.ok || !response.scan) return callback(new Error(response?.error || 'Email scan failed'))
+        callback(null, response.scan)
+      })
+    },
+    getLevel: getScanLevel,
+    isEnabled: () => emailConsentGranted,
+    initialBatchSize: inboxBatchSize,
+    maxConcurrency: MAX_INBOX_SCANS_IN_FLIGHT,
+    onState: syncGmailBatchState,
+    onResult: ({ row, email, scan, result }) => {
+      if (row?.dataset) row.dataset.threattrackLevel = result.level
+      if (row?.querySelector) markGmailInboxRow(row, scan)
+      if (isRiskyScan(scan)) showInboxRiskWarning(scan, email)
+    },
+  })
+  return gmailInboxBatchEngine
 }
 
 function scanGmailInbox() {
   if (!emailConsentGranted || window.location.hostname !== 'mail.google.com') return
-  if (inboxPaused) return
-  let started = 0
-  for (const row of getGmailInboxRows()) {
-    if (inboxPending >= MAX_INBOX_SCANS_IN_FLIGHT || inboxAttempts >= inboxBatchLimit) break
-    if (scanGmailInboxRow(row)) started += 1
-  }
-  const visibleRowsExhausted = started === 0 && inboxAttempts > inboxBatchStart
-  if (inboxPending === 0 && (inboxAttempts >= inboxBatchLimit || visibleRowsExhausted)) {
-    inboxPaused = true
-    showInboxStatus()
-    showInboxReview()
-    return
-  }
-  inboxWaitingForRows = started === 0 && inboxPending === 0
-  showInboxStatus()
+  ensureGmailBatchEngine()?.scan()
 }
 
 function scanOpenedEmail() {
   if (!emailConsentGranted) return
+  if (window.location.hostname === 'outlook.cloud.microsoft' && outlookCloudBatchActive) return
   const email = getOpenedEmail()
+  if (!email) return
   const content = `${email.subject}\n${email.body}`.trim()
-  if (
-    (!email.sender && !email.subject) ||
-    isTrackingThreatsReport(email) ||
-    content.length < MIN_EMAIL_TEXT_LENGTH
-  ) {
+  if (isTrackingThreatsReport(email) || content.length < MIN_EMAIL_TEXT_LENGTH) {
     return
   }
 
   const scanKey = getScanKey(email)
-  if (scanKey === lastScanKey) return
-  lastScanKey = scanKey
+  if (window.location.hostname === 'outlook.cloud.microsoft' && outlookCloudBatchAdapter) {
+    const messageId = getCurrentOutlookCloudMessageId()
+    if (messageId && outlookCloudBatchAdapter.hasMessageId(messageId)) return
+  }
+  if (scanKey === lastScanKey || openedScanInFlightKeys.has(scanKey)) return
+  openedScanInFlightKeys.add(scanKey)
+  const generation = openedScanGeneration
 
   chrome.runtime.sendMessage(
     {
@@ -1390,9 +1673,16 @@ function scanOpenedEmail() {
       email,
     },
     (response) => {
-      if (!emailConsentGranted) return
-      if (chrome.runtime.lastError) return
-      if (!response?.ok || !response.scan) return
+      openedScanInFlightKeys.delete(scanKey)
+      if (!emailConsentGranted || generation !== openedScanGeneration) return
+      const currentEmail = getOpenedEmail()
+      if (!currentEmail || getScanKey(currentEmail) !== scanKey) return
+      if (chrome.runtime.lastError || !response?.ok || !response.scan) {
+        showEmailScanFailure(email)
+        return
+      }
+      lastScanKey = scanKey
+      document.getElementById('threattrack-email-scan-failure')?.remove()
       showEmailWarning(response.scan, email)
     },
   )
@@ -1412,25 +1702,81 @@ function scheduleInboxScan() {
 
 function scheduleEmailChecks() {
   if (!emailConsentGranted) return
+  refreshOutlookCloudRouteIfChanged()
+  if (window.location.hostname === 'mail.google.com') ensureGmailBatchEngine()?.handleViewChange()
   scheduleScan()
   scheduleInboxScan()
 }
 
 function startEmailMonitoring() {
   if (emailConsentGranted && emailObserver) return
+  stopConsentRecoveryObserver()
   emailConsentGranted = true
   document.getElementById('threattrack-email-consent-disabled')?.remove()
   showInboxStatus()
+  startOutlookCloudRouteMonitor()
   scheduleEmailChecks()
   emailObserver = new MutationObserver(scheduleEmailChecks)
-  emailObserver.observe(document.body, { childList: true, subtree: true })
+  emailObserver.observe(document.body, { childList: true, subtree: true, characterData: true })
+  window.addEventListener('popstate', scheduleEmailChecks)
+  window.addEventListener('hashchange', scheduleEmailChecks)
 }
 
-Promise.all([readEmailConsent(), readInboxBatchSize()])
-  .then(([decision, batchSize]) => {
-    setInboxBatchSize(batchSize, false)
-    if (decision === 'accepted') startEmailMonitoring()
-    else if (decision === 'declined') showEmailScanningDisabled()
-    else showEmailConsentDialog()
-  })
-  .catch(() => showEmailConsentDialog())
+async function refreshEmailConsentUi() {
+  if (emailConsentCheckPromise) return emailConsentCheckPromise
+  const revision = emailConsentRevision
+  emailConsentCheckPromise = Promise.all([readEmailConsent(), readInboxBatchSize()])
+    .then(([decision, batchSize]) => {
+      if (revision !== emailConsentRevision) return
+      setInboxBatchSize(batchSize, false)
+      if (decision === 'accepted') {
+        document.getElementById('threattrack-email-consent')?.remove()
+        document.getElementById('threattrack-email-consent-disabled')?.remove()
+        startEmailMonitoring()
+      } else if (decision === 'declined') {
+        stopConsentRecoveryObserver()
+        if (emailConsentGranted) stopEmailMonitoring()
+        showEmailScanningDisabled()
+      } else {
+        if (emailConsentGranted) stopEmailMonitoring()
+        startConsentRecoveryObserver()
+        showEmailConsentDialog()
+      }
+    })
+    .catch(() => {
+      if (revision === emailConsentRevision) showEmailConsentDialog()
+    })
+    .finally(() => {
+      emailConsentCheckPromise = null
+    })
+  return emailConsentCheckPromise
+}
+
+function handleEmailConsentPageReady() {
+  refreshEmailConsentUi().catch(() => {})
+}
+
+document.addEventListener('DOMContentLoaded', handleEmailConsentPageReady)
+window.addEventListener('pageshow', handleEmailConsentPageReady)
+window.addEventListener('popstate', handleEmailConsentPageReady)
+window.addEventListener('hashchange', handleEmailConsentPageReady)
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== 'review-email-consent') return false
+  readEmailConsent()
+    .then((decision) => {
+      if (decision === 'accepted') {
+        sendResponse({ ok: true, alreadyAccepted: true })
+        return
+      }
+      startConsentRecoveryObserver()
+      document.getElementById('threattrack-email-consent-disabled')?.remove()
+      showEmailConsentDialog()
+      sendResponse({ ok: Boolean(document.getElementById('threattrack-email-consent')) })
+    })
+    .catch(() => sendResponse({ ok: false, error: 'Could not read email consent status.' }))
+  return true
+})
+
+startConsentRecoveryObserver()
+handleEmailConsentPageReady()

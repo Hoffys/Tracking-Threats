@@ -21,7 +21,7 @@ const BLOCK_CONTEXT_TTL_MS = 5 * 60 * 1000
 const CLIENT_ID_KEY = 'threattrackClientId'
 const CLIENT_TOKEN_KEY = 'threattrackClientToken'
 const EMAIL_CONSENT_KEY = 'trackingThreatsEmailConsent'
-const EMAIL_CONSENT_VERSION = '2026.09'
+const EMAIL_CONSENT_VERSION = '2026.12'
 const SEARCH_MONITOR_CONSENT_KEY = 'trackingThreatsSearchConsent'
 const SEARCH_MONITOR_CONSENT_VERSION = '2026.10'
 const BYPASS_HOSTS_KEY = 'bypassHosts'
@@ -43,6 +43,7 @@ const PASS_THROUGH_HOSTS = new Set([
   'mail.proton.me',
   'mail.yahoo.com',
   'mail.zoho.com',
+  'outlook.cloud.microsoft',
   'outlook.live.com',
   'outlook.office.com',
   'outlook.office365.com',
@@ -1667,7 +1668,7 @@ chrome.webNavigation.onHistoryStateUpdated?.addListener((details) => {
   if (details.frameId === 0) handleTabUrl(details.tabId, details.url, 'history-state')
 })
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'scan-candidate-url' && message.url) {
     scanUrl(message.url, message.reason ?? 'content-script')
       .then((scan) => sendResponse({ ok: true, scan }))
@@ -1711,6 +1712,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === 'scan-email-content') {
+    if (!isSupportedEmailSender(sender)) {
+      sendResponse({ ok: false, error: 'Email scans are only accepted from supported webmail pages' })
+      return false
+    }
     scanEmailContent(message.email ?? {})
       .then((scan) => sendResponse({ ok: true, scan }))
       .catch((error) => sendResponse({ ok: false, error: error.message }))

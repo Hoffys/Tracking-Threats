@@ -3,6 +3,8 @@ const pill = document.querySelector('#pill')
 const openApp = document.querySelector('#openApp')
 const inspectPage = document.querySelector('#inspectPage')
 const inspectionNote = document.querySelector('#inspectionNote')
+const reviewEmailConsent = document.querySelector('#reviewEmailConsent')
+const emailConsentNote = document.querySelector('#emailConsentNote')
 const announcementButton = document.querySelector('#announcementButton')
 const announcementBadge = document.querySelector('#announcementBadge')
 const announcementPanel = document.querySelector('#announcementPanel')
@@ -13,6 +15,40 @@ const announcementReadKey = 'trackingThreatsReadAnnouncements'
 let currentAnnouncements = []
 
 document.querySelector('#installedVersion').textContent = `Extension v${installedVersion}`
+
+reviewEmailConsent?.addEventListener('click', () => {
+  reviewEmailConsent.disabled = true
+  emailConsentNote.textContent = 'Opening email consent on the active tab...'
+  chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    if (chrome.runtime.lastError || !tab?.id) {
+      emailConsentNote.textContent = 'Could not find the active tab.'
+      reviewEmailConsent.disabled = false
+      return
+    }
+    let supportedWebmail = false
+    try {
+      const activeUrl = new URL(tab.url)
+      supportedWebmail = activeUrl.protocol === 'https:' && isSupportedEmailHost(activeUrl.hostname)
+    } catch {
+      supportedWebmail = false
+    }
+    if (!supportedWebmail) {
+      emailConsentNote.textContent = 'Open a supported webmail page, then try again.'
+      reviewEmailConsent.disabled = false
+      return
+    }
+    chrome.tabs.sendMessage(tab.id, { type: 'review-email-consent' }, (response) => {
+      reviewEmailConsent.disabled = false
+      if (chrome.runtime.lastError || !response?.ok) {
+        emailConsentNote.textContent = 'Open a supported webmail page, then try again.'
+        return
+      }
+      emailConsentNote.textContent = response.alreadyAccepted
+        ? 'Email monitoring is already enabled with current consent.'
+        : 'Review the consent dialog on the webmail page.'
+    })
+  })
+})
 
 function createAnnouncementCard(announcement) {
   const card = document.createElement('article')
