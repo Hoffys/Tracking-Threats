@@ -10,7 +10,6 @@ import {
   Mail,
   MailPlus,
   MailWarning,
-  MapPin,
   Plus,
   Phone,
   Save,
@@ -27,28 +26,24 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const teamContacts = [
   {
     name: 'Alemari Acuesta',
-    address: '8271 Apelo Bldg Dr. A Santos, San Dionisio, Paranaque',
     phone: '+63 945 673 8111',
     phoneLink: '+639456738111',
     email: 'alemari.acuesta@adamson.edu.ph',
   },
   {
     name: 'Bryan Duran',
-    address: '1285 Calixto Dyco St, Paco Manila',
     phone: '+63 966 249 1460',
     phoneLink: '+639662491460',
     email: 'bryan.alexis.duran@adamson.edu.ph',
   },
   {
     name: 'Niccolo Valero',
-    address: 'Summerhills Executive Village Brgy Dela Paz Antipolo',
     phone: '+63 984 509 899',
     phoneLink: '+63984509899',
     email: 'simone.niccolo.valero@adamson.edu.ph',
   },
   {
     name: 'James Torralba',
-    address: '1215 Sta. Monica Ugong Valenzuela',
     phone: '+63 976 362 1550',
     phoneLink: '+639763621550',
     email: 'james.raphael.torralba@adamson.edu.ph',
@@ -537,20 +532,13 @@ export function Settings() {
               </p>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {teamContacts.map(({ name, address, phone, phoneLink, email }) => (
+              {teamContacts.map(({ name, phone, phoneLink, email }) => (
                 <article
                   key={email}
                   className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors transition-shadow hover:border-teal-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-teal-700"
                 >
                   <h3 className="text-base font-semibold text-slate-950 dark:text-white">{name}</h3>
                   <dl className="mt-3 space-y-3 text-sm leading-5 text-slate-600 dark:text-slate-300">
-                    <div className="flex items-start gap-2.5">
-                      <MapPin size={17} className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden="true" />
-                      <div>
-                        <dt className="sr-only">Address</dt>
-                        <dd>{address}</dd>
-                      </div>
-                    </div>
                     <div className="flex items-start gap-2.5">
                       <Phone size={16} className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-400" aria-hidden="true" />
                       <div>
