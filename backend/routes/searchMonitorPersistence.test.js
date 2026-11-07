@@ -20,7 +20,7 @@ const freePort = async () => {
   return port
 }
 
-test('browser-search-monitor URL requests persist with their source; preview requests remain non-persistent', async () => {
+test('extension URL and email scans persist to client activity while search previews remain non-persistent', async () => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tracking-threats-search-monitor-'))
   const port = await freePort()
   const child = spawn(process.execPath, ['backend/server.js'], {
@@ -66,6 +66,30 @@ test('browser-search-monitor URL requests persist with their source; preview req
     const registration = await call('/public/clients', { method: 'POST' })
     assert.equal(registration.status, 201, JSON.stringify(registration.body))
     const headers = { 'X-Client-Token': registration.body.token }
+
+    const automaticNavigation = await call('/scan/url', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        url: 'https://automatic-navigation.example/path',
+        source: 'browser-extension',
+        preview: false,
+        clientId: registration.body.clientId,
+      }),
+    })
+    assert.equal(automaticNavigation.status, 201, JSON.stringify(automaticNavigation.body))
+    assert.equal(automaticNavigation.body.source, 'browser-extension')
+
+    const manualExtensionScan = await call('/scan/url', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        url: 'https://manual-extension.example/path',
+        source: 'browser-extension',
+        preview: false,
+        clientId: registration.body.clientId,
+      }),
+    })
+    assert.equal(manualExtensionScan.status, 201, JSON.stringify(manualExtensionScan.body))
+
     const noConsent = await call('/scan/url', {
       method: 'POST', headers,
       body: JSON.stringify({
@@ -106,6 +130,38 @@ test('browser-search-monitor URL requests persist with their source; preview req
     assert.ok(persisted.body.id)
     assert.equal(persisted.body.source, 'browser-search-monitor')
 
+    const gmailBatch = await call('/scan/email', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        sender: 'sender@example.test',
+        subject: 'Gmail batch fixture',
+        body: 'Synthetic Gmail batch scan content for persistence verification.',
+        source: 'browser-email-monitor',
+        clientId: registration.body.clientId,
+        privacyAccepted: true,
+        privacyNoticeVersion: '2026.12',
+      }),
+    })
+    assert.equal(gmailBatch.status, 201, JSON.stringify(gmailBatch.body))
+    assert.equal(gmailBatch.body.type, 'Email')
+    assert.equal(gmailBatch.body.source, 'browser-email-monitor')
+
+    const outlookBatch = await call('/scan/email', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        sender: 'sender@example.test',
+        subject: 'Outlook Cloud batch fixture',
+        body: 'Synthetic Outlook Cloud batch scan content for persistence verification.',
+        source: 'browser-email-monitor',
+        clientId: registration.body.clientId,
+        privacyAccepted: true,
+        privacyNoticeVersion: '2026.12',
+      }),
+    })
+    assert.equal(outlookBatch.status, 201, JSON.stringify(outlookBatch.body))
+    assert.equal(outlookBatch.body.type, 'Email')
+    assert.equal(outlookBatch.body.source, 'browser-email-monitor')
+
     const preview = await call('/scan/url', {
       method: 'POST', headers,
       body: JSON.stringify({
@@ -120,9 +176,20 @@ test('browser-search-monitor URL requests persist with their source; preview req
 
     const activity = await call(`/public/activity/${registration.body.clientId}`, { headers })
     assert.equal(activity.status, 200, JSON.stringify(activity.body))
-    assert.equal(activity.body.scans.length, 1)
-    assert.equal(activity.body.scans[0].id, persisted.body.id)
-    assert.equal(activity.body.scans[0].source, 'browser-search-monitor')
+    assert.equal(activity.body.scans.length, 5)
+    assert.deepEqual(new Set(activity.body.scans.map((scan) => scan.id)), new Set([
+      automaticNavigation.body.id,
+      manualExtensionScan.body.id,
+      persisted.body.id,
+      gmailBatch.body.id,
+      outlookBatch.body.id,
+    ]))
+    assert.equal(activity.body.liveFeed.length, 5)
+    assert.equal(activity.body.stats.total, 5)
+    assert.equal(activity.body.stats.liveScanCount, 5)
+    assert.equal(activity.body.scans.some((scan) => scan.source === 'browser-search-preview'), false)
+    assert.equal(activity.body.scans.find((scan) => scan.id === persisted.body.id)?.source, 'browser-search-monitor')
+    assert.equal(activity.body.scans.every((scan) => scan.clientId === registration.body.clientId), true)
   } finally {
     if (child.exitCode === null) {
       const exited = once(child, 'exit')

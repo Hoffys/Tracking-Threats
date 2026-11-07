@@ -1752,7 +1752,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === 'get-client-credential') {
     try {
-      if (new URL(_sender.url).origin !== APP_ORIGIN) {
+      if (new URL(sender?.url ?? '').origin !== APP_ORIGIN) {
         sendResponse({ ok: false, error: 'Untrusted page' })
         return false
       }

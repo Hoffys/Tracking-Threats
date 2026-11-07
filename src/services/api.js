@@ -25,8 +25,16 @@ const receiveExtensionCredential = (clientId) => new Promise((resolve) => {
   }
   const onMessage = (event) => {
     if (event.source !== window || event.origin !== window.location.origin ||
-        event.data?.type !== 'tracking-threats:client-credential' ||
-        (event.data.requestedClientId ?? event.data.clientId) !== clientId ||
+        (event.data?.requestedClientId ?? event.data?.clientId) !== clientId) return
+    if (event.data?.type === 'tracking-threats:client-credential-error') {
+      const messages = {
+        EXTENSION_UNAVAILABLE: 'The Tracking Threats extension did not respond. Reload it and try again.',
+        CREDENTIAL_UNAVAILABLE: 'The Tracking Threats extension could not verify this browser. Reload it and try again.',
+      }
+      finish({ bridgeError: messages[event.data.code] ?? 'The Tracking Threats extension could not provide history access.' })
+      return
+    }
+    if (event.data?.type !== 'tracking-threats:client-credential' ||
         !validClientId(event.data.clientId) || !validClientToken(event.data.token)) return
     finish({ clientId: event.data.clientId, token: event.data.token })
   }
@@ -93,6 +101,7 @@ export const ensureClientCredential = async () => {
       const bridged = validClientId(linkedId)
         ? await receiveExtensionCredential(linkedId)
         : null
+      if (bridged?.bridgeError) throw new Error(bridged.bridgeError)
       if (validClientId(linkedId) && !bridged) {
         throw new Error('Cannot access extension history. Reload the extension or open the app without the client link.')
       }

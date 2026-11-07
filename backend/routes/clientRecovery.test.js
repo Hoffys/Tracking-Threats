@@ -113,8 +113,122 @@ test('credential bridge returns the replacement ID only to the trusted app windo
   assert.equal(messages[0].clientId, newCredential.clientId)
 })
 
-function webClient(fetch, linked = false) {
-  const storage = new Map([['threattrack:client-credential', JSON.stringify(oldCredential)]])
+function getBackgroundCredentialListener(credentials = oldCredential) {
+  const source = readFileSync(new URL('../../browser-extension/background.js', import.meta.url), 'utf8')
+  const start = source.lastIndexOf('chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {')
+  const end = source.indexOf('\nchrome.notifications.onClicked', start)
+  assert.notEqual(start, -1)
+  assert.notEqual(end, -1)
+  let listener
+  let verifications = 0
+  const sandbox = {
+    URL,
+    APP_ORIGIN: 'https://app.example',
+    chrome: { runtime: { onMessage: { addListener: (callback) => { listener = callback } } } },
+    getVerifiedClientCredentials: async () => { verifications += 1; return credentials },
+  }
+  vm.runInNewContext(source.slice(start, end), sandbox)
+  return { listener, get verifications() { return verifications } }
+}
+
+const requestBackgroundCredential = (listener, sender) => new Promise((resolve) => {
+  const keepsChannelOpen = listener({ type: 'get-client-credential' }, sender, resolve)
+  assert.equal(keepsChannelOpen, true)
+})
+
+test('background credential listener returns credentials only to the trusted app origin', async () => {
+  const bridge = getBackgroundCredentialListener()
+  const response = await requestBackgroundCredential(bridge.listener, {
+    url: 'https://app.example/page',
+  })
+  assert.deepEqual(JSON.parse(JSON.stringify(response)), { ok: true, ...oldCredential })
+  assert.equal(bridge.verifications, 1)
+})
+
+test('background credential listener safely rejects an untrusted origin and missing sender URL', async () => {
+  for (const sender of [{ url: 'https://attacker.example/' }, {}, null]) {
+    const bridge = getBackgroundCredentialListener()
+    const response = await requestBackgroundCredential(bridge.listener, sender)
+    assert.deepEqual(JSON.parse(JSON.stringify(response)), { ok: false, error: 'Untrusted page' })
+    assert.equal(bridge.verifications, 0)
+  }
+})
+
+test('content bridge reports credential failures promptly without forwarding secrets or internal errors', () => {
+  let handler
+  const messages = []
+  const window = {
+    location: { origin: 'https://app.example' },
+    addEventListener: (_type, listener) => { handler = listener },
+    postMessage: (message) => messages.push(message),
+  }
+  window.top = window
+  const sandbox = {
+    URL, window,
+    TRACKING_THREATS_CONFIG: { APP_URL: 'https://app.example/' },
+    chrome: { runtime: {
+      lastError: null,
+      sendMessage: (_message, callback) => callback({
+        ok: false,
+        error: 'private backend detail',
+        clientId: oldCredential.clientId,
+        token: oldCredential.token,
+      }),
+    } },
+  }
+  vm.runInNewContext(readFileSync(new URL('../../browser-extension/app-bridge.js', import.meta.url), 'utf8'), sandbox)
+  const request = {
+    source: window,
+    origin: window.location.origin,
+    data: { type: 'tracking-threats:request-client-credential', clientId: oldCredential.clientId },
+  }
+  handler({ ...request, origin: 'https://attacker.example' })
+  assert.equal(messages.length, 0)
+  handler(request)
+  assert.deepEqual(JSON.parse(JSON.stringify(messages[0])), {
+    type: 'tracking-threats:client-credential-error',
+    requestedClientId: oldCredential.clientId,
+    code: 'CREDENTIAL_UNAVAILABLE',
+  })
+  assert.equal(JSON.stringify(messages).includes(oldCredential.token), false)
+  assert.equal(JSON.stringify(messages).includes('private backend detail'), false)
+})
+
+test('content bridge reports a runtime messaging failure without exposing lastError details', () => {
+  let handler
+  const messages = []
+  const window = {
+    location: { origin: 'https://app.example' },
+    addEventListener: (_type, listener) => { handler = listener },
+    postMessage: (message) => messages.push(message),
+  }
+  window.top = window
+  const sandbox = {
+    URL, window,
+    TRACKING_THREATS_CONFIG: { APP_URL: 'https://app.example/' },
+    chrome: { runtime: {
+      lastError: { message: 'sensitive runtime detail' },
+      sendMessage: (_message, callback) => callback(undefined),
+    } },
+  }
+  vm.runInNewContext(readFileSync(new URL('../../browser-extension/app-bridge.js', import.meta.url), 'utf8'), sandbox)
+  handler({
+    source: window,
+    origin: window.location.origin,
+    data: { type: 'tracking-threats:request-client-credential', clientId: oldCredential.clientId },
+  })
+  assert.deepEqual(JSON.parse(JSON.stringify(messages[0])), {
+    type: 'tracking-threats:client-credential-error',
+    requestedClientId: oldCredential.clientId,
+    code: 'EXTENSION_UNAVAILABLE',
+  })
+  assert.equal(JSON.stringify(messages).includes('sensitive runtime detail'), false)
+})
+
+function webClient(fetch, linked = false, storedCredential = oldCredential, bridgeCredential = newCredential) {
+  const storage = new Map(storedCredential
+    ? [['threattrack:client-credential', JSON.stringify(storedCredential)]]
+    : [])
   const location = new URL(`https://app.example/?page=history${linked ? `&client=${oldCredential.clientId}` : ''}`)
   const listeners = new Set()
   const window = {
@@ -125,7 +239,7 @@ function webClient(fetch, linked = false) {
     postMessage: (message) => queueMicrotask(() => {
       for (const handler of listeners) handler({
         source: window, origin: location.origin,
-        data: { type: 'tracking-threats:client-credential', requestedClientId: message.clientId, ...newCredential },
+        data: { type: 'tracking-threats:client-credential', requestedClientId: message.clientId, ...bridgeCredential },
       })
     }),
   }
@@ -141,8 +255,8 @@ function webClient(fetch, linked = false) {
     ...sandbox,
     viteEnv: { VITE_API_BASE_URL: '', VITE_CHROME_WEB_STORE_URL: '' },
   }
-  vm.runInNewContext(`${source}\nglobalThis.ensure = ensureClientCredential`, context)
-  return { ensure: context.ensure, storage, location }
+  vm.runInNewContext(`${source}\nglobalThis.ensure = ensureClientCredential; globalThis.apiService = apiService`, context)
+  return { ensure: context.ensure, apiService: context.apiService, storage, location }
 }
 
 test('web client replaces deleted credentials with a single registration', async () => {
@@ -165,6 +279,51 @@ test('linked web app adopts the extension replacement and updates its history li
   assert.equal((await ensure()).clientId, newCredential.clientId)
   assert.equal(location.searchParams.get('client'), newCredential.clientId)
   assert.equal(location.searchParams.get('page'), 'history')
+})
+
+test('linked app receives extension credentials promptly and retrieves only that client activity', async () => {
+  const activity = {
+    scans: [{ id: 'scan-1', type: 'URL', source: 'browser-extension', status: 'Safe' }],
+    liveFeed: [{ id: 'scan-1', activityType: 'URL', source: 'browser-extension' }],
+    stats: { total: 1, liveScanCount: 1 },
+  }
+  const requests = []
+  const { ensure, apiService, location } = webClient(async (url, options = {}) => {
+    requests.push({ url, options })
+    if (url.endsWith(`/public/clients/${oldCredential.clientId}`)) return denied()
+    if (url.endsWith(`/public/activity/${newCredential.clientId}`)) return Response.json(activity)
+    throw new Error('Unexpected API request')
+  }, true, null, newCredential)
+
+  const credential = await ensure()
+  assert.equal(credential.clientId, newCredential.clientId)
+  assert.equal(location.searchParams.get('client'), newCredential.clientId)
+  const retrieved = await apiService.getPublicActivity(credential.clientId)
+  assert.deepEqual(JSON.parse(JSON.stringify(retrieved)), activity)
+  assert.equal(requests.at(-1).url.endsWith(`/public/activity/${newCredential.clientId}`), true)
+  assert.equal(requests.at(-1).options.headers['X-Client-Token'], newCredential.token)
+})
+
+test('linked app reports bridge failures immediately with a sanitized diagnostic', async () => {
+  const { ensure } = webClient(async () => denied(), true, null, {
+    type: 'tracking-threats:client-credential-error',
+    code: 'CREDENTIAL_UNAVAILABLE',
+  })
+  await assert.rejects(ensure(), /extension could not verify this browser/i)
+})
+
+test('Dashboard, Live Monitor, and History consume the public activity state', () => {
+  const provider = readFileSync(new URL('../../src/context/ThreatProvider.jsx', import.meta.url), 'utf8')
+  const dashboard = readFileSync(new URL('../../src/pages/Dashboard.jsx', import.meta.url), 'utf8')
+  const liveMonitor = readFileSync(new URL('../../src/pages/LiveMonitor.jsx', import.meta.url), 'utf8')
+  const history = readFileSync(new URL('../../src/pages/ScanHistory.jsx', import.meta.url), 'utf8')
+
+  assert.match(provider, /setScanHistory\(nextScans\)/)
+  assert.match(provider, /setLiveFeed\(nextScans\.map\(toPublicLiveEvent\)\)/)
+  assert.match(provider, /setLiveScanCount\(nextScans\.length\)/)
+  assert.match(dashboard, /scanHistory/)
+  assert.match(liveMonitor, /liveFeed/)
+  assert.match(history, /scanHistory/)
 })
 
 test('web client keeps its identity during server failures', async () => {
