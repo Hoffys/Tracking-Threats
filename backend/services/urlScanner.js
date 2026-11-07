@@ -52,6 +52,7 @@ export const officialDomains = {
   microsoft: ['microsoft.com', 'microsoftonline.com', 'live.com', 'outlook.com', 'office.com'],
   netflix: ['netflix.com'],
   paypal: ['paypal.com', 'paypal.me'],
+  roblox: ['roblox.com'],
   shopee: ['shopee.ph', 'shopee.com', 'shopee.sg', 'shopee.com.my'],
   unionbank: ['unionbankph.com'],
 }
@@ -196,6 +197,45 @@ export function scanUrl(urlInput) {
     }
   }
   if (brandFinding) findings.push(brandFinding)
+  // MMDA/NCAP impersonation often uses several government abbreviations in
+  // an unrelated commercial domain rather than a conventional brand label.
+  // Require a combined authority pattern (or an authority marker plus traffic
+  // enforcement language); a lone mention of MMDA is not enough.
+  const isOfficialMmdaHost = host === 'mmda.gov.ph' || host.endsWith('.mmda.gov.ph')
+  const mmdaMarker = /^(?:mmda|mmdancap)(?:$|[-0-9])/i.test(name)
+  const ncapMarker = /ncap/i.test(name)
+  const ltoMarker = /(?:^|-)lto(?:-|n)/i.test(name)
+  const ncrMarker = /(?:^|-)ncr(?:-|$)/i.test(name)
+  const enforcementContext = /(?:traffic|ticket|violation|citation|overdue|penalt(?:y|ies)|fine|settle|payment|ncap|ncr|lto)/i.test(`${decodedPath} ${url?.search ?? ''}`)
+  const authorityCombination = mmdaMarker && (ncapMarker || ltoMarker || ncrMarker)
+  if (url && domain && !isOfficialMmdaHost && mmdaMarker && (authorityCombination || enforcementContext)) {
+    findings.push(finding(
+      'brand-impersonation',
+      'Possible MMDA/NCAP traffic-enforcement impersonation on an unrelated domain',
+      30,
+      { brand: 'MMDA/NCAP', hostname: host, registrableDomain: domain, matchedBy: authorityCombination ? 'combined-government-identifiers' : 'traffic-enforcement-context' },
+    ))
+  }
+  // Catch deceptive account/profile URLs that put a known brand in the path
+  // while hosting the page on an unrelated domain. Brand mentions by
+  // themselves remain informational; require an account or action route.
+  const pathImpersonationContext = /(?:^|[^a-z0-9])(?:account|profile|user|login|log-in|signin|sign-in|verify|verification|password|wallet|billing|payment|recover|recovery|member|identity|claim|secure)(?:$|[^a-z0-9])/i.test(decodedPath)
+  if (url && domain && pathImpersonationContext) {
+    for (const [brand, owners] of Object.entries(officialDomains)) {
+      const isOfficialBrandHost = owners.some((officialDomain) => host === officialDomain || host.endsWith(`.${officialDomain}`))
+      if (isOfficialBrandHost || hostnameBrandMatches.has(brand)) continue
+      const escapedBrand = escapeRegExp(brand)
+      const brandInPath = new RegExp(`(?:^|[^a-z0-9])${escapedBrand}(?:$|[^a-z0-9])`, 'i').test(decodedPath)
+      if (!brandInPath) continue
+      findings.push(finding(
+        'brand-impersonation',
+        `Possible ${brand} impersonation in an account-related URL path on an unrelated domain`,
+        30,
+        { brand, hostname: host, registrableDomain: domain, matchedBy: 'brand-in-deceptive-path' },
+      ))
+      break
+    }
+  }
   if (url?.username || url?.password) {
     findings.push(finding('url-userinfo', 'URL includes credentials or text before @ that can conceal the destination', 30, { hostname: host, hasUsername: Boolean(url.username), hasPassword: Boolean(url.password) }))
     let username = url.username

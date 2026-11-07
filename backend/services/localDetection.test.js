@@ -45,6 +45,67 @@ test('brand domain, subdomain and private-hosting tricks require ownership', () 
   assert.equal(scanUrl('https://myproject.github.io/login').status, 'Safe')
 })
 
+test('MMDA and NCAP impersonation needs combined government identifiers or traffic context', () => {
+  const cases = [
+    ['http://mmda-ltoncas.com/rax4wc', 65],
+    ['https://mmdancap-ncr.biz/motfy5', 70],
+  ]
+  for (const [url, score] of cases) {
+    const result = scanUrl(url)
+    assert.equal(result.score, score, url)
+    assert.equal(result.status, 'Suspicious', url)
+    assert.ok(result.details.findings.some((item) => item.code === 'brand-impersonation' && item.evidence.brand === 'MMDA/NCAP'), url)
+    assert.ok(result.warningSigns.some((item) => /MMDA\/NCAP traffic-enforcement impersonation/i.test(item)), url)
+    assert.equal(attachThreatClassification('URL', result).details.threatClassification.threatName, 'Suspected credential phishing page', url)
+  }
+
+  for (const url of [
+    'https://mayhulika.mmda.gov.ph/',
+    'https://www.mmda.gov.ph/',
+    'https://mmda.com/news',
+    'https://example.com/news/mmda-ncap-history',
+  ]) {
+    const result = scanUrl(url)
+    assert.equal(result.status, 'Safe', url)
+    assert.equal(result.score, 100, url)
+    assert.ok(!result.details.findings.some((item) => item.evidence?.brand === 'MMDA/NCAP'), url)
+  }
+
+  const message = scanMessage('Your traffic ticket is about to become overdue. Details: https://mmdancap-ncr.biz/motfy5 failure to pay a traffic ticket by the due date will result in serious payment penalties or legal consequences.')
+  assert.equal(message.status, 'Suspicious')
+  assert.equal(message.score, 70)
+  assert.ok(message.details.findings.some((item) => item.code === 'brand-impersonation' && item.evidence?.brand === 'MMDA/NCAP' && item.source === 'link'))
+
+  const legitimateNotice = scanMessage('MMDA traffic updates are available. Check your ticket status through the official portal https://mayhulika.mmda.gov.ph/.')
+  assert.equal(legitimateNotice.status, 'Safe')
+  assert.equal(legitimateNotice.score, 100)
+})
+
+test('known brand in an unrelated account/profile path is suspicious, but a brand mention alone is not', () => {
+  const cases = [
+    ['http://s4w.in/www-roblox-com-user-1404516341-profile', 40],
+    ['https://unrelated.example/roblox/account/login', 70],
+  ]
+  for (const [url, score] of cases) {
+    const result = scanUrl(url)
+    assert.equal(result.score, score, url)
+    assert.ok(['Suspicious', 'Dangerous'].includes(result.status), url)
+    assert.ok(result.details.findings.some((item) => item.code === 'brand-impersonation' && item.evidence?.brand === 'roblox' && item.evidence?.matchedBy === 'brand-in-deceptive-path'), url)
+    assert.equal(attachThreatClassification('URL', result).details.threatClassification.threatName, 'Suspected credential phishing page', url)
+  }
+
+  for (const url of [
+    'https://www.roblox.com/users/1404516341/profile',
+    'https://example.com/news/roblox-community-history',
+    'https://example.com/roblox',
+  ]) {
+    const result = scanUrl(url)
+    assert.equal(result.status, 'Safe', url)
+    assert.equal(result.score, 100, url)
+    assert.ok(!result.details.findings.some((item) => item.evidence?.matchedBy === 'brand-in-deceptive-path'), url)
+  }
+})
+
 test('brand names in query parameters remain informational without corroborating URL evidence', () => {
   for (const url of [
     'https://shop.example/search?brand=shopee',
