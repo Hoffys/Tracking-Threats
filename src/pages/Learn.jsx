@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   BadgeCheck,
   BookOpenCheck,
@@ -19,6 +19,13 @@ import {
 } from 'lucide-react'
 import { Panel } from '../components/Panel'
 import { LearningCertificate } from '../components/LearningCertificate'
+import {
+  getDailyChecklist,
+  getChecklistStorage,
+  getLocalDateKey,
+  readDailyChecklistState,
+  writeDailyChecklistState,
+} from './dailyChecklist'
 
 const modules = [
   {
@@ -185,14 +192,6 @@ const modules = [
   },
 ]
 
-const checklist = [
-  'Check the sender address and domain before trusting a message.',
-  'Hover or preview links before opening them.',
-  'Never share one-time codes, passwords, or recovery links.',
-  'Scan files before opening downloads or email attachments.',
-  'Report suspicious activity quickly so it can be blocked.',
-]
-
 const detectionLayers = [
   {
     title: 'Suspicious keywords, domains, and TLDs',
@@ -265,7 +264,11 @@ const scenarios = [
 export function Learn({ onNavigate }) {
   const [activeModule, setActiveModule] = useState('')
   const [activeLessonIndex, setActiveLessonIndex] = useState(0)
-  const [checkedItems, setCheckedItems] = useState([])
+  const [dailyChecklistState, setDailyChecklistState] = useState(() => (
+    readDailyChecklistState(getChecklistStorage(), getLocalDateKey())
+  ))
+  const checklist = getDailyChecklist(dailyChecklistState.date)
+  const checkedItems = dailyChecklistState.checkedItems
   const [completedModules, setCompletedModules] = useState([])
   const [completionDismissed, setCompletionDismissed] = useState(false)
   const [levelFilter, setLevelFilter] = useState('All')
@@ -300,6 +303,29 @@ export function Learn({ onNavigate }) {
     }
   })
 
+  useEffect(() => {
+    const syncChecklistDay = () => {
+      const dateKey = getLocalDateKey()
+      setDailyChecklistState((current) => (
+        current.date === dateKey
+          ? current
+          : readDailyChecklistState(getChecklistStorage(), dateKey)
+      ))
+    }
+    const intervalId = window.setInterval(syncChecklistDay, 60_000)
+    window.addEventListener('focus', syncChecklistDay)
+    document.addEventListener('visibilitychange', syncChecklistDay)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', syncChecklistDay)
+      document.removeEventListener('visibilitychange', syncChecklistDay)
+    }
+  }, [])
+
+  useEffect(() => {
+    writeDailyChecklistState(getChecklistStorage(), dailyChecklistState)
+  }, [dailyChecklistState])
+
   const toggleComplete = (title) => {
     setCompletedModules((current) =>
       current.includes(title) ? current.filter((item) => item !== title) : [...current, title],
@@ -317,15 +343,21 @@ export function Learn({ onNavigate }) {
   }
 
   const toggleChecklistItem = (item) => {
-    setCheckedItems((current) =>
-      current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item],
-    )
+    setDailyChecklistState((current) => {
+      if (!getDailyChecklist(current.date).includes(item)) return current
+      return {
+        ...current,
+        checkedItems: current.checkedItems.includes(item)
+          ? current.checkedItems.filter((entry) => entry !== item)
+          : [...current.checkedItems, item],
+      }
+    })
   }
 
   const resetLearn = () => {
     setActiveModule('')
     setActiveLessonIndex(0)
-    setCheckedItems([])
+    setDailyChecklistState((current) => ({ ...current, checkedItems: [] }))
     setCompletionDismissed(false)
     setCompletedModules([])
     setLevelFilter('All')
@@ -573,6 +605,9 @@ export function Learn({ onNavigate }) {
                 Daily checklist
               </p>
               <h2 className="text-lg font-semibold">Before you click</h2>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                A fresh set of safety habits appears each day.
+              </p>
             </div>
           </div>
           <div className="space-y-3">
