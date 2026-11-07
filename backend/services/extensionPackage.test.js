@@ -22,7 +22,7 @@ test('download ZIP contains runnable extension assets and excludes private files
     ...manifest.web_accessible_resources.flatMap((resource) => resource.resources),
     ...manifest.declarative_net_request.rule_resources.map((rule) => rule.path), 'popup.js', 'INSTALL.txt']
   needed.forEach((file) => assert.ok(entries.has(file), `Missing ${file}`))
-  assert.equal(manifest.version, '1.0.46')
+  assert.equal(manifest.version, '1.0.47')
   assert.ok(manifest.permissions.includes('alarms'))
   assert.ok(manifest.permissions.includes('activeTab'))
   assert.ok(manifest.permissions.includes('scripting'))
@@ -37,6 +37,9 @@ test('download ZIP contains runnable extension assets and excludes private files
   assert.match(entries.get('background.js').toString(), /source: 'browser-search-preview',[\s\S]*?preview: true/)
   assert.match(entries.get('google-results.js').toString(), /SEARCH_MONITOR_CONSENT_VERSION = '2026\.10'/)
   assert.match(entries.get('background.js').toString(), /EMAIL_CONSENT_VERSION = '2026\.12'/)
+  assert.match(entries.get('background.js').toString(), /new URL\(sender\?\.url \?\? ''\)\.origin !== APP_ORIGIN/)
+  assert.doesNotMatch(entries.get('background.js').toString(), /_sender\.url/)
+  assert.match(entries.get('app-bridge.js').toString(), /tracking-threats:client-credential-error/)
   assert.match(entries.get('popup.html').toString(), /id="announcementButton"/)
   assert.match(entries.get('popup.js').toString(), /\/api\/public\/announcements\?version=/)
   assert.equal(archive.readUInt32LE(archive.length - 22), 0x06054b50)
