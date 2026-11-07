@@ -5,7 +5,7 @@ import { getRiskFromScore, recommendationsFor } from './riskScorer.js'
 import { providerCoverage } from './coverage.js'
 
 const maxRedirects = 3
-const maxPageBytes = 512 * 1024
+export const MAX_PAGE_BYTES = 1024 * 1024
 const timeoutMs = 4500
 
 const decodeEntities = (value = '') => String(value)
@@ -67,8 +67,8 @@ async function requestPage(url) {
       let length = 0
       response.on('data', (chunk) => {
         length += chunk.length
-        if (length > maxPageBytes) {
-          request.destroy(Object.assign(new Error('Page response exceeded 512 KB'), { code: 'PAGE_TOO_LARGE' }))
+        if (length > MAX_PAGE_BYTES) {
+          request.destroy(Object.assign(new Error('Page response exceeded 1 MB'), { code: 'PAGE_TOO_LARGE' }))
           return
         }
         chunks.push(chunk)
@@ -86,7 +86,7 @@ async function requestPage(url) {
 }
 
 export function inspectHtml(html, pageUrl) {
-  const text = String(html ?? '').slice(0, maxPageBytes)
+  const text = String(html ?? '').slice(0, MAX_PAGE_BYTES)
   const page = new URL(pageUrl)
   const title = decodeEntities(text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '').slice(0, 200)
   const visibleText = decodeEntities(text.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')).slice(0, 20000)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { enrichPageInspection, inspectHtml, inspectPage, isPublicAddress, pageSnapshotResult } from './pageInspector.js'
+import { enrichPageInspection, inspectHtml, inspectPage, isPublicAddress, MAX_PAGE_BYTES, pageSnapshotResult } from './pageInspector.js'
 
 test('page inspection rejects private and reserved address ranges', () => {
   for (const address of ['127.0.0.1', '10.1.2.3', '169.254.1.1', '172.16.0.1', '192.168.1.1', '::1', 'fd00::1', 'fe80::1', '2001:db8::1']) {
@@ -18,6 +18,15 @@ test('static page inspection detects external credential forms and redirect tric
   assert.equal(result.externalFormActions, 1)
   assert.equal(result.externalMetaRefresh, true)
   assert.ok(result.findings.reduce((sum, item) => sum + item.deduction, 0) >= 50)
+})
+
+test('page inspection accepts up to 1 MB and ignores HTML beyond the bounded inspection window', () => {
+  assert.equal(MAX_PAGE_BYTES, 1024 * 1024)
+  const withinLimit = `${' '.repeat(600 * 1024)}<input type="password">`
+  assert.equal(inspectHtml(withinLimit, 'https://example.com/').passwordFields, 1)
+
+  const beyondLimit = `${' '.repeat(MAX_PAGE_BYTES + 1)}<input type="password">`
+  assert.equal(inspectHtml(beyondLimit, 'https://example.com/').passwordFields, 0)
 })
 
 test('redirect inspection is bounded and only follows HTTPS', async () => {
