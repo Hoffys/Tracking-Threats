@@ -154,7 +154,32 @@ export function ManualScan({ onNavigate }) {
           ? `Run ${selectedFiles.length} File Scans`
           : 'Run Scan'
 
-  const renderScanResult = (scanResult) => (
+  const renderScanResult = (scanResult) => {
+    const scanStatus = scanResult.status ?? scanResult.risk
+    const urlScorePresentation = scanResult.type === 'URL'
+      ? {
+          Safe: {
+            label: 'Low Risk',
+            message: 'Fewer risk indicators were detected in this scan. This score is an indicator, not a guarantee that the website is safe.',
+            tone: 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100',
+            iconTone: 'text-emerald-700 dark:text-emerald-300',
+          },
+          Suspicious: {
+            label: 'Caution',
+            message: 'Warning signs were detected. Exercise caution and verify the website before continuing.',
+            tone: 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100',
+            iconTone: 'text-amber-700 dark:text-amber-300',
+          },
+          Dangerous: {
+            label: 'High Risk',
+            message: 'Security warning: avoid visiting this website and do not enter personal information, passwords, or payment details.',
+            tone: 'border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100',
+            iconTone: 'text-rose-700 dark:text-rose-300',
+          },
+        }[scanStatus]
+      : null
+
+    return (
     <div key={scanResult.id} className="space-y-4">
       {scanResult.blocked && (
         <div className="rounded-lg border border-rose-500/40 bg-rose-600 p-4 text-white shadow-sm">
@@ -172,12 +197,26 @@ export function ManualScan({ onNavigate }) {
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+      <div className={`rounded-lg border p-4 ${urlScorePresentation ? urlScorePresentation.tone : 'border-slate-200 dark:border-slate-800'}`}>
+        {urlScorePresentation && (
+          <div className="mb-5 flex items-start gap-3">
+            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/70 dark:bg-slate-900/60 ${urlScorePresentation.iconTone}`}>
+              {scanStatus === 'Dangerous' ? <ShieldX size={22} /> : scanStatus === 'Suspicious' ? <AlertTriangle size={22} /> : <CheckCircle2 size={22} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 className="text-lg font-semibold">{urlScorePresentation.label}</h3>
+                <p className="text-2xl font-bold tabular-nums">{scanResult.score}<span className="text-sm font-medium opacity-70">/100</span></p>
+              </div>
+              <p className="mt-1 text-sm leading-6">{urlScorePresentation.message}</p>
+            </div>
+          </div>
+        )}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate font-medium">{scanResult.target}</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {scanResult.type} - Safety score {scanResult.score}/100
+              {scanResult.type}{!urlScorePresentation && ` - Safety score ${scanResult.score}/100`}
             </p>
             {scanResult.responseStatus && (
               <p className="mt-1 text-sm font-semibold text-rose-600 dark:text-rose-300">
@@ -204,9 +243,9 @@ export function ManualScan({ onNavigate }) {
               boxShadow: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
             }}
             className={`h-3 rounded-full ${
-              scanResult.status === 'Dangerous'
+              scanStatus === 'Dangerous'
                 ? 'bg-rose-500'
-                : scanResult.status === 'Suspicious'
+                : scanStatus === 'Suspicious'
                   ? 'bg-amber-500'
                   : 'bg-emerald-500'
             }`}
@@ -217,6 +256,14 @@ export function ManualScan({ onNavigate }) {
           {scanResult.summary}
         </p>
         <ScanExplanation scan={scanResult} manual />
+        {urlScorePresentation && (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <h3 className="text-sm font-semibold">Safety Score Guide</h3>
+            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              The score summarizes risk indicators found by the URL checks. Higher scores indicate fewer detected indicators; lower scores indicate more. It is not a probability or a guarantee of safety. The label above reflects the scan’s existing classification.
+            </p>
+          </div>
+        )}
         <ThreatIntelSummary providers={scanResult.threatIntel} />
 
         {scanResult.fileDetails?.sha256 && (
@@ -267,7 +314,8 @@ export function ManualScan({ onNavigate }) {
         </div>
       </div>
     </div>
-  )
+    )
+  }
 
   const renderEmailBreakdown = (breakdown) => {
     if (!breakdown) return null

@@ -418,6 +418,17 @@ async function persistScan({
     })
   }
 
+  if (scan.type === 'URL' && source === 'browser-search-monitor') {
+    const localDetails = {}
+    if (Array.isArray(storedAnalysis.details?.findings)) {
+      localDetails.findings = storedAnalysis.details.findings
+    }
+    if (storedAnalysis.details?.pageInspection && typeof storedAnalysis.details.pageInspection === 'object') {
+      localDetails.pageInspection = storedAnalysis.details.pageInspection
+    }
+    if (Object.keys(localDetails).length > 0) savedScan.details = localDetails
+  }
+
   return savedScan
 }
 
@@ -520,6 +531,7 @@ export async function previewUrlScan(target) {
     warningSigns: analysis.warningSigns ?? [],
     recommendations: analysis.recommendations ?? [],
     recommendation: analysis.recommendation,
+    details: analysis.details,
     threatIntel: analysis.details?.threatIntel ?? [],
     coverage: analysis.details?.coverage,
     categories: analysis.details?.categories ?? [],
