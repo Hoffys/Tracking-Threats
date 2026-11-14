@@ -88,5 +88,21 @@
       "128": "icons/icon-128.png"
     }
   },
-  "web_accessible_resources": []
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon-32.png"],
+      "matches": [
+        "https://www.google.com/*",
+        "https://google.com/*",
+        "https://www.bing.com/*",
+        "https://bing.com/*",
+        "https://duckduckgo.com/*",
+        "https://search.yahoo.com/*",
+        "https://search.brave.com/*",
+        "https://www.ecosia.org/*",
+        "https://www.startpage.com/*",
+        "https://yandex.com/*"
+      ]
+    }
+  ]
 }
