@@ -381,6 +381,13 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
         : 'The scan classification is unavailable.'
   addText(dialog, explanation, 'margin:8px 0 0;color:#e2e8f0')
 
+  const guide = addSection('Safety Score Guide')
+  addText(guide, 'The score summarizes risk indicators found by URL checks. Higher scores indicate fewer detected indicators; lower scores indicate more. It is an indicator based on detected signals, not a probability or a guarantee that a website is safe. The classification reflects the scan’s existing result.', 'margin:7px 0 0;color:#cbd5e1')
+  addText(guide, 'Safe: Fewer risk indicators were detected. Proceed with normal caution and follow the scan’s recommendations.', 'margin:7px 0 0;color:#a7f3d0')
+  addText(guide, 'Suspicious: Warning signs were detected. Exercise caution, verify the website through a trusted source, and do not enter credentials until verified.', 'margin:7px 0 0;color:#fde68a')
+  addText(guide, 'Dangerous: Threat indicators were detected. Avoid visiting the website and do not enter personal information, passwords, or payment details.', 'margin:7px 0 0;color:#fecdd3')
+  addText(guide, 'Score contributions are combined in separate components: local URL rule deductions are summed for the URL score, eligible threat-intelligence deductions are summed for the reputation score, and page-inspection deductions form a separate score when that check ran. The final score is the lowest of the available component scores; deductions from all components are not simply added together.', 'margin:7px 0 0;color:#cbd5e1')
+
   if (dangerous) {
     const why = addSection('Why is this website dangerous?')
     addText(why, scan?.summary || 'The scan classified this website as Dangerous based on the findings below.', 'margin:7px 0 0;color:#fecdd3')
@@ -412,33 +419,86 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
     }
   }
 
+  const providers = Array.isArray(details?.threatIntel) &&
+      (details.threatIntel.length > 0 || !Array.isArray(scan?.threatIntel))
+    ? details.threatIntel
+    : Array.isArray(scan?.threatIntel) ? scan.threatIntel : null
+  const pageProvider = (providers ?? []).find((provider) => ['Page inspection', 'Rendered page inspection'].includes(provider?.provider))
   const localRules = (details?.findings ?? []).filter((finding) => Number(finding?.deduction ?? 0) > 0)
-  const pageFindings = (details?.pageInspection?.findings ?? []).filter((finding) => typeof finding === 'string' && finding.trim())
-  const hasStructuredLocalFindings = Array.isArray(details?.findings) || Array.isArray(details?.pageInspection?.findings)
+  const pageFindings = [...new Set([
+    ...(Array.isArray(details?.pageInspection?.findings) ? details.pageInspection.findings : []),
+    ...(Array.isArray(pageProvider?.inspection?.findings) ? pageProvider.inspection.findings.map((finding) => finding?.label) : []),
+  ].filter((finding) => typeof finding === 'string' && finding.trim()))]
+  const hasUrlFindingsData = Array.isArray(details?.findings)
+  const pageInspectionCompleted = pageProvider
+    ? pageProvider.checked === true && !pageProvider.error && !pageProvider.skipped
+    : Boolean(details?.pageInspection && typeof details.pageInspection === 'object')
+  const pageInspectionUnavailable = Boolean(pageProvider) && !pageInspectionCompleted
+  const coverageLimitations = [
+    ...(Array.isArray(scan?.coverage?.limitations) ? scan.coverage.limitations : []),
+    ...(Array.isArray(details?.coverage?.limitations) ? details.coverage.limitations : []),
+  ]
+  const pageInspectionNotRun = !pageProvider && !details?.pageInspection && coverageLimitations.some((item) => typeof item === 'string' && /page content.*not inspected|page inspection.*not run/i.test(item))
+  const pageInspectionHasFindings = pageFindings.length > 0 || pageProvider?.found === true
+  const pageInspectionStatus = pageInspectionUnavailable
+    ? 'Unavailable'
+    : pageInspectionCompleted
+      ? pageInspectionHasFindings ? 'Findings reported' : 'No findings detected'
+      : pageInspectionNotRun ? 'Not run' : 'Details unavailable'
   const local = addSection('Local security findings')
+  addText(local, `Page inspection: ${pageInspectionStatus}`, 'margin:7px 0 0;color:#cbd5e1')
   if (localRules.length === 0 && pageFindings.length === 0) {
-    const localMessage = hasStructuredLocalFindings
-      ? 'No Security Findings Detected'
-      : 'Local security finding details are unavailable for this scan.'
-    addText(local, localMessage, 'margin:7px 0 0;color:#cbd5e1')
+    if (pageProvider?.found === true) {
+      addText(local, `Page inspection reported a finding, but its rule details were not included${pageProvider.warning ? `: ${pageProvider.warning}` : '.'}`, 'margin:7px 0 0;color:#cbd5e1')
+      if (pageProvider.deduction !== undefined && pageProvider.deduction !== null && Number.isFinite(Number(pageProvider.deduction))) {
+        addText(local, `Combined page-inspection deduction: ${Number(pageProvider.deduction)} points. This is a separate score component.`, 'margin:5px 0 0;color:#cbd5e1')
+      }
+    } else {
+      const localMessage = hasUrlFindingsData && pageInspectionCompleted
+        ? 'No Security Findings Detected'
+        : hasUrlFindingsData
+          ? 'No URL rule findings were reported.'
+          : 'Local security finding details are unavailable for this scan.'
+      addText(local, localMessage, 'margin:5px 0 0;color:#cbd5e1')
+    }
   } else {
-    localRules.forEach((finding) => {
+    const appendFinding = (parent, { nameText, evidence, deduction, deductionLabel = 'Score deduction' }) => {
       const card = document.createElement('div')
       card.style.cssText = 'margin-top:9px;border:1px solid #334155;border-radius:8px;padding:10px'
       const name = document.createElement('strong')
-      name.textContent = finding.label || finding.code || 'Triggered local rule'
+      name.textContent = nameText
       name.style.cssText = 'display:block;color:#f8fafc'
       card.appendChild(name)
-      addText(card, `Why it triggered: ${finding.label || 'The scanner recorded this rule as triggered.'}`, 'margin:5px 0 0;color:#cbd5e1')
-      if (finding.evidence && typeof finding.evidence === 'object' && Object.keys(finding.evidence).length > 0) {
-        addText(card, `Evidence found: ${JSON.stringify(finding.evidence)}`, 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+      const evidenceEntries = evidence && typeof evidence === 'object' && !Array.isArray(evidence)
+        ? Object.entries(evidence).filter(([, value]) => value !== undefined)
+        : []
+      const evidenceSummary = evidenceEntries.map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('; ')
+      addText(card, evidenceSummary
+        ? `Why it triggered: The scan matched this rule using the recorded values: ${evidenceSummary}.`
+        : 'Why it triggered: The scan recorded this finding, but could not retrieve enough evidence to explain the match.', 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+      if (evidenceEntries.length > 0) {
+        addText(card, `Evidence found: ${JSON.stringify(Object.fromEntries(evidenceEntries))}`, 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
       } else {
         addText(card, 'Evidence found: The scanner did not provide additional evidence details.', 'margin:5px 0 0;color:#cbd5e1')
       }
-      local.appendChild(card)
+      if (deduction !== undefined && deduction !== null && Number.isFinite(Number(deduction))) {
+        addText(card, `${deductionLabel}: ${Number(deduction)} point${Number(deduction) === 1 ? '' : 's'}.`, 'margin:5px 0 0;color:#cbd5e1')
+      } else {
+        addText(card, 'Score deduction: Not included in the scan response.', 'margin:5px 0 0;color:#cbd5e1')
+      }
+      parent.appendChild(card)
+    }
+
+    localRules.forEach((finding) => {
+      appendFinding(local, {
+        nameText: finding.label || finding.code || 'Triggered local rule',
+        evidence: finding.evidence,
+        deduction: finding.deduction,
+      })
     })
     pageFindings.forEach((finding) => {
-      const inspection = details?.pageInspection
+      const inspection = details?.pageInspection ?? pageProvider?.inspection
+      const detailedFinding = pageProvider?.inspection?.findings?.find((item) => item?.label === finding)
       const normalizedFinding = finding.toLowerCase()
       const evidenceKeys = normalizedFinding.includes('submits to a different host')
         ? ['passwordFields', 'externalFormActions']
@@ -454,22 +514,18 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
       const evidence = inspection
         ? Object.fromEntries(evidenceKeys.filter((key) => inspection[key] !== undefined).map((key) => [key, inspection[key]]))
         : null
-      const card = document.createElement('div')
-      card.style.cssText = 'margin-top:9px;border:1px solid #334155;border-radius:8px;padding:10px'
-      const name = document.createElement('strong')
-      name.textContent = finding
-      name.style.cssText = 'display:block;color:#f8fafc'
-      card.appendChild(name)
-      addText(card, `Why it triggered: ${finding}`, 'margin:5px 0 0;color:#cbd5e1')
-      addText(card, Object.keys(evidence ?? {}).length ? `Evidence found: ${JSON.stringify(evidence)}` : 'Evidence found: The system could not retrieve additional page evidence details.', 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
-      local.appendChild(card)
+      appendFinding(local, {
+        nameText: finding,
+        evidence,
+        deduction: detailedFinding?.deduction,
+        deductionLabel: 'Rule deduction (within page inspection)',
+      })
     })
+    if (pageProvider?.checked === true && Number.isFinite(Number(pageProvider.deduction))) {
+      addText(local, `Combined page-inspection deduction: ${Number(pageProvider.deduction)} points. This is a separate score component.`, 'margin:9px 0 0;color:#cbd5e1')
+    }
   }
 
-  const providers = Array.isArray(details?.threatIntel) &&
-      (details.threatIntel.length > 0 || !Array.isArray(scan?.threatIntel))
-    ? details.threatIntel
-    : Array.isArray(scan?.threatIntel) ? scan.threatIntel : null
   const externalProviders = (providers ?? []).filter((provider) => !['Page inspection', 'Rendered page inspection'].includes(provider?.provider))
   const intel = addSection('External threat intelligence')
   if (providers === null) {
@@ -484,6 +540,10 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
         ? ''
         : state === 'Finding reported' && provider?.warning ? ` — ${provider.warning}` : ''
       addText(intel, `${provider?.provider || 'Threat intelligence provider'}: ${state}${explanation}`, 'margin:7px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+      if (state === 'Finding reported' && provider?.deduction !== undefined && provider?.deduction !== null && Number.isFinite(Number(provider.deduction))) {
+        const included = provider?.riskAffecting !== false && provider?.checked === true && !provider?.error && !provider?.skipped && Boolean(provider?.warning)
+        addText(intel, `Score deduction: ${Number(provider.deduction)} point${Number(provider.deduction) === 1 ? '' : 's'}${included ? ' (included in the reputation score)' : ' (not included in the reputation score)'}.`, 'margin:3px 0 0 10px;color:#cbd5e1')
+      }
     })
   }
 

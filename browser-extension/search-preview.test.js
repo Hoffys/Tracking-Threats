@@ -111,25 +111,34 @@ test('invalid or missing preview data cannot masquerade as a saved history resul
 test('Safety Score modal shows only triggered local rules, evidence, and unavailable providers honestly', () => {
   const app = popupExtension()
   app.showSafetyScoreModal(target, {
-    status: 'Dangerous', score: 20,
+    status: 'Dangerous', score: 35,
     recommendations: ['Avoid this website.'],
     details: {
       findings: [
-        { code: 'brand-impersonation', label: 'Possible brand impersonation', deduction: 30, evidence: { brand: 'Example', hostname: 'evil.test' } },
+        { code: 'brand-impersonation', label: 'Possible brand impersonation', deduction: 30, evidence: { brand: 'Example', hostname: 'evil.test', matchedBy: 'brand-label' } },
         { code: 'query-brand-mention', label: 'Informational mention', deduction: 0, evidence: { brand: 'Example' } },
       ],
+      pageInspection: { findings: ['Page contains a credential-entry form'], passwordFields: 1, credentialLanguage: true },
       threatIntel: [
         { provider: 'Google Safe Browsing', checked: false, skipped: 'Not configured', found: false },
-        { provider: 'URLhaus URL', checked: true, found: true, warning: 'URLhaus lists this URL' },
+        { provider: 'URLhaus URL', checked: true, found: true, warning: 'URLhaus lists this URL', deduction: 65 },
+        { provider: 'Page inspection', checked: true, found: true, deduction: 18, inspection: { findings: [{ label: 'Page contains a credential-entry form', deduction: 18 }] } },
       ],
     },
   })
   const text = app.elements.map((element) => element.textContent).join(' ')
   assert.match(text, /Why is this website dangerous\?/)
   assert.match(text, /Possible brand impersonation/)
+  assert.match(text, /Why it triggered: The scan matched this rule using the recorded values:.*hostname="evil\.test"/)
   assert.match(text, /Evidence found:.*Example.*evil\.test/)
-  assert.match(text, /Google Safe Browsing: Unavailable/)
+  assert.match(text, /Score deduction: 30 points/)
+  assert.match(text, /Rule deduction \(within page inspection\): 18 points/)
+  assert.match(text, /Combined page-inspection deduction: 18 points/)
   assert.match(text, /URLhaus URL: Finding reported/)
+  assert.match(text, /Score deduction: 65 points \(included in the reputation score\)/)
+  assert.match(text, /Google Safe Browsing: Unavailable/)
+  assert.match(text, /lowest of the available component scores/)
+  assert.match(text, /not simply added together/)
   assert.doesNotMatch(text, /Informational mention/)
   assert.match(text, /Avoid this website\./)
   assert.equal(app.document.body.child.children[0].attributes['aria-modal'], 'true')
@@ -137,16 +146,118 @@ test('Safety Score modal shows only triggered local rules, evidence, and unavail
 
 test('Safety Score modal explains Safe and Suspicious states and handles missing evidence', () => {
   const app = popupExtension()
-  app.showSafetyScoreModal(target, { status: 'Safe', score: 94, details: { findings: [], threatIntel: [] } })
+  app.showSafetyScoreModal(target, {
+    status: 'Safe', score: 94,
+    details: {
+      findings: [],
+      pageInspection: { findings: [] },
+      threatIntel: [{ provider: 'Page inspection', checked: true, found: false, deduction: 0, inspection: { findings: [] } }],
+    },
+  })
   let text = app.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /URL Security Classification: Safe.*94\/100/)
   assert.match(text, /Fewer risk indicators were detected/)
   assert.match(text, /No Security Findings Detected/)
+  assert.match(text, /Page inspection: No findings detected/)
+  assert.match(text, /Higher scores indicate fewer detected indicators; lower scores indicate more/)
+  assert.match(text, /not a probability or a guarantee/)
+  assert.match(text, /Safe: Fewer risk indicators were detected/)
+  assert.match(text, /Proceed with normal caution/)
 
   const suspiciousApp = popupExtension()
   suspiciousApp.showSafetyScoreModal(target, { status: 'Suspicious', score: 62 })
   text = suspiciousApp.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /URL Security Classification: Suspicious.*62\/100/)
   assert.match(text, /warning signs/i)
+  assert.match(text, /Suspicious: Warning signs were detected/)
+  assert.match(text, /verify the website through a trusted source/)
   assert.match(text, /Local security finding details are unavailable for this scan\./)
+
+  const dangerousApp = popupExtension()
+  dangerousApp.showSafetyScoreModal(target, { status: 'Dangerous', score: 20, details: { findings: [] } })
+  text = dangerousApp.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /URL Security Classification: Dangerous.*20\/100/)
+  assert.match(text, /Dangerous: Threat indicators were detected/)
+  assert.match(text, /Avoid visiting the website and do not enter personal information/)
+})
+
+test('local findings state distinguishes completed, unavailable, and finding-reported page inspection', () => {
+  const renderText = (scan) => {
+    const app = popupExtension()
+    app.showSafetyScoreModal(target, scan)
+    return app.elements.map((element) => element.textContent).join(' ')
+  }
+
+  const completedEmpty = renderText({
+    status: 'Safe', score: 100,
+    details: {
+      findings: [], pageInspection: { findings: [] },
+      threatIntel: [{ provider: 'Page inspection', checked: true, found: false, deduction: 0, inspection: { findings: [] } }],
+    },
+  })
+  assert.match(completedEmpty, /No Security Findings Detected/)
+  assert.match(completedEmpty, /Page inspection: No findings detected/)
+
+  const emptyUnavailable = renderText({
+    status: 'Safe', score: 100,
+    details: {
+      findings: [],
+      threatIntel: [{ provider: 'Page inspection', checked: false, skipped: 'Disabled', found: false, deduction: 0 }],
+    },
+  })
+  assert.match(emptyUnavailable, /Page inspection: Unavailable/)
+  assert.doesNotMatch(emptyUnavailable, /No Security Findings Detected/)
+
+  const urlFindingUnavailable = renderText({
+    status: 'Suspicious', score: 70,
+    details: {
+      findings: [{ code: 'url-userinfo', label: 'URL includes credentials before @', deduction: 30, evidence: { hostname: 'example.test', hasUsername: true } }],
+      threatIntel: [{ provider: 'Page inspection', checked: false, error: 'Fetch failed', found: false, deduction: 0 }],
+    },
+  })
+  assert.match(urlFindingUnavailable, /URL includes credentials before @/)
+  assert.match(urlFindingUnavailable, /Evidence found:.*example\.test/)
+  assert.match(urlFindingUnavailable, /Page inspection: Unavailable/)
+  assert.doesNotMatch(urlFindingUnavailable, /No Security Findings Detected/)
+
+  const pageFinding = renderText({
+    status: 'Suspicious', score: 82,
+    details: {
+      findings: [],
+      threatIntel: [{
+        provider: 'Page inspection', checked: true, found: true, deduction: 18,
+        inspection: { passwordFields: 1, credentialLanguage: true, findings: [{ label: 'Page contains a credential-entry form', deduction: 18 }] },
+      }],
+    },
+  })
+  assert.match(pageFinding, /Page inspection: Findings reported/)
+  assert.match(pageFinding, /Page contains a credential-entry form/)
+  assert.match(pageFinding, /Rule deduction \(within page inspection\): 18 points/)
+  assert.match(pageFinding, /Combined page-inspection deduction: 18 points/)
+  assert.doesNotMatch(pageFinding, /No Security Findings Detected/)
+})
+
+test('Safety Score modal preserves nested page-inspection findings when the separate page details are absent', () => {
+  const app = popupExtension()
+  app.showSafetyScoreModal(target, {
+    status: 'Suspicious', score: 72,
+    details: {
+      findings: [],
+      threatIntel: [{
+        provider: 'Page inspection', checked: true, found: true, deduction: 18,
+        warning: 'Page contains a credential-entry form',
+        inspection: {
+          passwordFields: 1, credentialLanguage: true,
+          findings: [{ label: 'Page contains a credential-entry form', deduction: 18 }],
+        },
+      }],
+    },
+  })
+  const text = app.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /Page contains a credential-entry form/)
+  assert.match(text, /Rule deduction \(within page inspection\): 18 points/)
+  assert.match(text, /Combined page-inspection deduction: 18 points/)
+  assert.doesNotMatch(text, /No Security Findings Detected/)
 })
 
 test('piracy content warning stays separate from a Safe URL security classification', () => {
@@ -157,7 +268,10 @@ test('piracy content warning stays separate from a Safe URL security classificat
     categoryWarnings: ['Contains piracy-related references; this is not a phishing determination.'],
     recommendations: ['Download risk is unknown. Scan the actual file before opening it.'],
     details: { categories: ['piracy-content'], categoryWarnings: [], findings: [], threatIntel: [] },
-    threatIntel: [{ provider: 'Google Safe Browsing', checked: false, skipped: 'Not configured', found: false }],
+    threatIntel: [
+      { provider: 'Google Safe Browsing', checked: false, skipped: 'Not configured', found: false },
+      { provider: 'Page inspection', checked: true, found: false, deduction: 0, inspection: { findings: [] } },
+    ],
   })
   const text = app.elements.map((element) => element.textContent).join(' ')
   assert.match(text, /URL Security Classification: Safe/)
