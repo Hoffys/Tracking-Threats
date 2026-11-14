@@ -315,6 +315,190 @@ function setDetailsHref(anchor, url, scan) {
   })
 }
 
+function showSafetyScoreModal(url, scan, returnFocus = null) {
+  document.getElementById('threattrack-safety-score-modal')?.remove()
+
+  const status = scan?.status ?? scan?.risk ?? 'Unknown'
+  const dangerous = status === 'Dangerous'
+  const suspicious = status === 'Suspicious'
+  const accent = dangerous ? '#fda4af' : suspicious ? '#fcd34d' : '#6ee7b7'
+  const style = getResultStyle(scan)
+  const overlay = document.createElement('div')
+  overlay.id = 'threattrack-safety-score-modal'
+  overlay.setAttribute('role', 'presentation')
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.66);padding:16px'
+
+  const dialog = document.createElement('section')
+  dialog.setAttribute('role', 'dialog')
+  dialog.setAttribute('aria-modal', 'true')
+  dialog.setAttribute('aria-labelledby', 'threattrack-score-title')
+  dialog.tabIndex = -1
+  dialog.style.cssText = `box-sizing:border-box;width:min(600px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border:1px solid ${style.border};border-radius:12px;background:#111827;color:#f8fafc;box-shadow:0 24px 80px rgba(0,0,0,.55);font:14px/1.5 Arial,sans-serif;padding:18px`
+
+  const addText = (parent, text, css = '') => {
+    const node = document.createElement('p')
+    node.textContent = text
+    node.style.cssText = css
+    parent.appendChild(node)
+    return node
+  }
+  const addSection = (titleText) => {
+    const section = document.createElement('section')
+    section.style.cssText = 'margin-top:16px;border-top:1px solid #334155;padding-top:12px'
+    const heading = document.createElement('h3')
+    heading.textContent = titleText
+    heading.style.cssText = 'margin:0;color:#f8fafc;font-size:14px'
+    section.appendChild(heading)
+    dialog.appendChild(section)
+    return section
+  }
+
+  const header = document.createElement('div')
+  header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:12px'
+  const title = document.createElement('h2')
+  title.id = 'threattrack-score-title'
+  title.textContent = 'Website Safety Details'
+  title.style.cssText = `margin:0;color:${accent};font-size:18px`
+  const close = document.createElement('button')
+  close.type = 'button'
+  close.textContent = 'Close'
+  close.setAttribute('aria-label', 'Close safety score details')
+  close.style.cssText = 'flex:0 0 auto;border:1px solid #475569;border-radius:7px;background:#1e293b;color:#f8fafc;padding:7px 10px;font:700 12px Arial,sans-serif;cursor:pointer'
+  const dismiss = () => { overlay.remove(); returnFocus?.focus?.() }
+  close.addEventListener('click', dismiss)
+  header.append(title, close)
+  dialog.appendChild(header)
+
+  addText(dialog, url, 'margin:12px 0 0;overflow-wrap:anywhere;color:#cbd5e1')
+  addText(dialog, `URL Security Classification: ${status} · Safety Score ${scan?.score ?? 'Unavailable'}/100`, `margin:8px 0 0;color:${accent};font-size:16px;font-weight:700`)
+
+  const explanation = dangerous
+    ? 'The scan found threat indicators for this website.'
+    : suspicious
+      ? 'The scan found warning signs. Review them carefully and use caution before continuing.'
+      : status === 'Safe'
+        ? 'Fewer risk indicators were detected in the checks that ran. A Safe result does not guarantee that a website is harmless.'
+        : 'The scan classification is unavailable.'
+  addText(dialog, explanation, 'margin:8px 0 0;color:#e2e8f0')
+
+  if (dangerous) {
+    const why = addSection('Why is this website dangerous?')
+    addText(why, scan?.summary || 'The scan classified this website as Dangerous based on the findings below.', 'margin:7px 0 0;color:#fecdd3')
+  }
+
+  const details = scan?.details && typeof scan.details === 'object' ? scan.details : null
+  const categories = [...new Set([
+    ...(Array.isArray(scan?.categories) ? scan.categories : []),
+    ...(Array.isArray(details?.categories) ? details.categories : []),
+  ])]
+  const categoryWarnings = [...new Set([
+    ...(Array.isArray(scan?.categoryWarnings) ? scan.categoryWarnings : []),
+    ...(Array.isArray(details?.categoryWarnings) ? details.categoryWarnings : []),
+  ].map((item) => typeof item === 'string' ? item : item?.label).filter(Boolean))]
+  const contentCategories = categories.filter((category) => typeof category === 'string' && category.endsWith('-content'))
+  const piracyRisk = categories.includes('piracy-content') || categoryWarnings.some((warning) => /piracy/i.test(warning))
+  const hasContentRisk = contentCategories.length > 0 || categoryWarnings.length > 0
+  if (hasContentRisk) {
+    const content = addSection('Piracy / Content Risk')
+    if (categoryWarnings.length > 0) {
+      categoryWarnings.forEach((warning) => addText(content, warning, 'margin:7px 0 0;color:#fde68a'))
+    } else {
+      addText(content, 'Content category indicators were recorded, but the scanner did not provide their warning text.', 'margin:7px 0 0;color:#fde68a')
+    }
+    if (piracyRisk) {
+      addText(content, 'This is a separate content/download risk warning, not a phishing or malware finding. Downloaded files were not assessed by this URL score.', 'margin:7px 0 0;color:#cbd5e1')
+    } else {
+      addText(content, 'Content category warnings are separate from the URL phishing and malware classification.', 'margin:7px 0 0;color:#cbd5e1')
+    }
+  }
+
+  const localRules = (details?.findings ?? []).filter((finding) => Number(finding?.deduction ?? 0) > 0)
+  const pageFindings = (details?.pageInspection?.findings ?? []).filter((finding) => typeof finding === 'string' && finding.trim())
+  const hasStructuredLocalFindings = Array.isArray(details?.findings) || Array.isArray(details?.pageInspection?.findings)
+  const local = addSection('Local security findings')
+  if (localRules.length === 0 && pageFindings.length === 0) {
+    const localMessage = hasStructuredLocalFindings
+      ? 'No Security Findings Detected'
+      : 'Local security finding details are unavailable for this scan.'
+    addText(local, localMessage, 'margin:7px 0 0;color:#cbd5e1')
+  } else {
+    localRules.forEach((finding) => {
+      const card = document.createElement('div')
+      card.style.cssText = 'margin-top:9px;border:1px solid #334155;border-radius:8px;padding:10px'
+      const name = document.createElement('strong')
+      name.textContent = finding.label || finding.code || 'Triggered local rule'
+      name.style.cssText = 'display:block;color:#f8fafc'
+      card.appendChild(name)
+      addText(card, `Why it triggered: ${finding.label || 'The scanner recorded this rule as triggered.'}`, 'margin:5px 0 0;color:#cbd5e1')
+      if (finding.evidence && typeof finding.evidence === 'object' && Object.keys(finding.evidence).length > 0) {
+        addText(card, `Evidence found: ${JSON.stringify(finding.evidence)}`, 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+      } else {
+        addText(card, 'Evidence found: The scanner did not provide additional evidence details.', 'margin:5px 0 0;color:#cbd5e1')
+      }
+      local.appendChild(card)
+    })
+    pageFindings.forEach((finding) => {
+      const inspection = details?.pageInspection
+      const normalizedFinding = finding.toLowerCase()
+      const evidenceKeys = normalizedFinding.includes('submits to a different host')
+        ? ['passwordFields', 'externalFormActions']
+        : normalizedFinding.includes('credential-entry form')
+          ? ['passwordFields', 'credentialLanguage']
+          : normalizedFinding.includes('meta-refresh')
+            ? ['externalMetaRefresh']
+            : normalizedFinding.includes('hidden forms') || normalizedFinding.includes('hidden frames')
+              ? ['hiddenFrames', 'credentialLanguage']
+              : normalizedFinding.includes('obfuscated script') || normalizedFinding.includes('obfuscated scripts')
+                ? ['obfuscatedScripts', 'credentialLanguage']
+                : []
+      const evidence = inspection
+        ? Object.fromEntries(evidenceKeys.filter((key) => inspection[key] !== undefined).map((key) => [key, inspection[key]]))
+        : null
+      const card = document.createElement('div')
+      card.style.cssText = 'margin-top:9px;border:1px solid #334155;border-radius:8px;padding:10px'
+      const name = document.createElement('strong')
+      name.textContent = finding
+      name.style.cssText = 'display:block;color:#f8fafc'
+      card.appendChild(name)
+      addText(card, `Why it triggered: ${finding}`, 'margin:5px 0 0;color:#cbd5e1')
+      addText(card, Object.keys(evidence ?? {}).length ? `Evidence found: ${JSON.stringify(evidence)}` : 'Evidence found: The system could not retrieve additional page evidence details.', 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+      local.appendChild(card)
+    })
+  }
+
+  const providers = Array.isArray(details?.threatIntel) &&
+      (details.threatIntel.length > 0 || !Array.isArray(scan?.threatIntel))
+    ? details.threatIntel
+    : Array.isArray(scan?.threatIntel) ? scan.threatIntel : null
+  const externalProviders = (providers ?? []).filter((provider) => !['Page inspection', 'Rendered page inspection'].includes(provider?.provider))
+  const intel = addSection('External threat intelligence')
+  if (providers === null) {
+    addText(intel, 'Threat intelligence provider details were not included in the scan response.', 'margin:7px 0 0;color:#cbd5e1')
+  } else if (externalProviders.length === 0) {
+    addText(intel, 'No external provider findings were returned in this scan. Provider-level results were not listed.', 'margin:7px 0 0;color:#cbd5e1')
+  } else {
+    externalProviders.forEach((provider) => {
+      const unavailable = provider?.checked !== true || provider?.error || provider?.skipped
+      const state = provider?.found === true && !unavailable ? 'Finding reported' : unavailable ? 'Unavailable' : 'No finding reported'
+      const explanation = state === 'Unavailable'
+        ? ''
+        : state === 'Finding reported' && provider?.warning ? ` — ${provider.warning}` : ''
+      addText(intel, `${provider?.provider || 'Threat intelligence provider'}: ${state}${explanation}`, 'margin:7px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+    })
+  }
+
+  const actionSection = addSection('Recommended action')
+  const action = scan?.recommendations?.find((item) => typeof item === 'string' && item.trim()) ??
+    (dangerous ? 'Avoid visiting this website. Do not enter personal information.' : suspicious ? 'Use caution and verify the website through a trusted source before continuing.' : status === 'Safe' ? 'No strong risk indicators were detected in the checks that ran; continue with normal caution.' : 'Treat the result as unverified until a scan is available.')
+  addText(actionSection, action, `margin:7px 0 0;color:${accent}`)
+
+  overlay.addEventListener('click', (event) => { if (event.target === overlay) dismiss() })
+  overlay.addEventListener('keydown', (event) => { if (event.key === 'Escape') dismiss() })
+  overlay.appendChild(dialog)
+  document.body.appendChild(overlay)
+  close.focus()
+}
+
 function addBadge(anchor, scan) {
   if (anchor.dataset.threattrackMarked === 'true') return false
 
@@ -325,6 +509,9 @@ function addBadge(anchor, scan) {
   const badge = document.createElement('span')
   badge.className = 'threattrack-result-badge'
   badge.textContent = getScanLevel(scan) === 'content' ? style.label : `${style.label} ${scan.score}/100`
+  badge.setAttribute('role', 'button')
+  badge.setAttribute('tabindex', '0')
+  badge.setAttribute('aria-label', `Show ${scan.status} classification and safety score details`)
   badge.style.cssText = [
     'all:initial',
     'box-sizing:border-box',
@@ -350,17 +537,15 @@ function addBadge(anchor, scan) {
     'vertical-align:middle',
     'cursor:pointer',
   ].join(';')
-  badge.onclick = (event) => {
+  const openDetails = (event) => {
     event.preventDefault()
     event.stopPropagation()
     const normalized = normalizeCandidate(anchor.getAttribute('href'))
     if (!normalized) return
-    sendRuntimeMessage({ type: 'get-linked-app-url' }, (response, lastError) => {
-      const appUrl =
-        lastError || !response?.ok || !response.appUrl ? APP_URL : response.appUrl
-      window.open(getDetailsUrl(normalized, appUrl, scan), '_blank', 'noopener,noreferrer')
-    })
+    showSafetyScoreModal(normalized, scan, badge)
   }
+  badge.onclick = openDetails
+  badge.onkeydown = (event) => { if (event.key === 'Enter' || event.key === ' ') openDetails(event) }
 
   const title = anchor.querySelector('h3')
   if (title) {
@@ -960,6 +1145,7 @@ function scheduleScan() {
 document.addEventListener(
   'click',
   (event) => {
+    if (event.target.closest?.('.threattrack-result-badge')) return
     const anchor = event.target.closest?.('a[href]')
     if (!anchor) return
 

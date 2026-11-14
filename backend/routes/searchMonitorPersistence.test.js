@@ -117,7 +117,7 @@ test('extension URL and email scans persist to client activity while search prev
     const persisted = await call('/scan/url', {
       method: 'POST', headers,
       body: JSON.stringify({
-        url: 'https://search-result.example/path',
+        url: 'https://paypal-login-attacker.example/account/login',
         source: 'browser-search-monitor',
         reason: 'search-result-preview',
         preview: false,
@@ -129,6 +129,10 @@ test('extension URL and email scans persist to client activity while search prev
     assert.equal(persisted.status, 201, JSON.stringify(persisted.body))
     assert.ok(persisted.body.id)
     assert.equal(persisted.body.source, 'browser-search-monitor')
+    assert.ok(Array.isArray(persisted.body.details?.findings))
+    const persistedFinding = persisted.body.details.findings.find((finding) => finding.code === 'brand-impersonation')
+    assert.ok(persistedFinding)
+    assert.equal(persistedFinding.evidence.hostname, 'paypal-login-attacker.example')
 
     const gmailBatch = await call('/scan/email', {
       method: 'POST', headers,
@@ -173,6 +177,21 @@ test('extension URL and email scans persist to client activity while search prev
     })
     assert.equal(preview.status, 200, JSON.stringify(preview.body))
     assert.equal(preview.body.id, undefined)
+    assert.ok(Array.isArray(preview.body.details?.findings))
+
+    const previewWithFinding = await call('/scan/url', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        url: 'https://paypal-login-attacker.example/account/login',
+        source: 'browser-search-preview',
+        preview: true,
+        clientId: registration.body.clientId,
+      }),
+    })
+    assert.equal(previewWithFinding.status, 200, JSON.stringify(previewWithFinding.body))
+    const previewFinding = previewWithFinding.body.details.findings.find((finding) => finding.code === 'brand-impersonation')
+    assert.ok(previewFinding)
+    assert.equal(previewFinding.evidence.hostname, 'paypal-login-attacker.example')
 
     const activity = await call(`/public/activity/${registration.body.clientId}`, { headers })
     assert.equal(activity.status, 200, JSON.stringify(activity.body))

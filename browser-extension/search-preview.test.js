@@ -30,6 +30,39 @@ function extension() {
   return { ...sandbox, reply: (response) => reply(response) }
 }
 
+function popupExtension() {
+  const elements = []
+  const makeElement = (tagName) => {
+    const node = {
+      tagName,
+      children: [],
+      style: {},
+      attributes: {},
+      listeners: {},
+      textContent: '',
+      appendChild(child) { this.children.push(child); return child },
+      append(...children) { children.forEach((child) => this.appendChild(child)) },
+      setAttribute(name, value) { this.attributes[name] = value },
+      addEventListener(name, listener) { this.listeners[name] = listener },
+      focus() { this.focused = true },
+      remove() { this.removed = true },
+    }
+    elements.push(node)
+    return node
+  }
+  const sandbox = {
+    URL, URLSearchParams,
+    TRACKING_THREATS_CONFIG: { APP_URL: appUrl },
+    document: {
+      body: { appendChild(node) { this.child = node } },
+      getElementById: () => null,
+      createElement: makeElement,
+    },
+  }
+  vm.runInNewContext(source.slice(0, source.indexOf('function addBadge(')), sandbox)
+  return { ...sandbox, elements }
+}
+
 test('search details carry the exact displayed preview and retain the linked client', () => {
   const app = extension()
   const anchor = {}
@@ -73,6 +106,99 @@ test('invalid or missing preview data cannot masquerade as a saved history resul
   const result = readSearchPreview(`${appUrl}?preview=1#${fragment}`)
   assert.deepEqual(result.warningSigns, ['Valid warning'])
   assert.deepEqual(result.recommendations, [])
+})
+
+test('Safety Score modal shows only triggered local rules, evidence, and unavailable providers honestly', () => {
+  const app = popupExtension()
+  app.showSafetyScoreModal(target, {
+    status: 'Dangerous', score: 20,
+    recommendations: ['Avoid this website.'],
+    details: {
+      findings: [
+        { code: 'brand-impersonation', label: 'Possible brand impersonation', deduction: 30, evidence: { brand: 'Example', hostname: 'evil.test' } },
+        { code: 'query-brand-mention', label: 'Informational mention', deduction: 0, evidence: { brand: 'Example' } },
+      ],
+      threatIntel: [
+        { provider: 'Google Safe Browsing', checked: false, skipped: 'Not configured', found: false },
+        { provider: 'URLhaus URL', checked: true, found: true, warning: 'URLhaus lists this URL' },
+      ],
+    },
+  })
+  const text = app.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /Why is this website dangerous\?/)
+  assert.match(text, /Possible brand impersonation/)
+  assert.match(text, /Evidence found:.*Example.*evil\.test/)
+  assert.match(text, /Google Safe Browsing: Unavailable/)
+  assert.match(text, /URLhaus URL: Finding reported/)
+  assert.doesNotMatch(text, /Informational mention/)
+  assert.match(text, /Avoid this website\./)
+  assert.equal(app.document.body.child.children[0].attributes['aria-modal'], 'true')
+})
+
+test('Safety Score modal explains Safe and Suspicious states and handles missing evidence', () => {
+  const app = popupExtension()
+  app.showSafetyScoreModal(target, { status: 'Safe', score: 94, details: { findings: [], threatIntel: [] } })
+  let text = app.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /Fewer risk indicators were detected/)
+  assert.match(text, /No Security Findings Detected/)
+
+  const suspiciousApp = popupExtension()
+  suspiciousApp.showSafetyScoreModal(target, { status: 'Suspicious', score: 62 })
+  text = suspiciousApp.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /warning signs/i)
+  assert.match(text, /Local security finding details are unavailable for this scan\./)
+})
+
+test('piracy content warning stays separate from a Safe URL security classification', () => {
+  const app = popupExtension()
+  app.showSafetyScoreModal(target, {
+    status: 'Safe', score: 100,
+    categories: ['piracy-content'],
+    categoryWarnings: ['Contains piracy-related references; this is not a phishing determination.'],
+    recommendations: ['Download risk is unknown. Scan the actual file before opening it.'],
+    details: { categories: ['piracy-content'], categoryWarnings: [], findings: [], threatIntel: [] },
+    threatIntel: [{ provider: 'Google Safe Browsing', checked: false, skipped: 'Not configured', found: false }],
+  })
+  const text = app.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /URL Security Classification: Safe/)
+  assert.match(text, /Piracy \/ Content Risk/)
+  assert.match(text, /not a phishing determination/)
+  assert.match(text, /This is a separate content\/download risk warning/)
+  assert.match(text, /No Security Findings Detected/)
+  assert.match(text, /Google Safe Browsing: Unavailable/)
+  assert.doesNotMatch(text, /No local URL security findings were recorded/)
+  assert.doesNotMatch(text, /No external provider findings were returned/)
+  assert.match(text, /Download risk is unknown/)
+})
+
+test('empty and missing provider detail arrays have distinct modal messages', () => {
+  const empty = popupExtension()
+  empty.showSafetyScoreModal(target, { status: 'Safe', score: 100, details: { threatIntel: [] } })
+  let text = empty.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /No external provider findings were returned/)
+
+  const missing = popupExtension()
+  missing.showSafetyScoreModal(target, { status: 'Safe', score: 100 })
+  text = missing.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /Threat intelligence provider details were not included/)
+})
+
+test('unavailable providers hide technical errors while preserving no-finding status', () => {
+  const app = popupExtension()
+  app.showSafetyScoreModal(target, {
+    status: 'Suspicious', score: 62,
+    threatIntel: [
+      { provider: 'PhishTank', checked: false, skipped: 'PhishTank API key is not configured', found: false },
+      { provider: 'VirusTotal', checked: false, error: 'VirusTotal returned 429', found: false },
+      { provider: 'URLhaus URL', checked: true, found: false },
+    ],
+  })
+  const text = app.elements.map((element) => element.textContent).join(' ')
+  assert.match(text, /PhishTank: Unavailable/)
+  assert.match(text, /VirusTotal: Unavailable/)
+  assert.doesNotMatch(text, /The threat intelligence check could not be completed\./)
+  assert.match(text, /URLhaus URL: No finding reported/)
+  assert.doesNotMatch(text, /API key is not configured|returned 429|HTTP 429/)
 })
 
 test('coverage, categories and content warnings survive linked-app preview roundtrips', () => {
@@ -214,5 +340,5 @@ test('synchronous context invalidation falls back, while unrelated runtime error
 
 test('all Google result runtime messages use the guarded callback wrapper', () => {
   assert.equal((source.match(/chrome\.runtime\.sendMessage\(/g) ?? []).length, 1)
-  assert.equal((source.match(/sendRuntimeMessage\(/g) ?? []).length, 6) // definition and five call sites
+  assert.equal((source.match(/sendRuntimeMessage\(/g) ?? []).length, 5) // definition and four call sites
 })
