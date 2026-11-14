@@ -321,77 +321,207 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
   const status = scan?.status ?? scan?.risk ?? 'Unknown'
   const dangerous = status === 'Dangerous'
   const suspicious = status === 'Suspicious'
-  const accent = dangerous ? '#fda4af' : suspicious ? '#fcd34d' : '#6ee7b7'
-  const style = getResultStyle(scan)
+  const safe = status === 'Safe'
+  const palette = dangerous
+    ? { accent: '#fda4af', border: 'rgba(251,113,133,.42)', panel: 'rgba(127,29,29,.25)', soft: '#4c0519', label: 'High Risk' }
+    : suspicious
+      ? { accent: '#fcd34d', border: 'rgba(251,191,36,.42)', panel: 'rgba(120,53,15,.24)', soft: '#451a03', label: 'Caution' }
+      : safe
+        ? { accent: '#6ee7b7', border: 'rgba(52,211,153,.4)', panel: 'rgba(6,78,59,.25)', soft: '#022c22', label: 'Low Risk' }
+        : { accent: '#cbd5e1', border: 'rgba(148,163,184,.38)', panel: 'rgba(51,65,85,.45)', soft: '#1e293b', label: 'Unverified' }
+  const score = typeof scan?.score === 'number' && Number.isFinite(scan.score) && scan.score >= 0 && scan.score <= 100
+    ? scan.score
+    : null
   const overlay = document.createElement('div')
   overlay.id = 'threattrack-safety-score-modal'
   overlay.setAttribute('role', 'presentation')
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.66);padding:16px'
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.72);padding:clamp(10px,3vw,24px)'
 
   const dialog = document.createElement('section')
   dialog.setAttribute('role', 'dialog')
   dialog.setAttribute('aria-modal', 'true')
   dialog.setAttribute('aria-labelledby', 'threattrack-score-title')
+  dialog.setAttribute('aria-describedby', 'threattrack-score-summary')
   dialog.tabIndex = -1
-  dialog.style.cssText = `box-sizing:border-box;width:min(600px,100%);max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border:1px solid ${style.border};border-radius:12px;background:#111827;color:#f8fafc;box-shadow:0 24px 80px rgba(0,0,0,.55);font:14px/1.5 Arial,sans-serif;padding:18px`
+  dialog.style.cssText = `box-sizing:border-box;display:flex;flex-direction:column;width:min(900px,100%);max-height:calc(100vh - 20px);max-height:calc(100dvh - 20px);overflow:hidden;border:1px solid ${palette.border};border-radius:18px;background:#0b1220;color:#f8fafc;box-shadow:0 28px 90px rgba(0,0,0,.58);font:14px/1.5 Arial,sans-serif`
 
-  const addText = (parent, text, css = '') => {
-    const node = document.createElement('p')
+  const addText = (parent, text, css = '', tagName = 'p') => {
+    const node = document.createElement(tagName)
     node.textContent = text
     node.style.cssText = css
     parent.appendChild(node)
     return node
   }
-  const addSection = (titleText) => {
+  const makeCard = (parent, titleText, subtitle = '') => {
     const section = document.createElement('section')
-    section.style.cssText = 'margin-top:16px;border-top:1px solid #334155;padding-top:12px'
+    section.style.cssText = 'min-width:0;border:1px solid #263449;border-radius:14px;background:rgba(15,23,42,.76);padding:16px'
     const heading = document.createElement('h3')
     heading.textContent = titleText
-    heading.style.cssText = 'margin:0;color:#f8fafc;font-size:14px'
+    heading.style.cssText = 'margin:0;color:#f8fafc;font-size:14px;font-weight:700;letter-spacing:.01em'
     section.appendChild(heading)
-    dialog.appendChild(section)
+    if (subtitle) addText(section, subtitle, 'margin:4px 0 0;color:#94a3b8;font-size:12px;line-height:1.5')
+    parent.appendChild(section)
     return section
   }
+  const addPill = (parent, text, color = palette.accent, background = palette.soft) => {
+    const pill = document.createElement('span')
+    pill.textContent = text
+    pill.style.cssText = `display:inline-flex;align-items:center;max-width:100%;border:1px solid ${palette.border};border-radius:999px;background:${background};color:${color};padding:3px 9px;font:700 11px/1.4 Arial,sans-serif;white-space:normal`
+    parent.appendChild(pill)
+    return pill
+  }
+  const resultStatusStyles = {
+    Clean: { color: '#6ee7b7', background: 'rgba(6,78,59,.28)', border: 'rgba(52,211,153,.35)' },
+    'No Issues': { color: '#6ee7b7', background: 'rgba(6,78,59,.28)', border: 'rgba(52,211,153,.35)' },
+    'No Threats': { color: '#6ee7b7', background: 'rgba(6,78,59,.28)', border: 'rgba(52,211,153,.35)' },
+    'Potential Risk': { color: '#fcd34d', background: 'rgba(120,53,15,.3)', border: 'rgba(251,191,36,.4)' },
+    Informational: { color: '#cbd5e1', background: 'rgba(51,65,85,.45)', border: 'rgba(148,163,184,.35)' },
+    Malicious: { color: '#fda4af', background: 'rgba(127,29,29,.3)', border: 'rgba(251,113,133,.4)' },
+    'Threat Detected': { color: '#fda4af', background: 'rgba(127,29,29,.3)', border: 'rgba(251,113,133,.4)' },
+    Unavailable: { color: '#fcd34d', background: 'rgba(120,53,15,.24)', border: 'rgba(251,191,36,.35)' },
+    'Check Incomplete': { color: '#fcd34d', background: 'rgba(120,53,15,.24)', border: 'rgba(251,191,36,.35)' },
+    'Not run': { color: '#cbd5e1', background: 'rgba(51,65,85,.45)', border: 'rgba(148,163,184,.35)' },
+    'Details unavailable': { color: '#cbd5e1', background: 'rgba(51,65,85,.45)', border: 'rgba(148,163,184,.35)' },
+    'Partial Results': { color: '#fcd34d', background: 'rgba(120,53,15,.24)', border: 'rgba(251,191,36,.35)' },
+    'No Results Listed': { color: '#cbd5e1', background: 'rgba(51,65,85,.45)', border: 'rgba(148,163,184,.35)' },
+  }
+  const addResultStatus = (parent, label) => {
+    const style = resultStatusStyles[label] ?? resultStatusStyles['Details unavailable']
+    const badge = document.createElement('span')
+    badge.textContent = label
+    badge.style.cssText = `display:inline-flex;align-items:center;border:1px solid ${style.border};border-radius:999px;background:${style.background};color:${style.color};padding:4px 9px;font:700 11px/1.35 Arial,sans-serif`
+    parent.appendChild(badge)
+    return badge
+  }
+  const makeFindingCard = (parent, titleText, subtitle, icon, statusLabel) => {
+    const section = document.createElement('section')
+    section.style.cssText = 'min-width:0;border:1px solid #263449;border-radius:14px;background:rgba(15,23,42,.76);padding:15px'
+    const headerRow = document.createElement('div')
+    headerRow.style.cssText = 'display:flex;align-items:center;gap:10px;min-width:0'
+    const iconBox = document.createElement('span')
+    iconBox.textContent = icon
+    iconBox.setAttribute('aria-hidden', 'true')
+    iconBox.style.cssText = `display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border:1px solid ${palette.border};border-radius:10px;background:${palette.panel};color:${palette.accent};font:700 16px Arial,sans-serif`
+    const title = document.createElement('h3')
+    title.textContent = titleText
+    title.style.cssText = 'flex:1 1 auto;min-width:0;margin:0;color:#f8fafc;font-size:14px;font-weight:700;letter-spacing:.01em'
+    headerRow.append(iconBox, title)
+    section.appendChild(headerRow)
+    addResultStatus(section, statusLabel)
+    addText(section, subtitle, 'margin:8px 0 0;color:#94a3b8;font-size:12px;line-height:1.5')
+    parent.appendChild(section)
+    return section
+  }
+  const displayStatus = ['Safe', 'Suspicious', 'Dangerous'].includes(status) ? status : 'Unverified'
+  const scoreDescriptions = {
+    Safe: 'Fewer risk indicators were detected in the checks that ran. Proceed with normal caution.',
+    Suspicious: 'Warning signs were detected. Verify this website through a trusted source before continuing.',
+    Dangerous: 'Threat indicators were detected. Avoid visiting this website and do not enter personal information.',
+  }
+  const scoreDescription = scoreDescriptions[status] ?? 'The scan did not return a recognized security classification.'
 
   const header = document.createElement('div')
-  header.style.cssText = 'display:flex;align-items:flex-start;justify-content:space-between;gap:12px'
+  header.style.cssText = 'flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid #263449;padding:16px clamp(16px,3vw,24px)'
+  const brandBlock = document.createElement('div')
+  brandBlock.style.cssText = 'display:flex;align-items:center;gap:12px;min-width:0'
+  const brandIcon = document.createElement('img')
+  brandIcon.src = chrome.runtime.getURL('icons/icon-32.png')
+  brandIcon.alt = ''
+  brandIcon.setAttribute('aria-hidden', 'true')
+  brandIcon.style.cssText = 'display:block;flex:0 0 auto;width:46px;height:46px;border-radius:12px;object-fit:contain'
+  const brandText = document.createElement('div')
+  brandText.style.cssText = 'min-width:0'
+  addText(brandText, 'TRACKING THREATS', 'margin:0;color:#5eead4;font-size:10px;font-weight:800;letter-spacing:.16em', 'p')
   const title = document.createElement('h2')
   title.id = 'threattrack-score-title'
-  title.textContent = 'Website Safety Details'
-  title.style.cssText = `margin:0;color:${accent};font-size:18px`
+  title.textContent = 'Safety Score Details'
+  title.style.cssText = 'margin:2px 0 0;color:#f8fafc;font-size:17px;font-weight:700;line-height:1.3'
+  brandText.appendChild(title)
+  brandBlock.append(brandIcon, brandText)
   const close = document.createElement('button')
   close.type = 'button'
-  close.textContent = 'Close'
+  close.textContent = '×'
   close.setAttribute('aria-label', 'Close safety score details')
-  close.style.cssText = 'flex:0 0 auto;border:1px solid #475569;border-radius:7px;background:#1e293b;color:#f8fafc;padding:7px 10px;font:700 12px Arial,sans-serif;cursor:pointer'
+  close.style.cssText = 'display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;border:1px solid #334155;border-radius:10px;background:#111827;color:#cbd5e1;font:400 24px/1 Arial,sans-serif;cursor:pointer'
   const dismiss = () => { overlay.remove(); returnFocus?.focus?.() }
   close.addEventListener('click', dismiss)
-  header.append(title, close)
+  header.append(brandBlock, close)
   dialog.appendChild(header)
 
-  addText(dialog, url, 'margin:12px 0 0;overflow-wrap:anywhere;color:#cbd5e1')
-  addText(dialog, `URL Security Classification: ${status} · Safety Score ${scan?.score ?? 'Unavailable'}/100`, `margin:8px 0 0;color:${accent};font-size:16px;font-weight:700`)
+  const content = document.createElement('div')
+  content.style.cssText = 'flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:clamp(14px,3vw,24px)'
+  dialog.appendChild(content)
 
-  const explanation = dangerous
-    ? 'The scan found threat indicators for this website.'
-    : suspicious
-      ? 'The scan found warning signs. Review them carefully and use caution before continuing.'
-      : status === 'Safe'
-        ? 'Fewer risk indicators were detected in the checks that ran. A Safe result does not guarantee that a website is harmless.'
-        : 'The scan classification is unavailable.'
-  addText(dialog, explanation, 'margin:8px 0 0;color:#e2e8f0')
-
-  const guide = addSection('Safety Score Guide')
-  addText(guide, 'The score summarizes risk indicators found by URL checks. Higher scores indicate fewer detected indicators; lower scores indicate more. It is an indicator based on detected signals, not a probability or a guarantee that a website is safe. The classification reflects the scan’s existing result.', 'margin:7px 0 0;color:#cbd5e1')
-  addText(guide, 'Safe: Fewer risk indicators were detected. Proceed with normal caution and follow the scan’s recommendations.', 'margin:7px 0 0;color:#a7f3d0')
-  addText(guide, 'Suspicious: Warning signs were detected. Exercise caution, verify the website through a trusted source, and do not enter credentials until verified.', 'margin:7px 0 0;color:#fde68a')
-  addText(guide, 'Dangerous: Threat indicators were detected. Avoid visiting the website and do not enter personal information, passwords, or payment details.', 'margin:7px 0 0;color:#fecdd3')
-  addText(guide, 'Score contributions are combined in separate components: local URL rule deductions are summed for the URL score, eligible threat-intelligence deductions are summed for the reputation score, and page-inspection deductions form a separate score when that check ran. The final score is the lowest of the available component scores; deductions from all components are not simply added together.', 'margin:7px 0 0;color:#cbd5e1')
-
-  if (dangerous) {
-    const why = addSection('Why is this website dangerous?')
-    addText(why, scan?.summary || 'The scan classified this website as Dangerous based on the findings below.', 'margin:7px 0 0;color:#fecdd3')
+  const scorePanel = document.createElement('section')
+  scorePanel.style.cssText = `border:1px solid ${palette.border};border-radius:16px;background:${palette.panel};padding:clamp(16px,3vw,24px)`
+  const scoreTop = document.createElement('div')
+  scoreTop.style.cssText = 'display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px'
+  const scoreCopy = document.createElement('div')
+  scoreCopy.style.cssText = 'flex:1 1 300px;min-width:0'
+  const scoreLabel = document.createElement('p')
+  scoreLabel.textContent = 'URL SAFETY SCORE'
+  scoreLabel.style.cssText = 'margin:0;color:#94a3b8;font-size:10px;font-weight:800;letter-spacing:.15em'
+  scoreCopy.appendChild(scoreLabel)
+  addPill(scoreCopy, `${displayStatus} · ${palette.label}`)
+  if (dangerous) addText(scoreCopy, 'Why is this website dangerous?', 'margin:10px 0 0;color:#fda4af;font-size:15px;font-weight:700', 'h3')
+  addText(scoreCopy, scoreDescription, 'margin:10px 0 0;color:#e2e8f0;font-size:14px;line-height:1.6', 'p').id = 'threattrack-score-summary'
+  const scoreIndicator = document.createElement('div')
+  scoreIndicator.setAttribute('role', 'progressbar')
+  scoreIndicator.setAttribute('aria-label', 'Safety score')
+  scoreIndicator.setAttribute('aria-valuemin', '0')
+  scoreIndicator.setAttribute('aria-valuemax', '100')
+  if (score !== null) {
+    scoreIndicator.setAttribute('aria-valuenow', String(score))
+    scoreIndicator.setAttribute('aria-valuetext', `${score} out of 100`)
+  } else {
+    scoreIndicator.setAttribute('aria-valuetext', 'Score unavailable')
   }
+  scoreIndicator.style.cssText = `display:grid;place-items:center;flex:0 0 auto;width:clamp(94px,22vw,116px);aspect-ratio:1;border-radius:50%;background:conic-gradient(from -90deg,${palette.accent} ${score ?? 0}%,#334155 0)`
+  const scoreCenter = document.createElement('div')
+  scoreCenter.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:calc(100% - 12px);height:calc(100% - 12px);border-radius:50%;background:#101a2b;text-align:center'
+  const scoreNumber = document.createElement('p')
+  scoreNumber.textContent = score === null ? 'Unavailable' : String(score)
+  scoreNumber.style.cssText = `max-width:100%;margin:0;color:${palette.accent};font-size:clamp(24px,6vw,32px);font-weight:800;line-height:1.05;letter-spacing:-.04em;overflow-wrap:anywhere`
+  scoreCenter.appendChild(scoreNumber)
+  if (score !== null) addText(scoreCenter, 'out of 100', 'margin:3px 0 0;color:#cbd5e1;font-size:10px')
+  scoreIndicator.appendChild(scoreCenter)
+  scoreTop.append(scoreCopy, scoreIndicator)
+  scorePanel.appendChild(scoreTop)
+  content.appendChild(scorePanel)
+
+  const targetSection = makeCard(content, 'Target URL')
+  targetSection.style.marginTop = '12px'
+  addText(targetSection, url, 'margin:8px 0 0;color:#e2e8f0;overflow-wrap:anywhere;font-size:12px')
+
+  const guide = makeCard(content, 'Safety Score Guide', 'These ranges match the URL scanner’s existing classification thresholds.')
+  guide.style.marginTop = '16px'
+  const guideGrid = document.createElement('div')
+  guideGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px;margin-top:12px'
+  const guideItems = [
+    { status: 'Safe', range: '80–100', text: 'Fewer indicators were detected. Proceed with normal caution.', color: '#6ee7b7', border: 'rgba(52,211,153,.35)', background: 'rgba(6,78,59,.18)' },
+    { status: 'Suspicious', range: '51–79', text: 'Warning signs were detected. Verify the site before continuing.', color: '#fcd34d', border: 'rgba(251,191,36,.35)', background: 'rgba(120,53,15,.18)' },
+    { status: 'Dangerous', range: '0–50', text: 'Threat indicators were detected. Avoid visiting the site.', color: '#fda4af', border: 'rgba(251,113,133,.35)', background: 'rgba(127,29,29,.18)' },
+  ]
+  guideItems.forEach((item) => {
+    const guideItem = document.createElement('div')
+    const current = status === item.status
+    guideItem.setAttribute('aria-label', `${item.status}, ${item.range}${current ? ', current classification' : ''}`)
+    guideItem.style.cssText = `min-width:0;border:1px solid ${current ? item.border : '#263449'};border-radius:12px;background:${current ? item.background : 'rgba(15,23,42,.42)'};padding:12px`
+    const titleLine = document.createElement('div')
+    titleLine.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px'
+    addText(titleLine, item.status, `margin:0;color:${item.color};font-size:13px;font-weight:700`)
+    addText(titleLine, item.range, 'margin:0;color:#cbd5e1;font-size:12px;font-variant-numeric:tabular-nums')
+    guideItem.appendChild(titleLine)
+    addText(guideItem, item.text, 'margin:7px 0 0;color:#cbd5e1;font-size:12px;line-height:1.5')
+    guideGrid.appendChild(guideItem)
+  })
+  guide.appendChild(guideGrid)
+
+  const found = makeCard(content, 'What We Found', 'Security checks and content-category warnings are reported separately.')
+  found.style.marginTop = '16px'
+  const findingGrid = document.createElement('div')
+  findingGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px;margin-top:12px'
+  found.appendChild(findingGrid)
 
   const details = scan?.details && typeof scan.details === 'object' ? scan.details : null
   const categories = [...new Set([
@@ -404,67 +534,34 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
   ].map((item) => typeof item === 'string' ? item : item?.label).filter(Boolean))]
   const contentCategories = categories.filter((category) => typeof category === 'string' && category.endsWith('-content'))
   const piracyRisk = categories.includes('piracy-content') || categoryWarnings.some((warning) => /piracy/i.test(warning))
-  const hasContentRisk = contentCategories.length > 0 || categoryWarnings.length > 0
-  if (hasContentRisk) {
-    const content = addSection('Piracy / Content Risk')
-    if (categoryWarnings.length > 0) {
-      categoryWarnings.forEach((warning) => addText(content, warning, 'margin:7px 0 0;color:#fde68a'))
-    } else {
-      addText(content, 'Content category indicators were recorded, but the scanner did not provide their warning text.', 'margin:7px 0 0;color:#fde68a')
-    }
-    if (piracyRisk) {
-      addText(content, 'This is a separate content/download risk warning, not a phishing or malware finding. Downloaded files were not assessed by this URL score.', 'margin:7px 0 0;color:#cbd5e1')
-    } else {
-      addText(content, 'Content category warnings are separate from the URL phishing and malware classification.', 'margin:7px 0 0;color:#cbd5e1')
-    }
-  }
-
   const providers = Array.isArray(details?.threatIntel) &&
       (details.threatIntel.length > 0 || !Array.isArray(scan?.threatIntel))
     ? details.threatIntel
     : Array.isArray(scan?.threatIntel) ? scan.threatIntel : null
   const pageProvider = (providers ?? []).find((provider) => ['Page inspection', 'Rendered page inspection'].includes(provider?.provider))
-  const localRules = (details?.findings ?? []).filter((finding) => Number(finding?.deduction ?? 0) > 0)
+  const localRules = Array.isArray(details?.findings) ? details.findings : []
   const pageFindings = [...new Set([
     ...(Array.isArray(details?.pageInspection?.findings) ? details.pageInspection.findings : []),
     ...(Array.isArray(pageProvider?.inspection?.findings) ? pageProvider.inspection.findings.map((finding) => finding?.label) : []),
   ].filter((finding) => typeof finding === 'string' && finding.trim()))]
-  const hasUrlFindingsData = Array.isArray(details?.findings)
   const pageInspectionCompleted = pageProvider
-    ? pageProvider.checked === true && !pageProvider.error && !pageProvider.skipped
+    ? pageProvider.checked === true && !pageProvider.error && !pageProvider.skipped && (typeof pageProvider.found === 'boolean' || Boolean(pageProvider.inspection && typeof pageProvider.inspection === 'object'))
     : Boolean(details?.pageInspection && typeof details.pageInspection === 'object')
   const pageInspectionUnavailable = Boolean(pageProvider) && !pageInspectionCompleted
   const coverageLimitations = [
     ...(Array.isArray(scan?.coverage?.limitations) ? scan.coverage.limitations : []),
     ...(Array.isArray(details?.coverage?.limitations) ? details.coverage.limitations : []),
   ]
-  const pageInspectionNotRun = !pageProvider && !details?.pageInspection && coverageLimitations.some((item) => typeof item === 'string' && /page content.*not inspected|page inspection.*not run/i.test(item))
+  const pageInspectionNotRun = !pageProvider && !details?.pageInspection && coverageLimitations.some((item) => typeof item === 'string' && /page content.*(?:not inspected|not checked)|page inspection.*not run/i.test(item))
   const pageInspectionHasFindings = pageFindings.length > 0 || pageProvider?.found === true
   const pageInspectionStatus = pageInspectionUnavailable
     ? 'Unavailable'
     : pageInspectionCompleted
       ? pageInspectionHasFindings ? 'Findings reported' : 'No findings detected'
       : pageInspectionNotRun ? 'Not run' : 'Details unavailable'
-  const local = addSection('Local security findings')
-  addText(local, `Page inspection: ${pageInspectionStatus}`, 'margin:7px 0 0;color:#cbd5e1')
-  if (localRules.length === 0 && pageFindings.length === 0) {
-    if (pageProvider?.found === true) {
-      addText(local, `Page inspection reported a finding, but its rule details were not included${pageProvider.warning ? `: ${pageProvider.warning}` : '.'}`, 'margin:7px 0 0;color:#cbd5e1')
-      if (pageProvider.deduction !== undefined && pageProvider.deduction !== null && Number.isFinite(Number(pageProvider.deduction))) {
-        addText(local, `Combined page-inspection deduction: ${Number(pageProvider.deduction)} points. This is a separate score component.`, 'margin:5px 0 0;color:#cbd5e1')
-      }
-    } else {
-      const localMessage = hasUrlFindingsData && pageInspectionCompleted
-        ? 'No Security Findings Detected'
-        : hasUrlFindingsData
-          ? 'No URL rule findings were reported.'
-          : 'Local security finding details are unavailable for this scan.'
-      addText(local, localMessage, 'margin:5px 0 0;color:#cbd5e1')
-    }
-  } else {
-    const appendFinding = (parent, { nameText, evidence, deduction, deductionLabel = 'Score deduction' }) => {
+  const appendFinding = (parent, { nameText, evidence, deduction, whyMatters, deductionLabel = 'Score deduction' }) => {
       const card = document.createElement('div')
-      card.style.cssText = 'margin-top:9px;border:1px solid #334155;border-radius:8px;padding:10px'
+      card.style.cssText = 'margin-top:10px;border:1px solid #263449;border-radius:10px;background:rgba(2,6,23,.3);padding:11px'
       const name = document.createElement('strong')
       name.textContent = nameText
       name.style.cssText = 'display:block;color:#f8fafc'
@@ -473,87 +570,189 @@ function showSafetyScoreModal(url, scan, returnFocus = null) {
         ? Object.entries(evidence).filter(([, value]) => value !== undefined)
         : []
       const evidenceSummary = evidenceEntries.map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('; ')
-      addText(card, evidenceSummary
-        ? `Why it triggered: The scan matched this rule using the recorded values: ${evidenceSummary}.`
-        : 'Why it triggered: The scan recorded this finding, but could not retrieve enough evidence to explain the match.', 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+      if (evidenceSummary) addText(card, `Why it triggered: The scan matched this rule using the recorded values: ${evidenceSummary}.`, 'margin:7px 0 0;color:#cbd5e1;overflow-wrap:anywhere;font-size:12px')
+      if (whyMatters) addText(card, `Why it matters: ${whyMatters}`, 'margin:7px 0 0;color:#cbd5e1;font-size:12px')
       if (evidenceEntries.length > 0) {
-        addText(card, `Evidence found: ${JSON.stringify(Object.fromEntries(evidenceEntries))}`, 'margin:5px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
+        addText(card, `Evidence: ${JSON.stringify(Object.fromEntries(evidenceEntries))}`, 'margin:7px 0 0;color:#94a3b8;overflow-wrap:anywhere;font:11px/1.5 ui-monospace,Consolas,monospace')
       } else {
-        addText(card, 'Evidence found: The scanner did not provide additional evidence details.', 'margin:5px 0 0;color:#cbd5e1')
+        addText(card, 'The scanner did not provide additional evidence details.', 'margin:7px 0 0;color:#94a3b8;font-size:12px')
       }
-      if (deduction !== undefined && deduction !== null && Number.isFinite(Number(deduction))) {
-        addText(card, `${deductionLabel}: ${Number(deduction)} point${Number(deduction) === 1 ? '' : 's'}.`, 'margin:5px 0 0;color:#cbd5e1')
+      if (deduction !== undefined && deduction !== null && Number.isFinite(Number(deduction)) && Number(deduction) > 0) {
+        addText(card, `${deductionLabel}: −${Number(deduction)} points`, 'margin:7px 0 0;color:#f8fafc;font-size:12px;font-weight:700')
       } else {
-        addText(card, 'Score deduction: Not included in the scan response.', 'margin:5px 0 0;color:#cbd5e1')
+        addText(card, 'No score deduction recorded.', 'margin:7px 0 0;color:#94a3b8;font-size:12px')
       }
       parent.appendChild(card)
-    }
-
-    localRules.forEach((finding) => {
-      appendFinding(local, {
-        nameText: finding.label || finding.code || 'Triggered local rule',
-        evidence: finding.evidence,
-        deduction: finding.deduction,
-      })
-    })
-    pageFindings.forEach((finding) => {
-      const inspection = details?.pageInspection ?? pageProvider?.inspection
-      const detailedFinding = pageProvider?.inspection?.findings?.find((item) => item?.label === finding)
-      const normalizedFinding = finding.toLowerCase()
-      const evidenceKeys = normalizedFinding.includes('submits to a different host')
-        ? ['passwordFields', 'externalFormActions']
-        : normalizedFinding.includes('credential-entry form')
-          ? ['passwordFields', 'credentialLanguage']
-          : normalizedFinding.includes('meta-refresh')
-            ? ['externalMetaRefresh']
-            : normalizedFinding.includes('hidden forms') || normalizedFinding.includes('hidden frames')
-              ? ['hiddenFrames', 'credentialLanguage']
-              : normalizedFinding.includes('obfuscated script') || normalizedFinding.includes('obfuscated scripts')
-                ? ['obfuscatedScripts', 'credentialLanguage']
-                : []
-      const evidence = inspection
-        ? Object.fromEntries(evidenceKeys.filter((key) => inspection[key] !== undefined).map((key) => [key, inspection[key]]))
-        : null
-      appendFinding(local, {
-        nameText: finding,
-        evidence,
-        deduction: detailedFinding?.deduction,
-        deductionLabel: 'Rule deduction (within page inspection)',
-      })
-    })
-    if (pageProvider?.checked === true && Number.isFinite(Number(pageProvider.deduction))) {
-      addText(local, `Combined page-inspection deduction: ${Number(pageProvider.deduction)} points. This is a separate score component.`, 'margin:9px 0 0;color:#cbd5e1')
-    }
+  }
+  const getPageFindingEvidence = (finding) => {
+    const inspection = details?.pageInspection ?? pageProvider?.inspection
+    const normalizedFinding = finding.toLowerCase()
+    const evidenceKeys = normalizedFinding.includes('submits to a different host')
+      ? ['passwordFields', 'externalFormActions']
+      : normalizedFinding.includes('credential-entry form')
+        ? ['passwordFields', 'credentialLanguage']
+        : normalizedFinding.includes('meta-refresh')
+          ? ['externalMetaRefresh']
+          : normalizedFinding.includes('hidden forms') || normalizedFinding.includes('hidden frames')
+            ? ['hiddenFrames', 'credentialLanguage']
+            : normalizedFinding.includes('obfuscated script') || normalizedFinding.includes('obfuscated scripts')
+              ? ['obfuscatedScripts', 'credentialLanguage']
+              : []
+    return inspection
+      ? Object.fromEntries(evidenceKeys.filter((key) => inspection[key] !== undefined).map((key) => [key, inspection[key]]))
+      : null
   }
 
   const externalProviders = (providers ?? []).filter((provider) => !['Page inspection', 'Rendered page inspection'].includes(provider?.provider))
-  const intel = addSection('External threat intelligence')
-  if (providers === null) {
-    addText(intel, 'Threat intelligence provider details were not included in the scan response.', 'margin:7px 0 0;color:#cbd5e1')
-  } else if (externalProviders.length === 0) {
-    addText(intel, 'No external provider findings were returned in this scan. Provider-level results were not listed.', 'margin:7px 0 0;color:#cbd5e1')
-  } else {
-    externalProviders.forEach((provider) => {
-      const unavailable = provider?.checked !== true || provider?.error || provider?.skipped
-      const state = provider?.found === true && !unavailable ? 'Finding reported' : unavailable ? 'Unavailable' : 'No finding reported'
-      const explanation = state === 'Unavailable'
-        ? ''
-        : state === 'Finding reported' && provider?.warning ? ` — ${provider.warning}` : ''
-      addText(intel, `${provider?.provider || 'Threat intelligence provider'}: ${state}${explanation}`, 'margin:7px 0 0;color:#cbd5e1;overflow-wrap:anywhere')
-      if (state === 'Finding reported' && provider?.deduction !== undefined && provider?.deduction !== null && Number.isFinite(Number(provider.deduction))) {
-        const included = provider?.riskAffecting !== false && provider?.checked === true && !provider?.error && !provider?.skipped && Boolean(provider?.warning)
-        addText(intel, `Score deduction: ${Number(provider.deduction)} point${Number(provider.deduction) === 1 ? '' : 's'}${included ? ' (included in the reputation score)' : ' (not included in the reputation score)'}.`, 'margin:3px 0 0 10px;color:#cbd5e1')
-      }
-    })
+  const checkedExternalProviders = externalProviders.filter((provider) => provider?.checked === true && !provider?.error && !provider?.skipped)
+  const externalThreats = checkedExternalProviders.filter((provider) => provider?.found === true)
+  const completeExternalProviders = checkedExternalProviders.filter((provider) => typeof provider?.found === 'boolean')
+  const incompleteExternalCount = externalProviders.length - completeExternalProviders.length
+  const externalStatus = providers === null || externalProviders.length === 0
+    ? 'Check Incomplete'
+    : externalThreats.length > 0
+      ? 'Threat Detected'
+      : completeExternalProviders.length === 0
+        ? 'Check Incomplete'
+        : incompleteExternalCount > 0 ? 'Partial Results' : 'No Threats'
+  const externalSummary = externalThreats.length > 0
+    ? incompleteExternalCount > 0 ? 'A threat was reported; other checks were incomplete.' : 'A completed threat-intelligence check reported a threat.'
+    : providers === null || externalProviders.length === 0 || checkedExternalProviders.length === 0
+      ? 'Threat-intelligence checks were unavailable or not included in the scan response.'
+      : incompleteExternalCount > 0
+        ? 'Some checks were unavailable, so a clean result cannot be confirmed.'
+        : 'No known threats from trusted sources.'
+  const urlStatus = !Array.isArray(details?.findings)
+    ? 'Check Incomplete'
+    : localRules.some((finding) => Number(finding?.deduction) > 0) || localRules.some((finding) => finding?.deduction === undefined || finding?.deduction === null)
+      ? 'Potential Risk'
+      : localRules.length ? 'Informational' : 'Clean'
+  const firstUrlFinding = localRules.find((finding) => finding?.label || finding?.code)
+  const urlSummary = !Array.isArray(details?.findings)
+    ? 'URL reputation details were not included in this scan.'
+    : urlStatus === 'Clean'
+      ? 'No known malicious activity.'
+      : urlStatus === 'Informational'
+        ? 'Informational signals were recorded, with no score deduction.'
+        : firstUrlFinding ? `Detected: ${firstUrlFinding.label || firstUrlFinding.code}.` : 'URL risk indicators were detected.'
+  const urlGroup = makeFindingCard(findingGrid, 'URL Reputation', urlSummary, '↗', urlStatus)
+
+  const pageCardStatus = pageInspectionUnavailable && pageInspectionHasFindings
+    ? 'Partial Results'
+    : pageInspectionStatus === 'Findings reported' ? 'Potential Risk'
+      : pageInspectionStatus === 'No findings detected' ? 'No Issues'
+        : pageInspectionStatus === 'Unavailable' || pageInspectionStatus === 'Details unavailable' ? 'Check Incomplete'
+          : pageInspectionStatus
+  const firstPageFinding = pageFindings[0]
+  const pageSummary = pageCardStatus === 'No Issues'
+    ? 'No suspicious content found.'
+    : pageCardStatus === 'Potential Risk'
+      ? firstPageFinding ? `Detected: ${firstPageFinding}.` : 'Page inspection reported a potential risk.'
+      : pageCardStatus === 'Partial Results'
+        ? `A finding was returned (${firstPageFinding || 'details unavailable'}), but inspection was incomplete.`
+        : pageCardStatus === 'Not run'
+          ? 'Page inspection was not run for this scan.'
+          : 'Page inspection could not be completed or its details were unavailable.'
+  const pageGroup = makeFindingCard(findingGrid, 'Page Inspection', pageSummary, '▤', pageCardStatus)
+  const intel = makeFindingCard(findingGrid, 'External Intelligence', externalSummary, '◎', externalStatus)
+
+  if (contentCategories.length > 0 || categoryWarnings.length > 0) {
+    const contentGroup = makeCard(content, 'Content Category Warnings', 'These content warnings are separate from the URL security classification.')
+    contentGroup.style.marginTop = '12px'
+    contentCategories.forEach((category) => addPill(contentGroup, category, '#fcd34d', '#451a03'))
+    if (categoryWarnings.length) {
+      categoryWarnings.forEach((warning) => addText(contentGroup, warning, 'margin:8px 0 0;color:#fde68a;overflow-wrap:anywhere;font-size:12px'))
+    } else {
+      addText(contentGroup, 'Content-category indicators were recorded, but no warning explanation was included.', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+    }
+    if (piracyRisk) {
+      addText(contentGroup, 'Piracy-related content risk is not a phishing or malware finding. Downloaded files were not assessed by this URL score.', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+    }
   }
 
-  const actionSection = addSection('Recommended action')
-  const action = scan?.recommendations?.find((item) => typeof item === 'string' && item.trim()) ??
-    (dangerous ? 'Avoid visiting this website. Do not enter personal information.' : suspicious ? 'Use caution and verify the website through a trusted source before continuing.' : status === 'Safe' ? 'No strong risk indicators were detected in the checks that ran; continue with normal caution.' : 'Treat the result as unverified until a scan is available.')
-  addText(actionSection, action, `margin:7px 0 0;color:${accent}`)
+  const whyFlagged = makeCard(content, 'Why This URL Was Flagged', 'Only returned security findings are listed here.')
+  whyFlagged.style.marginTop = '12px'
+  const whyReasons = [
+    ...localRules.map((finding) => ({
+      source: 'URL Reputation',
+      name: finding?.label || finding?.code || 'Finding details unavailable',
+      evidence: finding?.evidence,
+      deduction: finding?.deduction,
+      whyMatters: 'This signal is included in URL analysis; its recorded deduction is shown when available.',
+    })),
+    ...pageFindings.map((finding) => ({
+      source: 'Page Inspection',
+      name: finding,
+      evidence: getPageFindingEvidence(finding),
+      deduction: pageProvider?.inspection?.findings?.find((item) => item?.label === finding)?.deduction,
+      deductionLabel: 'Recorded page-inspection deduction',
+      whyMatters: 'This signal is included in page inspection; its recorded deduction is shown when available.',
+    })),
+    ...(pageProvider?.checked === true && pageInspectionHasFindings && pageProvider.deduction !== undefined && pageProvider.deduction !== null && Number.isFinite(Number(pageProvider.deduction))
+      ? [{
+          source: 'Page Inspection',
+          name: 'Combined page-inspection result',
+          deduction: pageProvider.deduction,
+          deductionLabel: 'Recorded combined page-inspection deduction',
+          whyMatters: 'This is the recorded total deduction for page inspection.',
+        }]
+      : []),
+    ...externalThreats.map((provider) => {
+      const included = provider?.riskAffecting !== false && provider?.checked === true && !provider?.error && !provider?.skipped && Boolean(provider?.warning)
+      return {
+        source: 'External Intelligence',
+        name: 'Threat intelligence finding',
+        deduction: provider?.deduction,
+        deductionLabel: 'Recorded external-intelligence deduction',
+        whyMatters: included
+          ? 'This threat match was included in the external reputation component.'
+          : 'This threat match was reported but was not included in the external reputation component.',
+      }
+    }),
+  ].filter((reason) => reason.name)
+  if (whyReasons.length > 0) {
+    if (status === 'Safe') {
+      addText(whyFlagged, 'The scan returned a Safe classification. These findings were included in the scan response:', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+    } else {
+      addText(whyFlagged, 'The scan returned a ' + displayStatus + ' classification. These findings were included in the scan response:', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+    }
+    whyReasons.forEach((reason) => {
+      const row = document.createElement('div')
+      row.style.cssText = 'margin-top:8px;border-left:2px solid #475569;padding-left:10px'
+      addText(row, reason.source, 'margin:0;color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em')
+      appendFinding(row, { ...reason, nameText: reason.name })
+      whyFlagged.appendChild(row)
+    })
+  } else if (['Suspicious', 'Dangerous'].includes(status)) {
+    addText(whyFlagged, 'The scan returned a ' + displayStatus + ' classification, but rule-level reasons were not included in the available scan details.', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+  } else if (status === 'Safe') {
+    addText(whyFlagged, 'No additional security findings were included in the available scan details.', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+  } else {
+    addText(whyFlagged, 'The scan did not include enough detail to explain this classification.', 'margin:8px 0 0;color:#cbd5e1;font-size:12px')
+  }
+
+  const calculation = makeCard(content, 'How the Score Is Calculated', 'The score reflects separate scanner components; deductions across components are not all added together.')
+  calculation.style.marginTop = '16px'
+  addText(calculation, 'Applicable local URL deductions are aggregated within URL analysis. Eligible external-provider deductions are aggregated separately into a reputation score; page deductions form a page-inspection score. The final Safety Score is the lowest of the available component scores.', 'margin:9px 0 0;color:#cbd5e1;font-size:12px;line-height:1.6')
+  addText(calculation, 'The response provides the final score and recorded finding deductions, but not intermediate component scores. They are not estimated here.', 'margin:8px 0 0;color:#94a3b8;font-size:12px;line-height:1.6')
+
+  const notes = makeCard(content, 'Important Notes')
+  notes.style.marginTop = '12px'
+  addText(notes, 'The Safety Score is an indicator based on signals detected by the checks that ran. It is not a probability and does not guarantee that a website is safe. A higher score means fewer detected risk indicators, not zero risk.', 'margin:8px 0 0;color:#cbd5e1;font-size:12px;line-height:1.6')
+
+  const actionSection = makeCard(content, 'Recommended Action')
+  actionSection.style.marginTop = '12px'
+  const recommendedAction = scan?.recommendations?.find((item) => typeof item === 'string' && item.trim()) ?? scoreDescription
+  addText(actionSection, recommendedAction, `margin:8px 0 0;color:${palette.accent};font-size:12px;line-height:1.6`)
 
   overlay.addEventListener('click', (event) => { if (event.target === overlay) dismiss() })
-  overlay.addEventListener('keydown', (event) => { if (event.key === 'Escape') dismiss() })
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') dismiss()
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      close.focus()
+    }
+  })
   overlay.appendChild(dialog)
   document.body.appendChild(overlay)
   close.focus()
